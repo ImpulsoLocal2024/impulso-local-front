@@ -1,6 +1,6 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
-import logo from '../assets/img/impulso.png';
+import logo from '../assets/img/Impulso.png';
 import './css/Aside.css';
 
 export default function Aside() {

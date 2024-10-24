@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import './css/Login.css'; 
-import logo from '../assets/img/impulso.png'; 
+import logo from '../assets/img/Impulso.png'; 
 
 export default function Login() {
   const [email, setEmail] = useState('');

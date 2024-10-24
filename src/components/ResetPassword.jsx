@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import './css/Login.css'; // Usamos el mismo archivo de estilos que el login
-import logo from '../assets/img/logo-impulso-capital.png'; // Importa el logo
+import logo from '../assets/img/Impulso.png'; // Importa el logo
 
 export default function ResetPassword() {
   const { token } = useParams();  // Obtener el token de la URL
