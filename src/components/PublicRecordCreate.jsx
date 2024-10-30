@@ -92,7 +92,6 @@ export default function PublicRecordCreate() {
           `https://impulso-local-back.onrender.com/api/inscriptions/tables/${tableName}/fields`
         );
 
-        console.log('Campos obtenidos:', fieldsResponse.data);
 
         // Filtrar los campos para excluir 'Estado', 'Asesor' e 'ID'
         const filteredFields = fieldsResponse.data.filter(
