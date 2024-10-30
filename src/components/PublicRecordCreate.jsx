@@ -22,56 +22,7 @@ export default function PublicRecordCreate() {
 
   // Mapeo de nombres personalizados para los campos
   const fieldLabels = {
-    "nombres": "Nombres",
-    "apellidos": "Apellidos",
-    "tipo_de_identificacion": "Tipo de identificación",
-    "numero_de_identificacion": "Número de identificación",
-    "fecha_de_nacimiento": "Fecha de nacimiento (DD/MM/AAAA)",
-    "edad": "Edad",
-    "sexo": "Sexo",
-    "telefono_fijo": "Teléfono fijo",
-    "celular": "Celular",
-    "celular_2": "Celular 2 (puede ser el de un familiar)",
-    "correo_electronico": "Correo electrónico",
-    "direccion": "Dirección de residencia",
-    "barrio": "Barrio de residencia",
-    "localidad_de_residencia": "Localidad de residencia",
-    "nivel_educativo_del_empresario": "Nivel educativo del empresario",
-    "presenta_algun_tipo_de_discapacidad": "¿Presenta algún tipo de discapacidad?",
-    "grupo_etnico": "Grupo étnico",
-    "es_victima_del_conflicto_armado": "¿Es víctima del conflicto armado?",
-    "es_cuidador_de_alguien": "¿Es cuidador de alguna de las siguientes personas?",
-    "identidad_de_genero": "Identidad de género",
-    "personas_a_cargo": "Personas a cargo",
-    "nombre_del_emprendimiento": "Nombre de la unidad de negocio",
-    "fecha_de_inicio_actividad_economica": "Fecha de inicio actividad económica",
-    "esta_registrado_y_renovado_ante_la_camara_de_comercio": "¿Su unidad de negocio está registrado ante la Cámara de Comercio?",
-    "logro_renovar_la_matricula_del_negocio_a_comienzos_del_2023": "¿Logró renovar la matrícula del negocio a comienzos del  2024?",
-    "fecha_de_registro_en_camara_de_comercio": "Fecha de registro en Cámara de Comercio (DD/MM/AAAA)",
-    "nit": "NIT (sin dígito de verificación)",
-    "localidad_de_la_unidad_de_negocio": "Localidad de la unidad de negocio",
-    "direccion_de_la_unidad_de_negocio": "Dirección en donde se desarrolla la actividad de la unidad de negocio (debe coincidir con el servicio público que va a adjuntar más adelante)",
-    "es_tambien_su_vivienda": "¿En esta dirección también es su vivienda?",
-    "barrio_de_la_unidad_de_negocio": "Barrio de la unidad de negocio",
-    "telefono_fijo_de_la_unidad_de_negocio": "Teléfono fijo de la unidad de negocio",
-    "area_del_negocio": "¿El negocio se encuentra ubicado en área?",
-    "estrato_socioeconomico": "Estrato socioeconómico de su unidad de negocio",
-    "tiempo_de_funcionamiento": "¿Cuánto tiempo de funcionamiento tiene su unidad de negocio?",
-    "es_vendedor_informal_o_ambulante": "¿Usted es vendedor informal/ambulante registrado en el HEMI con RIVI de la localidad por la cual usted se postula?",
-    "personas_en_el_emprendimiento": "¿Cuántas personas trabajan directamente en su unidad de negocio, incluyéndolo a usted?",
-    "sector_productivo": "¿En qué sector productivo se encuentra su unidad de negocio?",
-    "oferta_productos_o_servicios": "¿Cuál es la oferta de productos o servicios de su unidad de negocio?",
-    "actividades_sostenibles": "¿Su unidad de negocio realiza actividades sostenibles y en proceso de reconversión dirigidas al cuidado del medio ambiente?",
-    "actividad_implementada": "¿Cuál es esa actividad que Ud. implementa que es sostenible y en proceso de reconversión dirigidas al cuidado del medio ambiente?",
-    "acceso_a_internet": "¿Tiene acceso a internet y/o a un dispositivo que le permita acceder a las cápsulas de conocimiento?",
-    "plan_datos_celular": "¿Cuenta con plan de datos en su celular?",
-    "cuenta_bancaria": "¿Dispone de una cuenta bancaria o algún servicio de billetera electrónica que le permita recibir el incentivo económico?",
-    "cual": "¿Cuál?",
-    "clientes_actuales": "Número de clientes actuales",
-    "ventas_promedio_mensual": "Valor de ventas promedio mensual",
-    "tiempo_para_formacion": "¿De cuánto tiempo dispone para dedicarle al proceso de formación y realización del plan de inversión?",
-    "canales_comercializacion": "Para la comercialización de su producto utiliza canales como:",
-    "funcionario_publico": "¿El dueño del emprendimiento es funcionario público?"
+    // Mapeo de campos personalizado como antes...
   };
 
   // Obtener los campos de la tabla y datos relacionados
@@ -105,6 +56,80 @@ export default function PublicRecordCreate() {
   // Manejar cambios en los campos del formulario
   const handleChange = (e) => {
     setNewRecord({ ...newRecord, [e.target.name]: e.target.value });
+  };
+
+  // Manejar cambios en los archivos
+  const handleFileChange = (e) => {
+    const selectedFiles = Array.from(e.target.files);
+    setFiles(selectedFiles);
+  };
+
+  // Manejar cambios en los nombres de los archivos
+  const handleFileNameChange = (e, index) => {
+    setFileNames({
+      ...fileNames,
+      [index]: e.target.value,
+    });
+  };
+
+  // Manejar envío del formulario y subida de archivos
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError(null);
+    setSuccessMessage('');
+
+    try {
+      const token = localStorage.getItem('token');
+
+      // Primero, crear el registro
+      const recordResponse = await axios.post(
+        `https://impulso-local-back.onrender.com/api/inscriptions/tables/${tableName}/record/create`,
+        newRecord,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      // Verificar que el registro se haya creado correctamente y que contenga un 'id'
+      const createdRecordId = recordResponse.data?.record?.id || recordResponse.data?.id;
+
+      if (!createdRecordId) {
+        throw new Error('No se pudo obtener el ID del registro creado.');
+      }
+
+      // Subir cada archivo con su nombre si hay archivos seleccionados
+      if (files.length > 0) {
+        const uploadPromises = files.map((file, index) => {
+          const formData = new FormData();
+          formData.append('file', file);
+          formData.append('fileName', fileNames[index] || file.name);
+
+          return axios.post(
+            `https://impulso-local-back.onrender.com/api/inscriptions/tables/${tableName}/record/${createdRecordId}/upload`,
+            formData,
+            {
+              headers: {
+                Authorization: `Bearer ${token}`,
+                'Content-Type': 'multipart/form-data',
+              },
+            }
+          );
+        });
+
+        // Esperar a que todas las subidas de archivos finalicen
+        await Promise.all(uploadPromises);
+      }
+
+      setSuccessMessage('Registro y archivos subidos exitosamente');
+      setTimeout(() => {
+        navigate(`/table/${tableName}`);
+      }, 2000);
+    } catch (error) {
+      console.error('Error creando el registro o subiendo los archivos:', error);
+      setError('Error creando el registro o subiendo los archivos');
+    }
   };
 
   return (
