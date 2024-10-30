@@ -45,7 +45,7 @@ export default function PublicRecordCreate() {
     "nombre_del_emprendimiento": "Nombre de la unidad de negocio",
     "fecha_de_inicio_actividad_economica": "Fecha de inicio actividad económica",
     "esta_registrado_y_renovado_ante_la_camara_de_comercio": "¿Su unidad de negocio está registrado ante la Cámara de Comercio?",
-    "logro_renovar_la_matricula_del_negocio_a_comienzos_del_2023": "¿Logró renovar la matrícula del negocio a comienzos del  2024?",
+    "logro_renovar_la_matricula_del_negocio_a_comienzos_del_2023": "¿Logró renovar la matrícula del negocio a comienzos del 2024?",
     "fecha_de_registro_en_camara_de_comercio": "Fecha de registro en Cámara de Comercio (DD/MM/AAAA)",
     "nit": "NIT (sin dígito de verificación)",
     "localidad_de_la_unidad_de_negocio": "Localidad de la unidad de negocio",
@@ -140,7 +140,6 @@ export default function PublicRecordCreate() {
         }
       );
 
-      // Verificar que el registro se haya creado correctamente y que contenga un 'id'
       const createdRecordId = recordResponse.data?.record?.id || recordResponse.data?.id;
 
       if (!createdRecordId) {
@@ -166,7 +165,6 @@ export default function PublicRecordCreate() {
           );
         });
 
-        // Esperar a que todas las subidas de archivos finalicen
         await Promise.all(uploadPromises);
       }
 
