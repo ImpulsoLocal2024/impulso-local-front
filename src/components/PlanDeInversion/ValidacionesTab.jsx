@@ -305,7 +305,7 @@ export default function ValidacionesTab({ id }) {
                       <strong>{file.name}</strong>
                       <br />
                       <a
-                        href={`http://localhost:4000${file.url}`}
+                        href={`https://impulso-local.netlify.app${file.url}`}
                         target="_blank"
                         rel="noopener noreferrer"
                       >
