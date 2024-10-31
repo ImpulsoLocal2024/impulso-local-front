@@ -670,7 +670,7 @@ export default function DynamicRecordEdit() {
                               <strong>{file.name}</strong>
                               <br />
                               <a
-                                href={`https://impulso-local.netlify.app${file.url}`}
+                                href={`https://impulso-local-back.onrender.com${file.url}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
                               >
