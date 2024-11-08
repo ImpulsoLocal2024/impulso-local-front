@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import './css/DynamicRecordEdit.css';
+import './css/PublicRecordCreate.css';
 
 export default function PublicRecordCreate() {
   const { tableName } = useParams();

@@ -1,0 +1,45 @@
+.form-container {
+    background-color: #f7f7f7;
+    padding: 20px;
+    border-radius: 10px;
+  }
+  
+  .custom-form {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+  }
+  
+  .form-group label {
+    font-weight: bold;
+    color: #555;
+  }
+  
+  .form-control {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+  }
+  
+  .form-group {
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .btn-primary {
+    background-color: #ff4d4d;
+    border: none;
+    padding: 10px 20px;
+    font-weight: bold;
+    border-radius: 5px;
+    color: white;
+  }
+  
+  .btn-danger {
+    color: white;
+  }
+  
+  .content-wrapper {
+    margin-bottom: 100px;
+}
