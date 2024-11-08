@@ -1,13 +1,14 @@
 /* Container principal para el diseño en pantalla completa */
 .container-fluid.d-flex {
     display: flex;
-    min-height: 100vh;
+    height: 100vh; /* Hace que el contenedor principal ocupe toda la altura de la ventana */
+    overflow: hidden; /* Evita el desplazamiento en el contenedor principal */
   }
   
   /* Sidebar (aside) */
   .sidebar {
     width: 250px;
-    height: auto !important;
+    height: 100vh !important; /* Altura fija de toda la ventana */
     color: white;
     padding: 20px;
     background-color: #E61A4E !important;
@@ -15,6 +16,10 @@
     align-items: center;
     justify-content: center;
     text-align: center;
+    position: fixed; /* Fija el aside al lado izquierdo */
+    top: 0;
+    left: 0;
+    overflow-y: auto; /* Agrega scroll interno al aside en caso de contenido adicional */
   }
   
   /* Ocultar el aside en dispositivos móviles */
@@ -29,10 +34,8 @@
     flex: 1;
     background-color: #f7f7f7;
     padding: 40px;
-    display: flex;
-    flex-direction: column;
-    justify-content: center; /* Asegura que el contenido esté centrado */
-    min-height: 100vh; /* Hace que el fondo gris cubra toda la altura */
+    margin-left: 250px; /* Espacio para que el formulario no quede detrás del aside */
+    overflow-y: auto; /* Permite desplazamiento dentro del formulario */
   }
   
   /* Encabezado del formulario */
