@@ -24,7 +24,7 @@
   
   /* Ocultar el aside en dispositivos móviles */
   @media (max-width: 768px) {
-    .sidebar {
+    .sidebar-public {
       display: none;
     }
   }
