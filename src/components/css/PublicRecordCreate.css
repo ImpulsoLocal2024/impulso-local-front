@@ -6,7 +6,7 @@
   }
   
   /* Sidebar (aside) */
-  .sidebar {
+  .sidebar-public {
     width: 250px;
     height: 100vh !important; /* Altura fija de toda la ventana */
     color: white;
