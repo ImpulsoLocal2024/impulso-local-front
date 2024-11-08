@@ -30,14 +30,16 @@
   
     /* Contenedor principal en móviles para asegurar ancho completo */
     .container-fluid.d-flex {
-      display: block !important; /* Elimina el flex para que ocupe todo el ancho */
+      display: block !important; /* Cambia de flex a block en móviles */
+      padding: 0 !important; /* Elimina padding para ocupar ancho completo */
     }
   
     .form-wrapper {
-      margin-left: 0 !important; /* Elimina el margen izquierdo para ocupar todo el ancho */
-      width: 100vw !important; /* Asegura que el formulario ocupe todo el ancho de la pantalla */
-      padding: 20px !important; /* Ajusta el padding para dispositivos móviles */
-      max-width: 100% !important; /* Asegura que no haya límite de ancho */
+      margin-left: 0 !important; /* Elimina margen izquierdo */
+      width: 100% !important; /* Asegura que el formulario ocupe el ancho completo */
+      padding: 20px !important; /* Ajusta el padding */
+      max-width: 100% !important; /* Evita límites de ancho */
+      box-sizing: border-box !important; /* Asegura que padding no afecte el ancho */
     }
   }
   
@@ -74,6 +76,7 @@
     padding: 10px !important;
     border: 1px solid #ccc !important;
     border-radius: 5px !important;
+    box-sizing: border-box !important;
   }
   
   /* Botón principal */
