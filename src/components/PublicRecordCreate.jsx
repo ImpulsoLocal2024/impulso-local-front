@@ -75,7 +75,7 @@ export default function PublicRecordCreate() {
     [normalize("Es cuidador de alguna de las siguientes personas")]: "¿Es cuidador de alguna de las siguientes personas?",
     [normalize("Identidad de genero")]: "Identidad de género",
     [normalize("Personas a cargo")]: "Personas a cargo",
-    [normalize("Nombre del emprendimiento")]: "Nombre de la unidad de negocio",
+    [normalize("Nombre del emprendimiento")]: "Nombre del emprendimiento",
     [normalize("Fecha de inicio actividad economica")]: "Fecha de inicio actividad económica",
     [normalize("Esta registrado y renovado ante la Camara de Comercio")]: "¿Su unidad de negocio está registrada ante la Cámara de Comercio?",
     [normalize("Logro renovar la matricula del negocio a comienzos del 2023")]: "¿Logró renovar la matrícula del negocio a comienzos del 2024?",
