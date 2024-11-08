@@ -1,4 +1,6 @@
-import { useEffect, useState } from 'react';
+// PublicRecordCreate.jsx
+
+import { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import './css/PublicRecordCreate.css';
@@ -14,6 +16,10 @@ export default function PublicRecordCreate() {
   const [error, setError] = useState(null);
   const [successMessage, setSuccessMessage] = useState('');
   const [fileList, setFileList] = useState([]);
+
+  // Estados para validación en tiempo real
+  const [validationErrors, setValidationErrors] = useState({});
+  const typingTimeoutRef = useRef({});
 
   const fileTypeOptions = [
     "Copia de documento de identidad",
@@ -130,7 +136,58 @@ export default function PublicRecordCreate() {
   }, [tableName]);
 
   const handleChange = (e) => {
-    setNewRecord({ ...newRecord, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    const normalizedColumnName = normalize(name);
+
+    let newValue = value;
+
+    // Si es un campo de fecha, formatear a 'dd/mm/aaaa'
+    if (dateFields.has(normalizedColumnName) && value) {
+      const [year, month, day] = value.split('-');
+      newValue = `${day}/${month}/${year}`;
+    }
+
+    setNewRecord({ ...newRecord, [name]: newValue });
+
+    // Validación en tiempo real para 'Numero de identificacion' y 'Correo electronico'
+    if (
+      normalizedColumnName === normalize('Numero de identificacion') ||
+      normalizedColumnName === normalize('Correo electronico')
+    ) {
+      // Limpiar el timeout previo si existe
+      if (typingTimeoutRef.current[name]) {
+        clearTimeout(typingTimeoutRef.current[name]);
+      }
+
+      // Establecer un nuevo timeout
+      typingTimeoutRef.current[name] = setTimeout(() => {
+        validateField(name, newValue);
+      }, 500); // 500 ms de retraso después de que el usuario deja de escribir
+    }
+  };
+
+  const validateField = async (fieldName, fieldValue) => {
+    try {
+      const response = await axios.post(
+        `https://impulso-local-back.onrender.com/api/inscriptions/tables/${tableName}/validate`,
+        { fieldName, fieldValue }
+      );
+
+      if (response.data.exists) {
+        setValidationErrors((prevErrors) => ({
+          ...prevErrors,
+          [fieldName]: `${fieldLabels[normalize(fieldName)] || fieldName} ya está registrado.`
+        }));
+      } else {
+        setValidationErrors((prevErrors) => {
+          const newErrors = { ...prevErrors };
+          delete newErrors[fieldName];
+          return newErrors;
+        });
+      }
+    } catch (error) {
+      console.error('Error validando el campo:', error);
+    }
   };
 
   const handleFileChange = (e) => {
@@ -163,6 +220,12 @@ export default function PublicRecordCreate() {
     e.preventDefault();
     setError(null);
     setSuccessMessage('');
+
+    // Verificar si hay errores de validación
+    if (Object.keys(validationErrors).length > 0) {
+      setError('Por favor, corrija los errores antes de enviar el formulario.');
+      return;
+    }
 
     try {
       const token = localStorage.getItem('token');
@@ -255,13 +318,18 @@ export default function PublicRecordCreate() {
                         ))}
                       </select>
                     ) : (
-                      <input
-                        type={dateFields.has(normalizedColumnName) ? "date" : "text"}
-                        name={field.column_name}
-                        value={newRecord[field.column_name] || ''}
-                        onChange={handleChange}
-                        className="form-control"
-                      />
+                      <>
+                        <input
+                          type={dateFields.has(normalizedColumnName) ? "date" : "text"}
+                          name={field.column_name}
+                          value={dateFields.has(normalizedColumnName) && newRecord[field.column_name] ? newRecord[field.column_name].split('/').reverse().join('-') : newRecord[field.column_name] || ''}
+                          onChange={handleChange}
+                          className="form-control"
+                        />
+                        {validationErrors[field.column_name] && (
+                          <div className="text-danger">{validationErrors[field.column_name]}</div>
+                        )}
+                      </>
                     )}
                   </div>
                 );
