@@ -15,9 +15,27 @@ export default function PublicRecordCreate() {
   const [error, setError] = useState(null);
   const [successMessage, setSuccessMessage] = useState('');
 
-  // Estados para manejo de archivos
-  const [files, setFiles] = useState([]);
-  const [fileNames, setFileNames] = useState({});
+  // Estado para manejo de archivos
+  const [fileList, setFileList] = useState([]); // Cada elemento será { file: File, name: string, type: string }
+
+  // Opciones para el tipo de archivo
+  const fileTypeOptions = [
+    "Copia de documento de identidad",
+    "Factura de servicio publico",
+    "Evidencia de existencia de mínimo un año",
+    "Registro Cámara de Comercio (solo si aplica)",
+    "RUT",
+    "Certificado de ventas",
+    "Evidencia generación de empleo",
+    "Certificación discapacidad expedida por Secretaria de Salud (Si aplica)",
+    "Certificado de cuidador (Si aplica)",
+    "Certificado de Población indígena (Si aplica)",
+    "Certificación de RIVI (Si aplica)",
+    "Antecedentes policía",
+    "Antecedentes procuraduría",
+    "Antecedentes contraloría",
+    "Otros"
+  ];
 
   // Función para normalizar los nombres de los campos
   const normalize = (str) => {
@@ -125,18 +143,34 @@ export default function PublicRecordCreate() {
     setNewRecord({ ...newRecord, [e.target.name]: e.target.value });
   };
 
-  // Manejar cambios en los archivos
+  // Manejar selección de archivos
   const handleFileChange = (e) => {
-    const selectedFiles = Array.from(e.target.files);
-    setFiles(selectedFiles);
+    const selectedFile = e.target.files[0];
+    if (selectedFile) {
+      setFileList([...fileList, { file: selectedFile, name: '', type: '' }]);
+    }
+    e.target.value = null; // Reinicia el input
   };
 
-  // Manejar cambios en los nombres de los archivos
+  // Manejar cambios en el nombre del archivo
   const handleFileNameChange = (e, index) => {
-    setFileNames({
-      ...fileNames,
-      [index]: e.target.value,
-    });
+    const updatedFileList = [...fileList];
+    updatedFileList[index].name = e.target.value;
+    setFileList(updatedFileList);
+  };
+
+  // Manejar cambios en el tipo de archivo
+  const handleFileTypeChange = (e, index) => {
+    const updatedFileList = [...fileList];
+    updatedFileList[index].type = e.target.value;
+    setFileList(updatedFileList);
+  };
+
+  // Manejar eliminación de archivos de la lista
+  const handleRemoveFile = (index) => {
+    const updatedFileList = [...fileList];
+    updatedFileList.splice(index, 1);
+    setFileList(updatedFileList);
   };
 
   // Manejar envío del formulario y subida de archivos
@@ -167,11 +201,13 @@ export default function PublicRecordCreate() {
       }
 
       // Subir cada archivo con su nombre si hay archivos seleccionados
-      if (files.length > 0) {
-        const uploadPromises = files.map((file, index) => {
+      if (fileList.length > 0) {
+        const uploadPromises = fileList.map((fileItem) => {
           const formData = new FormData();
-          formData.append('file', file);
-          formData.append('fileName', fileNames[index] || file.name);
+          formData.append('file', fileItem.file);
+          formData.append('fileName', fileItem.name || fileItem.file.name);
+
+          // No se envía 'fileType' al backend, ya que no debe cambiar la lógica del backend
 
           return axios.post(
             `https://impulso-local-back.onrender.com/api/inscriptions/tables/${tableName}/record/${createdRecordId}/upload`,
@@ -258,25 +294,41 @@ export default function PublicRecordCreate() {
               })}
 
               <div className="form-group">
-                <label>Seleccionar archivos para subir</label>
+                <label>Seleccionar archivo para subir</label>
                 <input
                   type="file"
-                  multiple
                   className="form-control"
                   onChange={handleFileChange}
                 />
               </div>
 
-              {files.map((file, index) => (
+              {fileList.map((fileItem, index) => (
                 <div className="form-group" key={index}>
-                  <label>Nombre para el archivo: {file.name}</label>
+                  <label>Archivo: {fileItem.file.name}</label>
                   <input
                     type="text"
                     className="form-control"
-                    value={fileNames[index] || ''}
+                    value={fileItem.name}
                     onChange={(e) => handleFileNameChange(e, index)}
                     placeholder="Ingresa un nombre para el archivo"
                   />
+                  <select
+                    className="form-control mt-2"
+                    value={fileItem.type}
+                    onChange={(e) => handleFileTypeChange(e, index)}
+                  >
+                    <option value="">-- Selecciona el tipo de archivo --</option>
+                    {fileTypeOptions.map((typeOption, idx) => (
+                      <option key={idx} value={typeOption}>{typeOption}</option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    className="btn btn-danger mt-2"
+                    onClick={() => handleRemoveFile(index)}
+                  >
+                    Eliminar
+                  </button>
                 </div>
               ))}
 
