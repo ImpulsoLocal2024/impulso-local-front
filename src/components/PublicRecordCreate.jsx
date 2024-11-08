@@ -119,8 +119,9 @@ export default function PublicRecordCreate() {
           `https://impulso-local-back.onrender.com/api/inscriptions/tables/${tableName}/fields`
         );
 
+        // Excluir además el campo "Acepta terminos"
         const filteredFields = fieldsResponse.data.filter(
-          (field) => !['estado', 'asesor', 'id'].includes(field.column_name.toLowerCase())
+          (field) => !['estado', 'asesor', 'id', 'Acepta terminos'].includes(field.column_name.toLowerCase())
         );
         setFields(filteredFields);
 
@@ -200,7 +201,7 @@ export default function PublicRecordCreate() {
       }
     } catch (error) {
       console.error('Error validando el campo:', error);
-      // Opcional: puedes establecer un error general aquí si lo deseas
+      // Establecer un error general para el usuario
       setError('Error validando el campo. Por favor, inténtalo de nuevo más tarde.');
     }
   };
