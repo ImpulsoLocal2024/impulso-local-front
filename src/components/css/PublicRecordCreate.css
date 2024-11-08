@@ -1,14 +1,14 @@
 /* Container principal para el diseño en pantalla completa */
 .container-fluid.d-flex {
     display: flex;
-    height: 100vh;
-    overflow: hidden;
+    min-height: 100vh; /* Cambia height a min-height para permitir crecimiento */
+    overflow: auto; /* Permite desplazamiento si el contenido es más alto que la pantalla */
   }
   
   /* Sidebar (aside) */
   .sidebar-public {
     width: 250px;
-    height: 100vh !important;
+    height: 100vh !important; /* Sidebar fijo en la pantalla */
     color: white;
     padding: 20px;
     background-color: #E61A4E !important;
@@ -16,9 +16,10 @@
     align-items: center;
     justify-content: center;
     text-align: center;
-    position: fixed;
+    position: fixed; /* Fija el aside al lado izquierdo */
     top: 0;
     left: 0;
+    overflow-y: auto; /* Scroll interno en el aside si el contenido es más largo */
   }
   
   /* Ocultar el aside y expandir el formulario en dispositivos móviles */
@@ -47,7 +48,7 @@
     background-color: #f7f7f7;
     padding: 40px;
     margin-left: 250px;
-    overflow-y: auto;
+    overflow-y: auto; /* Permite desplazamiento dentro del formulario */
   }
   
   /* Encabezado del formulario */
@@ -97,4 +98,4 @@
     border-radius: 5px;
     margin-top: 10px;
   }
-   
+  
