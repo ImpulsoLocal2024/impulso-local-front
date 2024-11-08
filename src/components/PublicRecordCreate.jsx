@@ -279,7 +279,7 @@ export default function PublicRecordCreate() {
 
   return (
     <div className="container-fluid d-flex">
-      <aside className="sidebar bg-red">
+      <aside className="sidebar-public bg-red">
         <h2>Inscripción</h2>
       </aside>
       <main className="form-wrapper">
