@@ -7,9 +7,10 @@
   /* Sidebar (aside) */
   .sidebar {
     width: 250px;
+    height: auto !important;
     color: white;
     padding: 20px;
-    background-color: #E61A4E;
+    background-color: #E61A4E !important;
     display: flex;
     align-items: center;
     justify-content: center;
