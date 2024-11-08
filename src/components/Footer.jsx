@@ -8,7 +8,7 @@ export default function Footer() {
           <b>Version</b> 2.0
         </div>
         <strong>
-          Copyright © 2024 <a href="#">Impulso Capital - Software desarrollado por QAAST</a>.
+          Copyright © 2024 <a href="#">Impulso Local - Software desarrollado por QAAST</a>.
         </strong>{' '}
         Todos los derechos reservados
       </footer>
