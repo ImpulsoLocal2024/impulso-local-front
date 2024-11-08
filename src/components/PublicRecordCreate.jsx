@@ -1,4 +1,3 @@
-// PublicRecordCreate.jsx
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
@@ -14,11 +13,8 @@ export default function PublicRecordCreate() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [successMessage, setSuccessMessage] = useState('');
+  const [fileList, setFileList] = useState([]);
 
-  // Estado para manejo de archivos
-  const [fileList, setFileList] = useState([]); // Cada elemento será { file: File, name: string, type: string }
-
-  // Opciones para el tipo de archivo
   const fileTypeOptions = [
     "Copia de documento de identidad",
     "Factura de servicio publico",
@@ -37,18 +33,16 @@ export default function PublicRecordCreate() {
     "Otros"
   ];
 
-  // Función para normalizar los nombres de los campos
   const normalize = (str) => {
     return str
       .toLowerCase()
-      .normalize("NFD") // Normaliza los caracteres unicode
-      .replace(/[\u0300-\u036f]/g, "") // Elimina los acentos
-      .replace(/[^a-z0-9]/g, '_') // Reemplaza caracteres especiales por guiones bajos
-      .replace(/_+/g, '_') // Reemplaza múltiples guiones bajos por uno solo
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-z0-9]/g, '_')
+      .replace(/_+/g, '_')
       .trim();
   };
 
-  // Mapeo de nombres personalizados para los campos
   const fieldLabels = {
     [normalize("Nombres")]: "Nombres",
     [normalize("Apellidos")]: "Apellidos",
@@ -102,14 +96,12 @@ export default function PublicRecordCreate() {
     [normalize("El dueño del emprendimiento es funcionario publico")]: "¿El dueño del emprendimiento es funcionario público?"
   };
 
-  // Definir los campos que son de tipo fecha
   const dateFields = new Set([
     normalize("Fecha de nacimiento"),
     normalize("Fecha de inicio actividad economica"),
     normalize("Fecha de registro en Cámara de Comercio")
   ]);
 
-  // Obtener los campos de la tabla y datos relacionados
   useEffect(() => {
     const fetchFieldsData = async () => {
       try {
@@ -117,7 +109,6 @@ export default function PublicRecordCreate() {
           `https://impulso-local-back.onrender.com/api/inscriptions/tables/${tableName}/fields`
         );
 
-        // Filtrar los campos para excluir 'Estado', 'Asesor' e 'ID'
         const filteredFields = fieldsResponse.data.filter(
           (field) => !['estado', 'asesor', 'id'].includes(field.column_name.toLowerCase())
         );
@@ -138,42 +129,36 @@ export default function PublicRecordCreate() {
     fetchFieldsData();
   }, [tableName]);
 
-  // Manejar cambios en los campos del formulario
   const handleChange = (e) => {
     setNewRecord({ ...newRecord, [e.target.name]: e.target.value });
   };
 
-  // Manejar selección de archivos
   const handleFileChange = (e) => {
     const selectedFile = e.target.files[0];
     if (selectedFile) {
       setFileList([...fileList, { file: selectedFile, name: '', type: '' }]);
     }
-    e.target.value = null; // Reinicia el input
+    e.target.value = null;
   };
 
-  // Manejar cambios en el nombre del archivo
   const handleFileNameChange = (e, index) => {
     const updatedFileList = [...fileList];
     updatedFileList[index].name = e.target.value;
     setFileList(updatedFileList);
   };
 
-  // Manejar cambios en el tipo de archivo
   const handleFileTypeChange = (e, index) => {
     const updatedFileList = [...fileList];
     updatedFileList[index].type = e.target.value;
     setFileList(updatedFileList);
   };
 
-  // Manejar eliminación de archivos de la lista
   const handleRemoveFile = (index) => {
     const updatedFileList = [...fileList];
     updatedFileList.splice(index, 1);
     setFileList(updatedFileList);
   };
 
-  // Manejar envío del formulario y subida de archivos
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError(null);
@@ -182,7 +167,6 @@ export default function PublicRecordCreate() {
     try {
       const token = localStorage.getItem('token');
 
-      // Primero, crear el registro
       const recordResponse = await axios.post(
         `https://impulso-local-back.onrender.com/api/inscriptions/tables/${tableName}/record/create`,
         newRecord,
@@ -193,21 +177,17 @@ export default function PublicRecordCreate() {
         }
       );
 
-      // Verificar que el registro se haya creado correctamente y que contenga un 'id'
       const createdRecordId = recordResponse.data?.record?.id || recordResponse.data?.id;
 
       if (!createdRecordId) {
         throw new Error('No se pudo obtener el ID del registro creado.');
       }
 
-      // Subir cada archivo con su nombre si hay archivos seleccionados
       if (fileList.length > 0) {
         const uploadPromises = fileList.map((fileItem) => {
           const formData = new FormData();
           formData.append('file', fileItem.file);
           formData.append('fileName', fileItem.name || fileItem.file.name);
-
-          // No se envía 'fileType' al backend, ya que no debe cambiar la lógica del backend
 
           return axios.post(
             `https://impulso-local-back.onrender.com/api/inscriptions/tables/${tableName}/record/${createdRecordId}/upload`,
@@ -221,7 +201,6 @@ export default function PublicRecordCreate() {
           );
         });
 
-        // Esperar a que todas las subidas de archivos finalicen
         await Promise.all(uploadPromises);
       }
 
@@ -236,29 +215,24 @@ export default function PublicRecordCreate() {
   };
 
   return (
-    <div className="content-wrapper">
-      <section className="content-header">
-        <div className="container-fluid">
-          <div className="row mb-2">
-            <div className="col-sm-6">
-              <h1>Crear Nuevo Registro (Acceso Público)</h1>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="content">
-        <div className="container-fluid">
+    <div className="container-fluid d-flex">
+      <aside className="sidebar bg-red">
+        <h2>Inscripción</h2>
+      </aside>
+      <main className="form-wrapper">
+        <section className="form-header">
+          <h1>Crear Nuevo Registro (Acceso Público)</h1>
+        </section>
+        <section className="form-content">
           {error && <div className="alert alert-danger">{error}</div>}
           {successMessage && <div className="alert alert-success">{successMessage}</div>}
           {loading ? (
             <div>Cargando...</div>
           ) : (
-            <form onSubmit={handleSubmit}>
+            <form onSubmit={handleSubmit} className="custom-form">
               {fields.map((field) => {
                 const normalizedColumnName = normalize(field.column_name);
 
-                // Excluir el campo 'id' por si acaso
                 if (normalizedColumnName === 'id') {
                   return null;
                 }
@@ -337,8 +311,8 @@ export default function PublicRecordCreate() {
               </button>
             </form>
           )}
-        </div>
-      </section>
+        </section>
+      </main>
     </div>
   );
 }
