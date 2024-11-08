@@ -160,8 +160,8 @@ export default function PublicRecordCreate() {
 
     // Validación en tiempo real para 'Numero de identificacion' y 'Correo electronico'
     if (
-      normalizedColumnName === normalize('Numero de identificacion') ||
-      normalizedColumnName === normalize('Correo electronico')
+      name === 'Numero de identificacion' ||
+      name === 'Correo electronico'
     ) {
       // Limpiar el timeout previo si existe
       if (typingTimeoutRef.current[name]) {
@@ -170,28 +170,27 @@ export default function PublicRecordCreate() {
 
       // Establecer un nuevo timeout
       typingTimeoutRef.current[name] = setTimeout(() => {
-        validateField(name, newValue, normalizedColumnName);
+        validateField(name, newValue);
       }, 500); // 500 ms de retraso después de que el usuario deja de escribir
     }
   };
 
-  const validateField = async (fieldKey, fieldValue, normalizedFieldName) => {
+  const validateField = async (fieldName, fieldValue) => {
     try {
-      // Enviar el nombre del campo normalizado al backend
       const response = await axios.post(
         `https://impulso-local-back.onrender.com/api/inscriptions/tables/${tableName}/validate`,
-        { fieldName: normalizedFieldName, fieldValue }
+        { fieldName, fieldValue }
       );
 
       if (response.data.exists) {
         setFieldErrors((prevErrors) => ({
           ...prevErrors,
-          [fieldKey]: `${fieldLabels[normalizedFieldName] || fieldKey} ya está registrado.`
+          [fieldName]: `${fieldLabels[normalize(fieldName)] || fieldName} ya está registrado.`
         }));
       } else {
         setFieldErrors((prevErrors) => {
           const newErrors = { ...prevErrors };
-          delete newErrors[fieldKey];
+          delete newErrors[fieldName];
           return newErrors;
         });
       }
