@@ -170,27 +170,28 @@ export default function PublicRecordCreate() {
 
       // Establecer un nuevo timeout
       typingTimeoutRef.current[name] = setTimeout(() => {
-        validateField(name, newValue);
+        validateField(name, newValue, normalizedColumnName);
       }, 500); // 500 ms de retraso después de que el usuario deja de escribir
     }
   };
 
-  const validateField = async (fieldName, fieldValue) => {
+  const validateField = async (fieldKey, fieldValue, normalizedFieldName) => {
     try {
+      // Enviar el nombre del campo normalizado al backend
       const response = await axios.post(
         `https://impulso-local-back.onrender.com/api/inscriptions/tables/${tableName}/validate`,
-        { fieldName, fieldValue }
+        { fieldName: normalizedFieldName, fieldValue }
       );
 
       if (response.data.exists) {
         setFieldErrors((prevErrors) => ({
           ...prevErrors,
-          [fieldName]: `${fieldLabels[normalize(fieldName)] || fieldName} ya está registrado.`
+          [fieldKey]: `${fieldLabels[normalizedFieldName] || fieldKey} ya está registrado.`
         }));
       } else {
         setFieldErrors((prevErrors) => {
           const newErrors = { ...prevErrors };
-          delete newErrors[fieldName];
+          delete newErrors[fieldKey];
           return newErrors;
         });
       }
