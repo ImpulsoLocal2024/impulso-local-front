@@ -17,19 +17,19 @@ export default function PublicRecordCreate() {
   const [successMessage, setSuccessMessage] = useState('');
   const [fileList, setFileList] = useState([]);
 
-  // Estados para validación en tiempo real
-  const [validationErrors, setValidationErrors] = useState({});
+  // Estados para validación
+  const [fieldErrors, setFieldErrors] = useState({});
   const typingTimeoutRef = useRef({});
 
   const fileTypeOptions = [
     "Copia de documento de identidad",
-    "Factura de servicio publico",
+    "Factura de servicio público",
     "Evidencia de existencia de mínimo un año",
     "Registro Cámara de Comercio (solo si aplica)",
     "RUT",
     "Certificado de ventas",
     "Evidencia generación de empleo",
-    "Certificación discapacidad expedida por Secretaria de Salud (Si aplica)",
+    "Certificación discapacidad expedida por Secretaría de Salud (Si aplica)",
     "Certificado de cuidador (Si aplica)",
     "Certificado de Población indígena (Si aplica)",
     "Certificación de RIVI (Si aplica)",
@@ -73,24 +73,24 @@ export default function PublicRecordCreate() {
     [normalize("Personas a cargo")]: "Personas a cargo",
     [normalize("Nombre del emprendimiento")]: "Nombre de la unidad de negocio",
     [normalize("Fecha de inicio actividad economica")]: "Fecha de inicio actividad económica",
-    [normalize("Esta registrado y renovado ante la Camara de Comercio")]: "¿Su unidad de negocio está registrado ante la Cámara de Comercio?",
-    [normalize("Logro renovar la matricula del negocio a comienzos del 2023")]: "¿Logró renovar la matrícula del negocio a comienzos del  2024?",
+    [normalize("Esta registrado y renovado ante la Camara de Comercio")]: "¿Su unidad de negocio está registrada ante la Cámara de Comercio?",
+    [normalize("Logro renovar la matricula del negocio a comienzos del 2023")]: "¿Logró renovar la matrícula del negocio a comienzos del 2024?",
     [normalize("Fecha de registro en Cámara de Comercio")]: "Fecha de registro en Cámara de Comercio (DD/MM/AAAA)",
     [normalize("NIT")]: "NIT (sin dígito de verificación)",
     [normalize("Localidad de la unidad de negocio")]: "Localidad de la unidad de negocio",
-    [normalize("Direccion de la unidad de negocio")]: "Dirección en donde se desarrolla la actividad de la unidad de negocio (debe coincidir con el servicio público que va a adjuntar más adelante)",
+    [normalize("Direccion de la unidad de negocio")]: "Dirección donde se desarrolla la actividad de la unidad de negocio (debe coincidir con el servicio público que va a adjuntar más adelante)",
     [normalize("En esta direccion tambien es su vivienda")]: "¿En esta dirección también es su vivienda?",
     [normalize("Barrio de la unidad de negocio")]: "Barrio de la unidad de negocio",
     [normalize("Telefono fijo de la unidad de negocio")]: "Teléfono fijo de la unidad de negocio",
     [normalize("El negocio se encuentra ubicado en area")]: "¿El negocio se encuentra ubicado en área?",
     [normalize("Estrato socioeconomico de su unidad de negocio")]: "Estrato socioeconómico de su unidad de negocio",
     [normalize("Cuanto tiempo de funcionamiento tiene su emprendimiento")]: "¿Cuánto tiempo de funcionamiento tiene su unidad de negocio?",
-    [normalize("Vendedor informal o ambulante registrado en el HEMI con RIVI")]: "¿Usted es vendedor informal/ambulante registrado en el HEMI con RIVI de la localidad por la cual usted se postula?",
+    [normalize("Vendedor informal o ambulante registrado en el HEMI con RIVI")]: "¿Usted es vendedor informal/ambulante registrado en el HEMI con RIVI de la localidad por la cual se postula?",
     [normalize("Cuantas personas trabajan directamente en el emprendimiento")]: "¿Cuántas personas trabajan directamente en su unidad de negocio, incluyéndolo a usted?",
     [normalize("En que sector productivo se encuentra su emprendimiento")]: "¿En qué sector productivo se encuentra su unidad de negocio?",
     [normalize("Cual es la oferta de productos o servicios de su negocio")]: "¿Cuál es la oferta de productos o servicios de su unidad de negocio?",
     [normalize("Realiza actividades sostenibles y en proceso de reconversion")]: "¿Su unidad de negocio realiza actividades sostenibles y en proceso de reconversión dirigidas al cuidado del medio ambiente?",
-    [normalize("Actividad que Ud. Implementa sostenible y de reconversion")]: "¿Cuál es esa actividad que Ud. implementa que es sostenible y en proceso de reconversión dirigidas al cuidado del medio ambiente?",
+    [normalize("Actividad que Ud. Implementa sostenible y de reconversion")]: "¿Cuál es esa actividad que usted implementa que es sostenible y en proceso de reconversión dirigidas al cuidado del medio ambiente?",
     [normalize("Tiene acceso a internet y a un dispositivo")]: "¿Tiene acceso a internet y/o a un dispositivo que le permita acceder a las cápsulas de conocimiento?",
     [normalize("Cuenta con plan de datos en su celular")]: "¿Cuenta con plan de datos en su celular?",
     [normalize("Dispone de una cuenta bancaria o billetera electronica")]: "¿Dispone de una cuenta bancaria o algún servicio de billetera electrónica que le permita recibir el incentivo económico?",
@@ -149,6 +149,15 @@ export default function PublicRecordCreate() {
 
     setNewRecord({ ...newRecord, [name]: newValue });
 
+    // Remover el error si el campo ya tiene valor
+    if (newValue && newValue.trim() !== '') {
+      setFieldErrors((prevErrors) => {
+        const newErrors = { ...prevErrors };
+        delete newErrors[name];
+        return newErrors;
+      });
+    }
+
     // Validación en tiempo real para 'Numero de identificacion' y 'Correo electronico'
     if (
       normalizedColumnName === normalize('Numero de identificacion') ||
@@ -174,12 +183,12 @@ export default function PublicRecordCreate() {
       );
 
       if (response.data.exists) {
-        setValidationErrors((prevErrors) => ({
+        setFieldErrors((prevErrors) => ({
           ...prevErrors,
           [fieldName]: `${fieldLabels[normalize(fieldName)] || fieldName} ya está registrado.`
         }));
       } else {
-        setValidationErrors((prevErrors) => {
+        setFieldErrors((prevErrors) => {
           const newErrors = { ...prevErrors };
           delete newErrors[fieldName];
           return newErrors;
@@ -221,8 +230,24 @@ export default function PublicRecordCreate() {
     setError(null);
     setSuccessMessage('');
 
+    // Verificar si hay campos vacíos
+    const emptyFields = {};
+    fields.forEach((field) => {
+      const fieldName = field.column_name;
+      const value = newRecord[fieldName];
+      if (!value || value.trim() === '') {
+        emptyFields[fieldName] = `${fieldLabels[normalize(fieldName)] || fieldName} es obligatorio.`;
+      }
+    });
+
+    if (Object.keys(emptyFields).length > 0) {
+      setFieldErrors((prevErrors) => ({ ...prevErrors, ...emptyFields }));
+      setError('Por favor, complete todos los campos obligatorios.');
+      return;
+    }
+
     // Verificar si hay errores de validación
-    if (Object.keys(validationErrors).length > 0) {
+    if (Object.keys(fieldErrors).length > 0) {
       setError('Por favor, corrija los errores antes de enviar el formulario.');
       return;
     }
@@ -320,16 +345,20 @@ export default function PublicRecordCreate() {
                     ) : (
                       <>
                         <input
-                          type={dateFields.has(normalizedColumnName) ? "date" : "text"}
+                          type={dateFields.has(normalizedColumnName) ? 'date' : 'text'}
                           name={field.column_name}
-                          value={dateFields.has(normalizedColumnName) && newRecord[field.column_name] ? newRecord[field.column_name].split('/').reverse().join('-') : newRecord[field.column_name] || ''}
+                          value={
+                            dateFields.has(normalizedColumnName) && newRecord[field.column_name]
+                              ? newRecord[field.column_name].split('/').reverse().join('-')
+                              : newRecord[field.column_name] || ''
+                          }
                           onChange={handleChange}
                           className="form-control"
                         />
-                        {validationErrors[field.column_name] && (
-                          <div className="text-danger">{validationErrors[field.column_name]}</div>
-                        )}
                       </>
+                    )}
+                    {fieldErrors[field.column_name] && (
+                      <div className="text-danger">{fieldErrors[field.column_name]}</div>
                     )}
                   </div>
                 );
@@ -361,7 +390,9 @@ export default function PublicRecordCreate() {
                   >
                     <option value="">-- Selecciona el tipo de archivo --</option>
                     {fileTypeOptions.map((typeOption, idx) => (
-                      <option key={idx} value={typeOption}>{typeOption}</option>
+                      <option key={idx} value={typeOption}>
+                        {typeOption}
+                      </option>
                     ))}
                   </select>
                   <button
