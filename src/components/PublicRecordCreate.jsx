@@ -21,6 +21,10 @@ export default function PublicRecordCreate() {
   const [fieldErrors, setFieldErrors] = useState({});
   const typingTimeoutRef = useRef({});
 
+  // Estado para el checkbox de aceptación de términos
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [termsError, setTermsError] = useState(null);
+
   const fileTypeOptions = [
     "Copia de documento de identidad",
     "Factura de servicio público",
@@ -196,6 +200,8 @@ export default function PublicRecordCreate() {
       }
     } catch (error) {
       console.error('Error validando el campo:', error);
+      // Opcional: puedes establecer un error general aquí si lo deseas
+      setError('Error validando el campo. Por favor, inténtalo de nuevo más tarde.');
     }
   };
 
@@ -225,10 +231,18 @@ export default function PublicRecordCreate() {
     setFileList(updatedFileList);
   };
 
+  const handleTermsChange = (e) => {
+    setAcceptedTerms(e.target.checked);
+    if (e.target.checked) {
+      setTermsError(null);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError(null);
     setSuccessMessage('');
+    setTermsError(null); // Resetear el error de términos
 
     // Verificar si hay campos vacíos
     const emptyFields = {};
@@ -252,12 +266,24 @@ export default function PublicRecordCreate() {
       return;
     }
 
+    // Verificar si los términos han sido aceptados
+    if (!acceptedTerms) {
+      setTermsError('Por favor, acepte los términos y condiciones.');
+      return;
+    }
+
     try {
       const token = localStorage.getItem('token');
 
+      // Agregar el campo "Acepta terminos" al newRecord
+      const recordToSubmit = {
+        ...newRecord,
+        "Acepta terminos": true // Siempre será true aquí, ya que se verifica antes
+      };
+
       const recordResponse = await axios.post(
         `https://impulso-local-back.onrender.com/api/inscriptions/tables/${tableName}/record/create`,
-        newRecord,
+        recordToSubmit,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -363,6 +389,30 @@ export default function PublicRecordCreate() {
                   </div>
                 );
               })}
+
+              {/* Checkbox de aceptación de términos */}
+              <div className="form-group">
+                <div className="form-check">
+                  <input
+                    type="checkbox"
+                    className="form-check-input"
+                    id="acceptedTerms"
+                    checked={acceptedTerms}
+                    onChange={handleTermsChange}
+                  />
+                  <label className="form-check-label" htmlFor="acceptedTerms">
+                    Acepto los{' '}
+                    <a href="https://il30.propais.org.co/terminos-y-condiciones" target="_blank" rel="noopener noreferrer">
+                      compromisos, términos y condiciones
+                    </a>{' '}
+                    y la{' '}
+                    <a href="https://propais.org.co/politica-de-privacidad-uso-de-datos-personales/" target="_blank" rel="noopener noreferrer">
+                      política de tratamiento de datos personales
+                    </a>.
+                  </label>
+                </div>
+                {termsError && <div className="text-danger">{termsError}</div>}
+              </div>
 
               <div className="form-group">
                 <label>Seleccionar archivo para subir</label>
