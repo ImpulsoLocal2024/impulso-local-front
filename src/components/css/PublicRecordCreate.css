@@ -1,93 +1,99 @@
 /* Container principal para el diseño en pantalla completa */
 .container-fluid.d-flex {
-    display: flex;
-    height: 100vh; /* Hace que el contenedor principal ocupe toda la altura de la ventana */
-    overflow: hidden; /* Evita el desplazamiento en el contenedor principal */
+    display: flex !important;
+    height: 100vh !important;
+    overflow: hidden !important; /* Evita el desplazamiento en el contenedor principal */
   }
   
   /* Sidebar (aside) */
   .sidebar-public {
-    width: 250px;
+    width: 250px !important;
     height: 100vh !important; /* Altura fija de toda la ventana */
-    color: white;
-    padding: 20px;
+    color: white !important;
+    padding: 20px !important;
     background-color: #E61A4E !important;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-    position: fixed; /* Fija el aside al lado izquierdo */
-    top: 0;
-    left: 0;
-    overflow-y: auto; /* Agrega scroll interno al aside en caso de contenido adicional */
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    text-align: center !important;
+    position: fixed !important; /* Fija el aside al lado izquierdo */
+    top: 0 !important;
+    left: 0 !important;
+    overflow-y: auto !important; /* Agrega scroll interno al aside en caso de contenido adicional */
   }
   
   /* Ocultar el aside y expandir el formulario en dispositivos móviles */
   @media (max-width: 768px) {
     .sidebar-public {
-      display: none;
+      display: none !important;
     }
-    
+  
+    /* Contenedor principal en móviles para asegurar ancho completo */
+    .container-fluid.d-flex {
+      display: block !important; /* Elimina el flex para que ocupe todo el ancho */
+    }
+  
     .form-wrapper {
-      margin-left: 0; /* Elimina el margen izquierdo para ocupar todo el ancho */
-      width: 100%; /* Asegura que el formulario ocupe todo el ancho */
-      padding: 20px; /* Ajusta el padding para dispositivos móviles */
+      margin-left: 0 !important; /* Elimina el margen izquierdo para ocupar todo el ancho */
+      width: 100vw !important; /* Asegura que el formulario ocupe todo el ancho de la pantalla */
+      padding: 20px !important; /* Ajusta el padding para dispositivos móviles */
+      max-width: 100% !important; /* Asegura que no haya límite de ancho */
     }
   }
   
   /* Contenedor del formulario principal */
   .form-wrapper {
-    flex: 1;
-    background-color: #f7f7f7;
-    padding: 40px;
-    margin-left: 250px; /* Espacio para que el formulario no quede detrás del aside */
-    overflow-y: auto; /* Permite desplazamiento dentro del formulario */
+    flex: 1 !important;
+    background-color: #f7f7f7 !important;
+    padding: 40px !important;
+    margin-left: 250px !important; /* Espacio para que el formulario no quede detrás del aside */
+    overflow-y: auto !important; /* Permite desplazamiento dentro del formulario */
   }
   
   /* Encabezado del formulario */
   .form-header {
-    text-align: center;
-    margin-bottom: 20px;
+    text-align: center !important;
+    margin-bottom: 20px !important;
   }
   
   /* Contenido del formulario */
   .form-content {
-    background-color: #fff;
-    padding: 20px;
-    border-radius: 10px;
+    background-color: #fff !important;
+    padding: 20px !important;
+    border-radius: 10px !important;
   }
   
   /* Estilo de cada grupo de formulario */
   .form-group {
-    margin-bottom: 15px;
+    margin-bottom: 15px !important;
   }
   
   /* Estilo para los inputs y selects */
   .form-control {
-    width: 100%;
-    padding: 10px;
-    border: 1px solid #ccc;
-    border-radius: 5px;
+    width: 100% !important;
+    padding: 10px !important;
+    border: 1px solid #ccc !important;
+    border-radius: 5px !important;
   }
   
   /* Botón principal */
   .btn-primary {
-    background-color: #ff4d4d;
-    border: none;
-    padding: 10px 20px;
-    font-weight: bold;
-    border-radius: 5px;
-    color: white;
-    margin-top: 20px;
+    background-color: #ff4d4d !important;
+    border: none !important;
+    padding: 10px 20px !important;
+    font-weight: bold !important;
+    border-radius: 5px !important;
+    color: white !important;
+    margin-top: 20px !important;
   }
   
   /* Botón de eliminación */
   .btn-danger {
-    background-color: #e53935;
-    color: white;
-    border: none;
-    padding: 10px;
-    border-radius: 5px;
-    margin-top: 10px;
+    background-color: #e53935 !important;
+    color: white !important;
+    border: none !important;
+    padding: 10px !important;
+    border-radius: 5px !important;
+    margin-top: 10px !important;
   }
   
