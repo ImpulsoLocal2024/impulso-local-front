@@ -309,7 +309,7 @@ export default function PublicRecordCreate() {
       </aside>
       <main className="form-wrapper">
         <section className="form-header">
-          <h1>Crear Nuevo Registro (Acceso Público)</h1>
+          <h1>Nuevo Registro</h1>
         </section>
         <section className="form-content">
           {error && <div className="alert alert-danger">{error}</div>}
