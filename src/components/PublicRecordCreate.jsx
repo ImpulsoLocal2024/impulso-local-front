@@ -84,6 +84,13 @@ export default function PublicRecordCreate() {
     [normalize("El dueño del emprendimiento es funcionario publico")]: "¿El dueño del emprendimiento es funcionario público?"
   };
 
+  // Definir los campos que son de tipo fecha
+  const dateFields = new Set([
+    normalize("Fecha de nacimiento"),
+    normalize("Fecha de inicio actividad economica"),
+    normalize("Fecha de registro en Cámara de Comercio")
+  ]);
+
   // Obtener los campos de la tabla y datos relacionados
   useEffect(() => {
     const fetchFieldsData = async () => {
@@ -91,7 +98,6 @@ export default function PublicRecordCreate() {
         const fieldsResponse = await axios.get(
           `https://impulso-local-back.onrender.com/api/inscriptions/tables/${tableName}/fields`
         );
-
 
         // Filtrar los campos para excluir 'Estado', 'Asesor' e 'ID'
         const filteredFields = fieldsResponse.data.filter(
@@ -240,7 +246,7 @@ export default function PublicRecordCreate() {
                       </select>
                     ) : (
                       <input
-                        type="text"
+                        type={dateFields.has(normalizedColumnName) ? "date" : "text"}
                         name={field.column_name}
                         value={newRecord[field.column_name] || ''}
                         onChange={handleChange}
