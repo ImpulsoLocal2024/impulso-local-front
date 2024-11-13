@@ -85,7 +85,7 @@ export default function PublicRecordCreate() {
     [normalize("Barrio de la unidad de negocio")]: "Barrio del emprendimiento",
     [normalize("Telefono fijo de la unidad de negocio")]: "Teléfono fijo del emprendimiento",
     [normalize("El negocio se encuentra ubicado en area")]: "El negocio se encuentra ubicado en área:",
-    [normalize("Estrato socioeconomico de su unidad de negocio")]: "Estrato socioeconómico de su emprendimiento (en numeros)",
+    [normalize("Estrato socioeconomico de su unidad de negocio")]: "Estrato socioeconómico de su unidad de negocio",
     [normalize("Cuanto tiempo de funcionamiento tiene su emprendimiento")]: "¿Cuánto tiempo de funcionamiento tiene su emprendimiento?",
     [normalize("Vendedor informal o ambulante registrado en el HEMI con RIVI")]: "¿Usted es vendedor informal/ambulante registrado en el HEMI con RIVI de la localidad por la cual se postula?",
     [normalize("Cuantas personas trabajan directamente en el emprendimiento")]: "¿Cuántas personas trabajan directamente en su emprendimiento, incluyéndolo a usted?",
@@ -108,6 +108,15 @@ export default function PublicRecordCreate() {
     normalize("Fecha de nacimiento"),
     normalize("Fecha de inicio actividad economica"),
     normalize("Fecha de registro en Cámara de Comercio")
+  ]);
+
+  // Campos que deben aceptar solo números
+  const numericFields = new Set([
+    normalize("Edad"),
+    normalize("NIT"),
+    normalize("Valor de ventas promedio mensual"),
+    normalize("Numero de clientes actuales"),
+    normalize("Estrato socioeconomico de su unidad de negocio")
   ]);
 
   useEffect(() => {
@@ -148,6 +157,11 @@ export default function PublicRecordCreate() {
     if (dateFields.has(normalizedColumnName) && value) {
       const [year, month, day] = value.split('-');
       newValue = `${day}/${month}/${year}`;
+    }
+
+    // Si es un campo numérico, eliminar todo lo que no sea dígito
+    if (numericFields.has(normalizedColumnName)) {
+      newValue = newValue.replace(/\D/g, '');
     }
 
     setNewRecord({ ...newRecord, [name]: newValue });
@@ -375,7 +389,13 @@ export default function PublicRecordCreate() {
           ) : (
             <>
               <input
-                type={dateFields.has(normalizedColumnName) ? 'date' : 'text'}
+                type={
+                  dateFields.has(normalizedColumnName)
+                    ? 'date'
+                    : numericFields.has(normalizedColumnName)
+                    ? 'number'
+                    : 'text'
+                }
                 name={field.column_name}
                 value={
                   dateFields.has(normalizedColumnName) && newRecord[field.column_name]
