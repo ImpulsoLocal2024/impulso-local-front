@@ -285,6 +285,12 @@ export default function PublicRecordCreate() {
       return;
     }
 
+    // Verificar que al menos un archivo haya sido adjuntado
+    if (fileList.length === 0) {
+      setError('Debe adjuntar al menos un archivo que cumpla con los requerimientos.');
+      return;
+    }
+
     try {
       const token = localStorage.getItem('token');
 
