@@ -109,16 +109,20 @@ export default function PublicRecordCreate() {
     [normalize('Direccion')]: 'Dirección de residencia',
     [normalize('Barrio')]: 'Barrio de residencia',
     [normalize('Localidad de residencia')]: 'Localidad de residencia',
-    [normalize('Nivel educativo del empresario')]: 'Nivel educativo del emprendedor',
-    [normalize('Presenta algun tipo de discapacidad')]: '¿Presenta algún tipo de discapacidad?',
+    [normalize('Nivel educativo del empresario')]:
+      'Nivel educativo del emprendedor',
+    [normalize('Presenta algun tipo de discapacidad')]:
+      '¿Presenta algún tipo de discapacidad?',
     [normalize('Grupo etnico')]: 'Grupo étnico',
-    [normalize('Es victima del conflicto armado')]: '¿Es víctima del conflicto armado?',
+    [normalize('Es victima del conflicto armado')]:
+      '¿Es víctima del conflicto armado?',
     [normalize('Es cuidador de alguna de las siguientes personas')]:
       '¿Es cuidador de alguna de las siguientes personas?',
     [normalize('Identidad de genero')]: 'Identidad de género',
     [normalize('Personas a cargo')]: 'Personas a cargo',
     [normalize('Nombre del emprendimiento')]: 'Nombre del emprendimiento',
-    [normalize('Fecha de inicio actividad economica')]: 'Fecha de inicio actividad económica',
+    [normalize('Fecha de inicio actividad economica')]:
+      'Fecha de inicio actividad económica',
     [normalize('Esta registrado y renovado ante la Camara de Comercio')]:
       '¿Su emprendimiento está registrada ante la Cámara de Comercio?',
     [normalize('Logro renovar la matricula del negocio a comienzos del 2023')]:
@@ -130,11 +134,15 @@ export default function PublicRecordCreate() {
       'Localidad donde se encuentra en funcionamiento el emprendimiento',
     [normalize('Direccion de la unidad de negocio')]:
       'Dirección donde se desarrolla la actividad del emprendimiento (debe coincidir con el servicio público que va a adjuntar más adelante)',
-    [normalize('En esta direccion tambien es su vivienda')]: '¿En esta dirección también es su vivienda?',
+    [normalize('En esta direccion tambien es su vivienda')]:
+      '¿En esta dirección también es su vivienda?',
     [normalize('Barrio de la unidad de negocio')]: 'Barrio del emprendimiento',
-    [normalize('Telefono fijo de la unidad de negocio')]: 'Teléfono fijo del emprendimiento',
-    [normalize('El negocio se encuentra ubicado en area')]: 'El negocio se encuentra ubicado en área:',
-    [normalize('Estrato socioeconomico de su unidad de negocio')]: 'Estrato socioeconómico de su unidad de negocio',
+    [normalize('Telefono fijo de la unidad de negocio')]:
+      'Teléfono fijo del emprendimiento',
+    [normalize('El negocio se encuentra ubicado en area')]:
+      'El negocio se encuentra ubicado en área:',
+    [normalize('Estrato socioeconomico de su unidad de negocio')]:
+      'Estrato socioeconómico de su unidad de negocio',
     [normalize('Cuanto tiempo de funcionamiento tiene su emprendimiento')]:
       '¿Cuánto tiempo de funcionamiento tiene su emprendimiento?',
     [normalize('Vendedor informal o ambulante registrado en el HEMI con RIVI')]:
@@ -151,12 +159,14 @@ export default function PublicRecordCreate() {
       'Si su respuesta anterior fue Si - ¿Cuál es esa actividad que usted implementa que es sostenible y en proceso de reconversión dirigidas al cuidado del medio ambiente?',
     [normalize('Tiene acceso a internet y a un dispositivo')]:
       '¿Tiene acceso a internet y/o a un dispositivo que le permita acceder a las cápsulas de conocimiento?',
-    [normalize('Cuenta con plan de datos en su celular')]: '¿Cuenta con plan de datos en su celular?',
+    [normalize('Cuenta con plan de datos en su celular')]:
+      '¿Cuenta con plan de datos en su celular?',
     [normalize('Dispone de una cuenta bancaria o billetera electronica')]:
       '¿Dispone de una cuenta bancaria o algún servicio de billetera electrónica que le permita recibir el incentivo económico?',
     [normalize('Cual')]: '¿Cuál?',
     [normalize('Numero de clientes actuales')]: 'Número de clientes actuales',
-    [normalize('Valor de ventas promedio mensual')]: 'Valor de ventas promedio mensual',
+    [normalize('Valor de ventas promedio mensual')]:
+      'Valor de ventas promedio mensual',
     [normalize('Cuanto tiempo dispone para el proceso de formacion y PI')]:
       '¿De cuánto tiempo dispone para dedicarle al proceso de formación y realización del plan de inversión?',
     [normalize('Para la comercializacion de su producto utiliza canales como')]:
@@ -279,7 +289,9 @@ export default function PublicRecordCreate() {
     } catch (error) {
       console.error('Error validando el campo:', error);
       // Establecer un error general para el usuario
-      setModalMessage('Error validando el campo. Por favor, inténtalo de nuevo más tarde.');
+      setModalMessage(
+        'Error validando el campo. Por favor, inténtalo de nuevo más tarde.'
+      );
       setModalType('error');
       setShowModal(true);
     }
@@ -438,13 +450,27 @@ export default function PublicRecordCreate() {
         await Promise.all(uploadPromises);
       }
 
-      setModalMessage('Registro y archivos subidos exitosamente');
+      // Obtener la fecha y hora actuales
+      const currentDate = new Date();
+      const day = String(currentDate.getDate()).padStart(2, '0');
+      const month = String(currentDate.getMonth() + 1).padStart(2, '0'); // Los meses comienzan desde 0
+      const year = currentDate.getFullYear();
+      const hours = String(currentDate.getHours()).padStart(2, '0');
+      const minutes = String(currentDate.getMinutes()).padStart(2, '0');
+
+      // Construir el mensaje de éxito
+      const successMessage = `Ya logró el primer paso para ser parte del programa Impulso Local.
+Su registro ha quedado grabado en la base de datos de la plataforma con el número ${createdRecordId} y su fecha de registro es día (${day})-mes (${month})–año (${year})- hora (${hours}:${minutes}).
+Pronto un asesor se comunicará con Ud. mediante los canales de comunicación que proporcionó, para indicarle si la información y los archivos que cargó en su inscripción cumplen con los requisitos del programa.
+Por favor, estar atento(a) a los datos de contacto que suministró.`;
+
+      setModalMessage(successMessage);
       setModalType('success');
       setShowModal(true);
 
       setTimeout(() => {
         navigate(`/table/${tableName}`);
-      }, 2000);
+      }, 4000);
     } catch (error) {
       console.error('Error creando el registro o subiendo los archivos:', error);
       setModalMessage('Error creando el registro o subiendo los archivos');
@@ -594,8 +620,8 @@ export default function PublicRecordCreate() {
 
               {/* Texto adicional después del checkbox */}
               <p>
-                Según lo que usted haya indicado en el formulario de inscripción, deben
-                de cargar los siguientes documentos
+                Según lo que usted haya indicado en el formulario de inscripción,
+                debe cargar los siguientes documentos
               </p>
 
               <div className="form-group">
