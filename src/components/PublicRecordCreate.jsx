@@ -26,20 +26,18 @@ export default function PublicRecordCreate() {
   const [termsError, setTermsError] = useState(null);
 
   const fileTypeOptions = [
-    "Copia de documento de identidad",
-    "Factura de servicio público",
+    "Copia de documento de identidad por ambas caras",
+    "Factura de servicio publico por ambas caras",
     "Evidencia de existencia de mínimo un año",
-    "Registro Cámara de Comercio (solo si aplica)",
+    "Registro Cámara de Comercio (Solo si aplica)",
     "RUT",
-    "Certificado de ventas",
-    "Evidencia generación de empleo",
-    "Certificación discapacidad expedida por Secretaría de Salud (Si aplica)",
-    "Certificado de cuidador (Si aplica)",
-    "Certificado de Población indígena (Si aplica)",
-    "Certificación de RIVI (Si aplica)",
-    "Antecedentes policía",
-    "Antecedentes procuraduría",
-    "Antecedentes contraloría",
+    "Certificación discapacidad expedida por Secretaria de Salud (Solo si aplica)",
+    "Certificado de cuidador (Solo si aplica)",
+    "Certificado de Población indígena (Solo si aplica)",
+    "Certificación de RIVI (Solo si aplica)",
+    "Antecedentes Policía",
+    "Antecedentes Procuraduría",
+    "Antecedentes Contraloría",
     "Otros"
   ];
 
@@ -68,7 +66,7 @@ export default function PublicRecordCreate() {
     [normalize("Direccion")]: "Dirección de residencia",
     [normalize("Barrio")]: "Barrio de residencia",
     [normalize("Localidad de residencia")]: "Localidad de residencia",
-    [normalize("Nivel educativo del empresario")]: "Nivel educativo del empresario",
+    [normalize("Nivel educativo del empresario")]: "Nivel educativo del emprendedor",
     [normalize("Presenta algun tipo de discapacidad")]: "¿Presenta algún tipo de discapacidad?",
     [normalize("Grupo etnico")]: "Grupo étnico",
     [normalize("Es victima del conflicto armado")]: "¿Es víctima del conflicto armado?",
@@ -81,20 +79,20 @@ export default function PublicRecordCreate() {
     [normalize("Logro renovar la matricula del negocio a comienzos del 2023")]: "¿Logró renovar la matrícula del negocio a comienzos del 2024?",
     [normalize("Fecha de registro en Cámara de Comercio")]: "Fecha de registro en Cámara de Comercio (DD/MM/AAAA)",
     [normalize("NIT")]: "NIT (sin dígito de verificación)",
-    [normalize("Localidad de la unidad de negocio")]: "Localidad del emprendimiento",
+    [normalize("Localidad de la unidad de negocio")]: "Localidad donde se encuentra en funcionamiento el emprendimiento",
     [normalize("Direccion de la unidad de negocio")]: "Dirección donde se desarrolla la actividad del emprendimiento (debe coincidir con el servicio público que va a adjuntar más adelante)",
     [normalize("En esta direccion tambien es su vivienda")]: "¿En esta dirección también es su vivienda?",
     [normalize("Barrio de la unidad de negocio")]: "Barrio del emprendimiento",
     [normalize("Telefono fijo de la unidad de negocio")]: "Teléfono fijo del emprendimiento",
-    [normalize("El negocio se encuentra ubicado en area")]: "¿El negocio se encuentra ubicado en área?",
-    [normalize("Estrato socioeconomico de su unidad de negocio")]: "Estrato socioeconómico de su emprendimiento",
+    [normalize("El negocio se encuentra ubicado en area")]: "El negocio se encuentra ubicado en área:",
+    [normalize("Estrato socioeconomico de su unidad de negocio")]: "Estrato socioeconómico de su emprendimiento (en numeros)",
     [normalize("Cuanto tiempo de funcionamiento tiene su emprendimiento")]: "¿Cuánto tiempo de funcionamiento tiene su emprendimiento?",
     [normalize("Vendedor informal o ambulante registrado en el HEMI con RIVI")]: "¿Usted es vendedor informal/ambulante registrado en el HEMI con RIVI de la localidad por la cual se postula?",
     [normalize("Cuantas personas trabajan directamente en el emprendimiento")]: "¿Cuántas personas trabajan directamente en su emprendimiento, incluyéndolo a usted?",
     [normalize("En que sector productivo se encuentra su emprendimiento")]: "¿En qué sector productivo se encuentra su emprendimiento?",
     [normalize("Cual es la oferta de productos o servicios de su negocio")]: "¿Cuál es la oferta de productos o servicios de su emprendimiento?",
     [normalize("Realiza actividades sostenibles y en proceso de reconversion")]: "¿Su emprendimiento realiza actividades sostenibles y en proceso de reconversión dirigidas al cuidado del medio ambiente?",
-    [normalize("Actividad que Ud. Implementa sostenible y de reconversion")]: "¿Cuál es esa actividad que usted implementa que es sostenible y en proceso de reconversión dirigidas al cuidado del medio ambiente?",
+    [normalize("Actividad que Ud. Implementa sostenible y de reconversion")]: "Si su respuesta anterior fue Si - ¿Cuál es esa actividad que usted implementa que es sostenible y en proceso de reconversión dirigidas al cuidado del medio ambiente?",
     [normalize("Tiene acceso a internet y a un dispositivo")]: "¿Tiene acceso a internet y/o a un dispositivo que le permita acceder a las cápsulas de conocimiento?",
     [normalize("Cuenta con plan de datos en su celular")]: "¿Cuenta con plan de datos en su celular?",
     [normalize("Dispone de una cuenta bancaria o billetera electronica")]: "¿Dispone de una cuenta bancaria o algún servicio de billetera electrónica que le permita recibir el incentivo económico?",
@@ -329,6 +327,76 @@ export default function PublicRecordCreate() {
     }
   };
 
+  // Función para renderizar los campos con los textos adicionales
+  const renderFields = () => {
+    const elements = [];
+    let personalDataTextInserted = false;
+    let businessInfoTextInserted = false;
+
+    fields.forEach((field) => {
+      const normalizedColumnName = normalize(field.column_name);
+
+      if (!personalDataTextInserted && normalizedColumnName === normalize("Nombres")) {
+        elements.push(
+          <p key="personal-data-intro">A continuación usted debe proporcionar sus datos personales</p>
+        );
+        personalDataTextInserted = true;
+      }
+
+      if (!businessInfoTextInserted && normalizedColumnName === normalize("Nombre del emprendimiento")) {
+        elements.push(
+          <p key="business-info-intro">A continuación, deberá describir la información correspondiente a su emprendimiento</p>
+        );
+        businessInfoTextInserted = true;
+      }
+
+      // Excluir el campo "Acepta terminos"
+      if (normalizedColumnName === normalize("acepta terminos")) {
+        return;
+      }
+
+      elements.push(
+        <div className="form-group" key={field.column_name}>
+          <label>{fieldLabels[normalizedColumnName] || field.column_name}</label>
+          {Array.isArray(relatedData[field.column_name]) ? (
+            <select
+              className="form-control"
+              name={field.column_name}
+              value={newRecord[field.column_name] || ''}
+              onChange={handleChange}
+            >
+              <option value="">-- Selecciona una opción --</option>
+              {relatedData[field.column_name].map((relatedRecord) => (
+                <option key={relatedRecord.id} value={relatedRecord.id}>
+                  {relatedRecord.displayValue || `ID: ${relatedRecord.id}`}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <>
+              <input
+                type={dateFields.has(normalizedColumnName) ? 'date' : 'text'}
+                name={field.column_name}
+                value={
+                  dateFields.has(normalizedColumnName) && newRecord[field.column_name]
+                    ? newRecord[field.column_name].split('/').reverse().join('-')
+                    : newRecord[field.column_name] || ''
+                }
+                onChange={handleChange}
+                className="form-control"
+              />
+            </>
+          )}
+          {fieldErrors[field.column_name] && (
+            <div className="text-danger">{fieldErrors[field.column_name]}</div>
+          )}
+        </div>
+      );
+    });
+
+    return elements;
+  };
+
   return (
     <div className="container-fluid d-flex">
       <aside className="sidebar-public bg-red">
@@ -345,51 +413,7 @@ export default function PublicRecordCreate() {
             <div>Cargando...</div>
           ) : (
             <form onSubmit={handleSubmit} className="custom-form">
-              {fields.map((field) => {
-                const normalizedColumnName = normalize(field.column_name);
-
-                if (normalizedColumnName === 'id') {
-                  return null;
-                }
-
-                return (
-                  <div className="form-group" key={field.column_name}>
-                    <label>{fieldLabels[normalizedColumnName] || field.column_name}</label>
-                    {Array.isArray(relatedData[field.column_name]) ? (
-                      <select
-                        className="form-control"
-                        name={field.column_name}
-                        value={newRecord[field.column_name] || ''}
-                        onChange={handleChange}
-                      >
-                        <option value="">-- Selecciona una opción --</option>
-                        {relatedData[field.column_name].map((relatedRecord) => (
-                          <option key={relatedRecord.id} value={relatedRecord.id}>
-                            {relatedRecord.displayValue || `ID: ${relatedRecord.id}`}
-                          </option>
-                        ))}
-                      </select>
-                    ) : (
-                      <>
-                        <input
-                          type={dateFields.has(normalizedColumnName) ? 'date' : 'text'}
-                          name={field.column_name}
-                          value={
-                            dateFields.has(normalizedColumnName) && newRecord[field.column_name]
-                              ? newRecord[field.column_name].split('/').reverse().join('-')
-                              : newRecord[field.column_name] || ''
-                          }
-                          onChange={handleChange}
-                          className="form-control"
-                        />
-                      </>
-                    )}
-                    {fieldErrors[field.column_name] && (
-                      <div className="text-danger">{fieldErrors[field.column_name]}</div>
-                    )}
-                  </div>
-                );
-              })}
+              {renderFields()}
 
               {/* Checkbox de aceptación de términos */}
               <div className="form-group">
@@ -414,6 +438,9 @@ export default function PublicRecordCreate() {
                 </div>
                 {termsError && <div className="text-danger">{termsError}</div>}
               </div>
+
+              {/* Texto adicional después del checkbox */}
+              <p>Según lo que usted haya indicado en el formulario de inscripción, deben de cargar los siguientes documentos</p>
 
               <div className="form-group">
                 <label>Seleccionar archivo para subir</label>
