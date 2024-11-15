@@ -33,12 +33,16 @@ function Modal({ show, onClose, message, type }) {
     zIndex: 999,
   };
 
+  const handleClose = () => {
+    onClose();
+  };
+
   return (
     <>
-      <div style={overlayStyle} onClick={onClose}></div>
+      <div style={overlayStyle}></div>
       <div style={modalStyle}>
         <p style={{ whiteSpace: 'pre-wrap' }}>{message}</p>
-        <button onClick={onClose} className="btn btn-light">
+        <button onClick={handleClose} className="btn btn-light">
           Cerrar
         </button>
       </div>
@@ -403,6 +407,25 @@ export default function PublicRecordCreate() {
       return;
     }
 
+    // Validar información de los archivos
+    let fileErrors = [];
+    fileList.forEach((fileItem, index) => {
+      if (!fileItem.name || !fileItem.type) {
+        fileErrors.push(
+          `Por favor, complete la información del archivo ${index + 1}: ${
+            !fileItem.name ? 'Nombre del archivo' : ''
+          } ${!fileItem.type ? 'Tipo de archivo' : ''}`.trim()
+        );
+      }
+    });
+
+    if (fileErrors.length > 0) {
+      setModalMessage(fileErrors.join('\n'));
+      setModalType('error');
+      setShowModal(true);
+      return;
+    }
+
     try {
       const token = localStorage.getItem('token');
 
@@ -434,6 +457,7 @@ export default function PublicRecordCreate() {
           const formData = new FormData();
           formData.append('file', fileItem.file);
           formData.append('fileName', fileItem.name || fileItem.file.name);
+          formData.append('fileType', fileItem.type);
 
           return axios.post(
             `https://impulso-local-back.onrender.com/api/inscriptions/tables/${tableName}/record/${createdRecordId}/upload`,
@@ -468,9 +492,10 @@ Por favor, estar atento(a) a los datos de contacto que suministró.`;
       setModalType('success');
       setShowModal(true);
 
-      setTimeout(() => {
-        navigate(`/table/${tableName}`);
-      }, 4000);
+      // Eliminar redirección automática
+      // setTimeout(() => {
+      //   navigate(`/table/${tableName}`);
+      // }, 4000);
     } catch (error) {
       console.error('Error creando el registro o subiendo los archivos:', error);
       setModalMessage('Error creando el registro o subiendo los archivos');
@@ -567,6 +592,13 @@ Por favor, estar atento(a) a los datos de contacto que suministró.`;
     return elements;
   };
 
+  const handleModalClose = () => {
+    setShowModal(false);
+    if (modalType === 'success') {
+      navigate(`/table/${tableName}`);
+    }
+  };
+
   return (
     <div className="container-fluid d-flex">
       <aside className="sidebar-public bg-red">
@@ -614,7 +646,9 @@ Por favor, estar atento(a) a los datos de contacto que suministró.`;
                   </label>
                 </div>
                 {fieldErrors['acceptedTerms'] && (
-                  <div className="text-danger">{fieldErrors['acceptedTerms']}</div>
+                  <div className="text-danger">
+                    {fieldErrors['acceptedTerms']}
+                  </div>
                 )}
               </div>
 
@@ -674,13 +708,14 @@ Por favor, estar atento(a) a los datos de contacto que suministró.`;
       </main>
       <Modal
         show={showModal}
-        onClose={() => setShowModal(false)}
+        onClose={handleModalClose}
         message={modalMessage}
         type={modalType}
       />
     </div>
   );
 }
+
 
 
 
