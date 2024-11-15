@@ -192,6 +192,14 @@ export default function PublicRecordCreate() {
     normalize('Valor de ventas promedio mensual'),
     normalize('Numero de clientes actuales'),
     normalize('Estrato socioeconomico de su unidad de negocio'),
+    normalize('Telefono fijo'),
+    normalize('Celular'),
+    normalize('Celular 2'),
+  ]);
+
+  // Campos opcionales
+  const optionalFields = new Set([
+    normalize('Actividad que Ud. Implementa sostenible y de reconversion'),
   ]);
 
   useEffect(() => {
@@ -353,10 +361,14 @@ export default function PublicRecordCreate() {
     fields.forEach((field) => {
       const fieldName = field.column_name;
       const value = newRecord[fieldName];
+      const normalizedFieldName = normalize(fieldName);
+
       if (!value || value.trim() === '') {
-        emptyFields[fieldName] = `${
-          fieldLabels[normalize(fieldName)] || fieldName
-        } es obligatorio.`;
+        if (!optionalFields.has(normalizedFieldName)) {
+          emptyFields[fieldName] = `${
+            fieldLabels[normalizedFieldName] || fieldName
+          } es obligatorio.`;
+        }
       }
     });
 
@@ -574,7 +586,10 @@ Por favor, estar atento(a) a los datos de contacto que suministró.`;
                 value={
                   dateFields.has(normalizedColumnName) &&
                   newRecord[field.column_name]
-                    ? newRecord[field.column_name].split('/').reverse().join('-')
+                    ? newRecord[field.column_name]
+                        .split('/')
+                        .reverse()
+                        .join('-')
                     : newRecord[field.column_name] || ''
                 }
                 onChange={handleChange}
@@ -714,7 +729,7 @@ Por favor, estar atento(a) a los datos de contacto que suministró.`;
       />
     </div>
   );
-} 
+}
 
 
 
