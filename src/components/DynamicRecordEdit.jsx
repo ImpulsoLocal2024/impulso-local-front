@@ -101,7 +101,7 @@ export default function DynamicRecordEdit() {
         setEstadoFieldExists(estadoExists);
 
         // Excluir campos no deseados
-        const fieldsToExclude = ['Estado', 'cumple', 'descripcion cumplimiento', 'acepta terminos'];
+        const fieldsToExclude = ['Estado', 'acepta terminos'];
         const filteredFields = fieldsResponse.data.filter(
           (field) => !fieldsToExclude.includes(field.column_name)
         );
@@ -144,13 +144,16 @@ export default function DynamicRecordEdit() {
         }
 
         // Verificar si el campo 'Asesor' existe y obtener asesores si es necesario
-        if (filteredFields.some(field => field.column_name === 'Asesor')) {
+        if (filteredFields.some((field) => field.column_name === 'Asesor')) {
           console.log('El campo Asesor existe, solicitando asesores...');
-          const asesorsResponse = await axios.get('https://impulso-local-back.onrender.com/api/users/asesors', {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          });
+          const asesorsResponse = await axios.get(
+            'https://impulso-local-back.onrender.com/api/users/asesors',
+            {
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+            }
+          );
           console.log('Asesores obtenidos:', asesorsResponse.data);
           setAsesors(asesorsResponse.data);
         }
@@ -571,7 +574,9 @@ export default function DynamicRecordEdit() {
       )}
 
       {/* Overlay para los modals */}
-      {(showStatusModal || selectedFileForCompliance) && <div className="modal-backdrop fade show"></div>}
+      {(showStatusModal || selectedFileForCompliance) && (
+        <div className="modal-backdrop fade show"></div>
+      )}
 
       <section className="content-header">
         <div className="container-fluid">
@@ -591,15 +596,10 @@ export default function DynamicRecordEdit() {
           ) : (
             <div className="row">
               {/* Columna izquierda */}
-              <div
-                className={isPrimaryTable ? 'col-md-8' : 'col-md-12'}
-              >
+              <div className={isPrimaryTable ? 'col-md-8' : 'col-md-12'}>
                 <form onSubmit={handleSubmit}>
                   {fields.map((field) => (
-                    <div
-                      className="form-group"
-                      key={field.column_name}
-                    >
+                    <div className="form-group" key={field.column_name}>
                       <label>{field.column_name}</label>
 
                       {/* Campo 'id' como solo lectura */}
@@ -634,9 +634,7 @@ export default function DynamicRecordEdit() {
                           value={record[field.column_name] || ''}
                           onChange={handleChange}
                         >
-                          <option value="">
-                            -- Selecciona una opción --
-                          </option>
+                          <option value="">-- Selecciona una opción --</option>
                           {relatedData[field.column_name]?.map(
                             (relatedRecord) => (
                               <option
@@ -692,9 +690,7 @@ export default function DynamicRecordEdit() {
                           })}
                         />
                       </div>
-                      <div className="knob-label mt-2">
-                        Calificación
-                      </div>
+                      <div className="knob-label mt-2">Calificación</div>
                     </>
                   ) : (
                     <>
@@ -716,9 +712,7 @@ export default function DynamicRecordEdit() {
                           })}
                         />
                       </div>
-                      <div className="knob-label mt-2">
-                        Completado
-                      </div>
+                      <div className="knob-label mt-2">Completado</div>
                     </>
                   )}
 
@@ -741,10 +735,7 @@ export default function DynamicRecordEdit() {
                   )}
 
                   {/* Sección de Archivos adicionales */}
-                  <div
-                    className="mt-4"
-                    style={{ width: '100%' }}
-                  >
+                  <div className="mt-4" style={{ width: '100%' }}>
                     <h5>Archivos adicionales</h5>
                     {!showUploadForm && (
                       <button
@@ -814,27 +805,31 @@ export default function DynamicRecordEdit() {
                               <span
                                 className="badge"
                                 style={{
-                                  backgroundColor: 
-                                    file.cumple === true ? 'green' :
-                                    file.cumple === false ? 'red' : 'gray',
+                                  backgroundColor:
+                                    file.cumple === true
+                                      ? 'green'
+                                      : file.cumple === false
+                                      ? 'red'
+                                      : 'gray',
                                   color: '#fff',
                                   padding: '5px',
                                   borderRadius: '5px',
                                   cursor: 'pointer',
                                   marginTop: '5px',
-                                  display: 'inline-block'
+                                  display: 'inline-block',
                                 }}
                                 onClick={() => handleOpenComplianceModal(file)}
                               >
-                                {file.cumple === true ? 'Cumple' :
-                                  file.cumple === false ? 'No Cumple' : 'Cumplimiento'}
+                                {file.cumple === true
+                                  ? 'Cumple'
+                                  : file.cumple === false
+                                  ? 'No Cumple'
+                                  : 'Cumplimiento'}
                               </span>
                             </div>
                             <button
                               className="btn btn-danger btn-sm"
-                              onClick={() =>
-                                handleFileDelete(file.id)
-                              }
+                              onClick={() => handleFileDelete(file.id)}
                             >
                               Eliminar
                             </button>
