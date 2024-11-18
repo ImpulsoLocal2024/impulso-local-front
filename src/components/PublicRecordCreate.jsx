@@ -102,7 +102,7 @@ export default function PublicRecordCreate() {
     [normalize('Nombres')]: 'Nombres',
     [normalize('Apellidos')]: 'Apellidos',
     [normalize('Tipo de identificacion')]: 'Tipo de identificación',
-    [normalize('Numero de identificacion')]: 'Número de identificación',
+    [normalize('Numero de identificacion')]: 'Número de identificación (Sin puntos ni comas)',
     [normalize('Fecha de nacimiento')]: 'Fecha de nacimiento (DD/MM/AAAA)',
     [normalize('Edad')]: 'Edad',
     [normalize('Sexo')]: 'Sexo',
@@ -130,7 +130,7 @@ export default function PublicRecordCreate() {
     [normalize('Esta registrado y renovado ante la Camara de Comercio')]:
       '¿Su emprendimiento está registrada ante la Cámara de Comercio?',
     [normalize('Logro renovar la matricula del negocio a comienzos del 2023')]:
-      '¿Logró renovar la matrícula del negocio a comienzos del 2024?',
+      '¿Logró renovar la matrícula del emprendimiento a comienzos del 2024?',
     [normalize('Fecha de registro en Cámara de Comercio')]:
       'Fecha de registro en Cámara de Comercio (DD/MM/AAAA)',
     [normalize('NIT')]: 'NIT (sin dígito de verificación)',
@@ -144,9 +144,9 @@ export default function PublicRecordCreate() {
     [normalize('Telefono fijo de la unidad de negocio')]:
       'Teléfono fijo del emprendimiento',
     [normalize('El negocio se encuentra ubicado en area')]:
-      'El negocio se encuentra ubicado en área:',
+      'El emprendimiento se encuentra ubicado en área:',
     [normalize('Estrato socioeconomico de su unidad de negocio')]:
-      'Estrato socioeconómico de su unidad de negocio',
+      'Estrato socioeconómico de su emprendimiento',
     [normalize('Cuanto tiempo de funcionamiento tiene su emprendimiento')]:
       '¿Cuánto tiempo de funcionamiento tiene su emprendimiento?',
     [normalize('Vendedor informal o ambulante registrado en el HEMI con RIVI')]:
@@ -182,7 +182,7 @@ export default function PublicRecordCreate() {
   const dateFields = new Set([
     normalize('Fecha de nacimiento'),
     normalize('Fecha de inicio actividad economica'),
-    normalize('Fecha de registro en Cámara de Comercio'),
+    [normalize('Fecha de registro en Cámara de Comercio')],
   ]);
 
   // Campos que deben aceptar solo números
@@ -193,6 +193,7 @@ export default function PublicRecordCreate() {
     normalize('Numero de clientes actuales'),
     normalize('Estrato socioeconomico de su unidad de negocio'),
     normalize('Telefono fijo'),
+    normalize('Telefono fijo de la unidad de negocio'),
     normalize('Celular'),
     normalize('Celular 2'),
   ]);
@@ -268,6 +269,24 @@ export default function PublicRecordCreate() {
       // Limpiar el timeout previo si existe
       if (typingTimeoutRef.current[name]) {
         clearTimeout(typingTimeoutRef.current[name]);
+      }
+
+      // Validación adicional para 'Correo electronico'
+      if (name === 'Correo electronico') {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(newValue)) {
+          setFieldErrors((prevErrors) => ({
+            ...prevErrors,
+            [name]: 'No es un correo electrónico válido.',
+          }));
+          return; // No continuar con la validación de duplicados si el formato es inválido
+        } else {
+          setFieldErrors((prevErrors) => {
+            const newErrors = { ...prevErrors };
+            delete newErrors[name];
+            return newErrors;
+          });
+        }
       }
 
       // Establecer un nuevo timeout
