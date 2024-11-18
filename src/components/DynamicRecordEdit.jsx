@@ -39,6 +39,11 @@ export default function DynamicRecordEdit() {
   // Estado para almacenar asesores
   const [asesors, setAsesors] = useState([]);
 
+  // Estados para el manejo del cumplimiento por archivo
+  const [selectedFileForCompliance, setSelectedFileForCompliance] = useState(null);
+  const [complianceCumple, setComplianceCumple] = useState(null); // true, false, or null
+  const [complianceDescripcion, setComplianceDescripcion] = useState('');
+
   // Funciones para manejar el modal de estado
   const handleOpenStatusModal = () => {
     setNewStatus(record.Estado || '');
@@ -95,10 +100,11 @@ export default function DynamicRecordEdit() {
         const estadoExists = !!estadoField;
         setEstadoFieldExists(estadoExists);
 
-        // Filtrar los campos si 'Estado' existe
-        const filteredFields = estadoExists
-          ? fieldsResponse.data.filter((field) => field.column_name !== 'Estado')
-          : fieldsResponse.data;
+        // Excluir campos no deseados
+        const fieldsToExclude = ['Estado', 'cumple', 'descripcion cumplimiento', 'acepta terminos'];
+        const filteredFields = fieldsResponse.data.filter(
+          (field) => !fieldsToExclude.includes(field.column_name)
+        );
         setFields(filteredFields);
 
         // Obtener el registro específico
@@ -362,6 +368,57 @@ export default function DynamicRecordEdit() {
     }
   };
 
+  // Manejar apertura del modal de cumplimiento
+  const handleOpenComplianceModal = (file) => {
+    setSelectedFileForCompliance(file);
+    setComplianceCumple(file.cumple);
+    setComplianceDescripcion(file.descripcion_cumplimiento || '');
+  };
+
+  // Manejar cierre del modal de cumplimiento
+  const handleCloseComplianceModal = () => {
+    setSelectedFileForCompliance(null);
+    setComplianceCumple(null);
+    setComplianceDescripcion('');
+  };
+
+  // Manejar guardado del cumplimiento
+  const handleSaveCompliance = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      await axios.put(
+        `https://impulso-local-back.onrender.com/api/inscriptions/tables/${tableName}/record/${recordId}/file/${selectedFileForCompliance.id}/compliance`,
+        {
+          cumple: complianceCumple,
+          descripcion_cumplimiento: complianceDescripcion,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      // Actualizar el archivo en la lista de archivos subidos
+      setUploadedFiles((prevFiles) =>
+        prevFiles.map((file) =>
+          file.id === selectedFileForCompliance.id
+            ? {
+                ...file,
+                cumple: complianceCumple,
+                descripcion_cumplimiento: complianceDescripcion,
+              }
+            : file
+        )
+      );
+
+      handleCloseComplianceModal();
+    } catch (error) {
+      console.error('Error actualizando el cumplimiento:', error);
+      setError('Error actualizando el cumplimiento');
+    }
+  };
+
   // Estilos para el campo Estado
   const estadoStyle = {
     padding: '10px',
@@ -437,8 +494,84 @@ export default function DynamicRecordEdit() {
         </div>
       )}
 
-      {/* Overlay para el modal */}
-      {showStatusModal && <div className="modal-backdrop fade show"></div>}
+      {/* Modal para actualizar cumplimiento */}
+      {selectedFileForCompliance && (
+        <div
+          className="modal fade show"
+          style={{ display: 'block' }}
+          tabIndex="-1"
+          role="dialog"
+        >
+          <div className="modal-dialog" role="document">
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5 className="modal-title">Actualizar Cumplimiento</h5>
+                <button
+                  type="button"
+                  className="close"
+                  onClick={handleCloseComplianceModal}
+                >
+                  <span>&times;</span>
+                </button>
+              </div>
+              <div className="modal-body">
+                <div className="form-group">
+                  <label>Cumple</label>
+                  <div>
+                    <input
+                      type="radio"
+                      id="cumple-true"
+                      name="cumple"
+                      value="true"
+                      checked={complianceCumple === true}
+                      onChange={() => setComplianceCumple(true)}
+                    />
+                    <label htmlFor="cumple-true">Cumple</label>
+                  </div>
+                  <div>
+                    <input
+                      type="radio"
+                      id="cumple-false"
+                      name="cumple"
+                      value="false"
+                      checked={complianceCumple === false}
+                      onChange={() => setComplianceCumple(false)}
+                    />
+                    <label htmlFor="cumple-false">No Cumple</label>
+                  </div>
+                </div>
+                <div className="form-group">
+                  <label>Descripción cumplimiento</label>
+                  <textarea
+                    className="form-control"
+                    value={complianceDescripcion}
+                    onChange={(e) => setComplianceDescripcion(e.target.value)}
+                  ></textarea>
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={handleCloseComplianceModal}
+                >
+                  Cerrar
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  onClick={handleSaveCompliance}
+                >
+                  Guardar cambios
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Overlay para los modals */}
+      {(showStatusModal || selectedFileForCompliance) && <div className="modal-backdrop fade show"></div>}
 
       <section className="content-header">
         <div className="container-fluid">
@@ -676,6 +809,26 @@ export default function DynamicRecordEdit() {
                               >
                                 Ver archivo
                               </a>
+                              <br />
+                              {/* Etiqueta para Cumple/No Cumple */}
+                              <span
+                                className="badge"
+                                style={{
+                                  backgroundColor: 
+                                    file.cumple === true ? 'green' :
+                                    file.cumple === false ? 'red' : 'gray',
+                                  color: '#fff',
+                                  padding: '5px',
+                                  borderRadius: '5px',
+                                  cursor: 'pointer',
+                                  marginTop: '5px',
+                                  display: 'inline-block'
+                                }}
+                                onClick={() => handleOpenComplianceModal(file)}
+                              >
+                                {file.cumple === true ? 'Cumple' :
+                                  file.cumple === false ? 'No Cumple' : 'Cumplimiento'}
+                              </span>
                             </div>
                             <button
                               className="btn btn-danger btn-sm"
