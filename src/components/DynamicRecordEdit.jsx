@@ -375,7 +375,7 @@ export default function DynamicRecordEdit() {
   const handleOpenComplianceModal = (file) => {
     setSelectedFileForCompliance(file);
     setComplianceCumple(file.cumple);
-    setComplianceDescripcion(file.descripcion_cumplimiento || '');
+    setComplianceDescripcion(file['descripcion cumplimiento'] || '');
   };
 
   // Manejar cierre del modal de cumplimiento
@@ -409,7 +409,7 @@ export default function DynamicRecordEdit() {
             ? {
                 ...file,
                 cumple: complianceCumple,
-                descripcion_cumplimiento: complianceDescripcion,
+                'descripcion cumplimiento': complianceDescripcion,
               }
             : file
         )
@@ -552,10 +552,11 @@ export default function DynamicRecordEdit() {
                   ></textarea>
                 </div>
               </div>
-              <div className="modal-footer">
+              {/* Ajuste en la modal-footer para alinear los botones */}
+              <div className="modal-footer d-flex justify-content-end">
                 <button
                   type="button"
-                  className="btn btn-secondary"
+                  className="btn btn-secondary mr-2"
                   onClick={handleCloseComplianceModal}
                 >
                   Cerrar
