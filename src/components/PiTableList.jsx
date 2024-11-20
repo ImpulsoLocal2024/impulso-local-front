@@ -86,7 +86,7 @@ export default function PiTableList() {
 
       // Filtrar los registros con Estado == 4
       filteredRecords = filteredRecords.filter(
-        (record) => String(record.Estado) === 4
+        (record) => String(record.Estado) === '4'
       );
 
       // Filtrar los registros según el rol y el usuario
