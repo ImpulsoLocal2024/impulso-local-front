@@ -120,10 +120,11 @@ export default function PiTableList() {
 
       setRelatedData(relatedDataResponse.data.relatedData || {});
 
-      // Filtrar los registros con Estado == 4
+      // Filtrar los registros con Estado ID == 4 o Estado Display Value == 'Preseleccionado'
       filteredRecords = filteredRecords.filter((record) => {
-        const estadoValue = record['Estado'];
-        return parseInt(estadoValue, 10) === 4;
+        const estadoId = parseInt(record['Estado'], 10);
+        const estadoDisplayValue = getColumnDisplayValue(record, 'Estado');
+        return estadoId === 4 || estadoDisplayValue === 'Preseleccionado';
       });
 
       // Filtrar los registros según el rol y el usuario
@@ -133,7 +134,6 @@ export default function PiTableList() {
           (record) => String(record.Asesor) === String(loggedUserId)
         );
       }
-      // Si el usuario es 'SuperAdmin' (role_id '1'), no se aplica el filtro y se muestran todos los registros con Estado == 4
 
       setRecords(filteredRecords);
 
@@ -380,4 +380,5 @@ export default function PiTableList() {
     </div>
   );
 }
+
 
