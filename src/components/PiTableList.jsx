@@ -85,9 +85,10 @@ export default function PiTableList() {
       let filteredRecords = recordsResponse.data;
 
       // Filtrar los registros con Estado == 4
-      filteredRecords = filteredRecords.filter(
-        (record) => String(record.Estado) === '4'
-      );
+      filteredRecords = filteredRecords.filter((record) => {
+        const estadoValue = record.Estado || record.estado || record['Estado'] || record['estado'];
+        return parseInt(estadoValue, 10) === 4;
+      });
 
       // Filtrar los registros según el rol y el usuario
       if (loggedUserRoleId !== '1' && loggedUserId) {
@@ -150,7 +151,7 @@ export default function PiTableList() {
   }, [columns]);
 
   // Aplicar el filtro de búsqueda
-  const filteredRecords = search
+  const displayedRecords = search
     ? records.filter((record) => {
         return visibleColumns.some((column) => {
           const value = record[column];
@@ -240,8 +241,8 @@ export default function PiTableList() {
                         </tr>
                       </thead>
                       <tbody>
-                        {filteredRecords.length > 0 ? (
-                          filteredRecords.map((record) => (
+                        {displayedRecords.length > 0 ? (
+                          displayedRecords.map((record) => (
                             <tr key={record.id}>
                               {visibleColumns.map((column) => (
                                 <td key={column}>{record[column]}</td>
