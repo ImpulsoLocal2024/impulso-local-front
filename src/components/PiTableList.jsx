@@ -84,6 +84,11 @@ export default function PiTableList() {
 
       let filteredRecords = recordsResponse.data;
 
+      // Filtrar los registros con Estado == 4
+      filteredRecords = filteredRecords.filter(
+        (record) => String(record.Estado) === '4'
+      );
+
       // Filtrar los registros según el rol y el usuario
       if (loggedUserRoleId !== '1' && loggedUserId) {
         // Usuario NO es SuperAdmin y está logueado
@@ -91,7 +96,7 @@ export default function PiTableList() {
           (record) => String(record.Asesor) === String(loggedUserId)
         );
       }
-      // Si el usuario es 'SuperAdmin' (role_id '1'), no se aplica el filtro y se muestran todos los registros
+      // Si el usuario es 'SuperAdmin' (role_id '1'), no se aplica el filtro y se muestran todos los registros con Estado == 4
 
       setRecords(filteredRecords);
 
