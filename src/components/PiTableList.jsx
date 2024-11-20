@@ -12,12 +12,11 @@ export default function PiTableList() {
   const [error, setError] = useState(null);
   const [search, setSearch] = useState('');
   const [showSearchBar, setShowSearchBar] = useState(false);
+
   const [multiSelectFields, setMultiSelectFields] = useState([]);
-  const [relatedData, setRelatedData] = useState({});
-  const [currentPage, setCurrentPage] = useState(1);
-  const recordsPerPage = 100;
 
   const navigate = useNavigate();
+
   const tableName = 'inscription_caracterizacion';
 
   // Funciones para obtener el ID y el role_id del usuario logueado desde el localStorage
@@ -29,30 +28,7 @@ export default function PiTableList() {
     return localStorage.getItem('role_id') || null;
   };
 
-  // Función para obtener el valor a mostrar en una columna
-  const getColumnDisplayValue = (record, column) => {
-    if (multiSelectFields.includes(column)) {
-      // Es un campo de llave foránea
-      const foreignKeyValue = record[column];
-
-      if (relatedData[column]) {
-        const relatedRecord = relatedData[column].find(
-          (item) => String(item.id) === String(foreignKeyValue)
-        );
-        if (relatedRecord) {
-          return relatedRecord.displayValue || `ID: ${relatedRecord.id}`;
-        } else {
-          return `ID: ${foreignKeyValue}`;
-        }
-      } else {
-        return `ID: ${foreignKeyValue}`;
-      }
-    } else {
-      return record[column];
-    }
-  };
-
-  // Función para obtener columnas, registros y datos relacionados de la tabla
+  // Función para obtener columnas y registros de la tabla
   const fetchTableData = async (savedVisibleColumns = null) => {
     try {
       setLoading(true);
@@ -108,23 +84,9 @@ export default function PiTableList() {
 
       let filteredRecords = recordsResponse.data;
 
-      // Obtener datos relacionados para llaves foráneas
-      const relatedDataResponse = await axios.get(
-        `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/${tableName}/related-data`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      setRelatedData(relatedDataResponse.data.relatedData || {});
-
-      // Filtrar los registros con Estado ID == 4 o Estado Display Value == 'Preseleccionado'
+      // Filtrar los registros con Estado == 4
       filteredRecords = filteredRecords.filter((record) => {
-        const estadoId = parseInt(record['Estado'], 10);
-        const estadoDisplayValue = getColumnDisplayValue(record, 'Estado');
-        return estadoId === 4 || estadoDisplayValue === 'Preseleccionado';
+        return parseInt(record.Estado, 10) === 4;
       });
 
       // Filtrar los registros según el rol y el usuario
@@ -134,6 +96,7 @@ export default function PiTableList() {
           (record) => String(record.Asesor) === String(loggedUserId)
         );
       }
+      // Si el usuario es 'SuperAdmin' (role_id '1'), no se aplica el filtro y se muestran todos los registros con Estado == 4
 
       setRecords(filteredRecords);
 
@@ -186,23 +149,15 @@ export default function PiTableList() {
     }
   }, [columns]);
 
-  // Lógica de filtrado y búsqueda
-  const filteredRecords = search
-    ? records.filter((record) =>
-        visibleColumns.some((column) =>
-          getColumnDisplayValue(record, column)
-            ?.toString()
-            .toLowerCase()
-            .includes(search.toLowerCase())
-        )
-      )
+  // Aplicar el filtro de búsqueda
+  const displayedRecords = search
+    ? records.filter((record) => {
+        return visibleColumns.some((column) => {
+          const value = record[column];
+          return value?.toString()?.toLowerCase().includes(search.toLowerCase());
+        });
+      })
     : records;
-
-  // Lógica de paginación
-  const totalPages = Math.ceil(filteredRecords.length / recordsPerPage);
-  const indexOfLastRecord = currentPage * recordsPerPage;
-  const indexOfFirstRecord = indexOfLastRecord - recordsPerPage;
-  const currentRecords = filteredRecords.slice(indexOfFirstRecord, indexOfLastRecord);
 
   return (
     <div className="content-wrapper">
@@ -285,11 +240,11 @@ export default function PiTableList() {
                         </tr>
                       </thead>
                       <tbody>
-                        {currentRecords.length > 0 ? (
-                          currentRecords.map((record) => (
+                        {displayedRecords.length > 0 ? (
+                          displayedRecords.map((record) => (
                             <tr key={record.id}>
                               {visibleColumns.map((column) => (
-                                <td key={column}>{getColumnDisplayValue(record, column)}</td>
+                                <td key={column}>{record[column]}</td>
                               ))}
                               <td>
                                 <button
@@ -321,39 +276,6 @@ export default function PiTableList() {
                     </table>
                   )}
 
-                  {/* Paginación */}
-                  {totalPages > 1 && (
-                    <div className="pagination mt-3 d-flex justify-content-center">
-                      <button
-                        className="btn btn-light mr-2"
-                        onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-                        disabled={currentPage === 1}
-                      >
-                        Anterior
-                      </button>
-                      {Array.from({ length: totalPages }, (_, index) => index + 1).map(
-                        (number) => (
-                          <button
-                            key={number}
-                            onClick={() => setCurrentPage(number)}
-                            className={`btn btn-light mr-2 ${
-                              number === currentPage ? 'active' : ''
-                            }`}
-                          >
-                            {number}
-                          </button>
-                        )
-                      )}
-                      <button
-                        className="btn btn-light"
-                        onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
-                        disabled={currentPage === totalPages}
-                      >
-                        Siguiente
-                      </button>
-                    </div>
-                  )}
-
                   {/* Botón para limpiar filtros */}
                   <div className="mt-3">
                     <button
@@ -363,7 +285,6 @@ export default function PiTableList() {
                         setSearch('');
                         localStorage.removeItem('visibleColumns');
                         localStorage.removeItem('searchQuery');
-                        setCurrentPage(1);
                         fetchTableData();
                       }}
                     >
@@ -380,5 +301,4 @@ export default function PiTableList() {
     </div>
   );
 }
-
 
