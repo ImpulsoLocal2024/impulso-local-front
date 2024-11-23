@@ -110,6 +110,13 @@ export default function DynamicTableList() {
         // Si el usuario es 'SuperAdmin' (role_id '1'), no se aplica el filtro y se muestran todos los registros
       }
 
+      // **Añadido: Ordenar los registros por 'id' en orden ascendente**
+      filteredRecords.sort((a, b) => {
+        const idA = typeof a.id === 'number' ? a.id : parseInt(a.id, 10);
+        const idB = typeof b.id === 'number' ? b.id : parseInt(b.id, 10);
+        return idA - idB;
+      });
+
       setRecords(filteredRecords);
 
       // Obtener datos relacionados para claves foráneas
