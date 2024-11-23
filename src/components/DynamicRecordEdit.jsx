@@ -194,7 +194,7 @@ export default function DynamicRecordEdit() {
           }
         );
         console.log('Archivos subidos:', filesResponse.data);
-        setUploadedFiles(filesResponse.data);
+        setUploadedFiles(filesResponse.data.files); // Asegúrate de acceder a 'files'
 
         // Manejar 'Calificacion' si existe
         const calificacionValue = recordResponse.data.record.Calificacion;
@@ -330,7 +330,7 @@ export default function DynamicRecordEdit() {
           },
         }
       );
-      setUploadedFiles(filesResponse.data);
+      setUploadedFiles(filesResponse.data.files); // Asegúrate de acceder a 'files'
       setFile(null);
       setFileName('');
       setShowUploadForm(false);
@@ -364,7 +364,7 @@ export default function DynamicRecordEdit() {
             },
           }
         );
-        setUploadedFiles(filesResponse.data);
+        setUploadedFiles(filesResponse.data.files); // Asegúrate de acceder a 'files'
       } catch (error) {
         console.error('Error eliminando el archivo:', error);
         setError('Error eliminando el archivo');
@@ -382,7 +382,7 @@ export default function DynamicRecordEdit() {
         ? false
         : null
     );
-    setComplianceDescripcion(file.descripcionCumplimiento || '');
+    setComplianceDescripcion(file['descripcion cumplimiento'] || '');
   };
 
   // Manejar cierre del modal de cumplimiento
@@ -400,7 +400,7 @@ export default function DynamicRecordEdit() {
         `https://impulso-local-back.onrender.com/api/inscriptions/tables/${tableName}/record/${recordId}/file/${selectedFileForCompliance.id}/compliance`,
         {
           cumple: complianceCumple,
-          descripcionCumplimiento: complianceDescripcion,
+          'descripcion cumplimiento': complianceDescripcion,
         },
         {
           headers: {
@@ -416,7 +416,7 @@ export default function DynamicRecordEdit() {
             ? {
                 ...file,
                 cumple: complianceCumple,
-                descripcionCumplimiento: complianceDescripcion,
+                'descripcion cumplimiento': complianceDescripcion,
               }
             : file
         )
@@ -451,6 +451,7 @@ export default function DynamicRecordEdit() {
           role="dialog"
         >
           <div className="modal-dialog" role="document">
+            {/* Contenido del modal de estado */}
             <div className="modal-content">
               <div className="modal-header">
                 <h5 className="modal-title">Cambiar Estado</h5>
@@ -513,6 +514,7 @@ export default function DynamicRecordEdit() {
           role="dialog"
         >
           <div className="modal-dialog" role="document">
+            {/* Contenido del modal de cumplimiento */}
             <div className="modal-content">
               <div className="modal-header">
                 <h5 className="modal-title">Actualizar Cumplimiento</h5>
@@ -830,9 +832,7 @@ export default function DynamicRecordEdit() {
                                   marginTop: '5px',
                                   display: 'inline-block',
                                 }}
-                                onClick={() =>
-                                  handleOpenComplianceModal(file)
-                                }
+                                onClick={() => handleOpenComplianceModal(file)}
                               >
                                 {file.cumple === true ||
                                 file.cumple === 'true' ||
