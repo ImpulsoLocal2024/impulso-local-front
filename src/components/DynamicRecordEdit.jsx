@@ -844,6 +844,13 @@ export default function DynamicRecordEdit() {
                                   ? 'No Cumple'
                                   : 'Cumplimiento'}
                               </span>
+                              {/* Mostrar la descripción de cumplimiento si existe */}
+                              {file['descripcion cumplimiento'] && (
+                                <p style={{ marginTop: '5px' }}>
+                                  <strong>Descripción:</strong>{' '}
+                                  {file['descripcion cumplimiento']}
+                                </p>
+                              )}
                             </div>
                             <button
                               className="btn btn-danger btn-sm"
