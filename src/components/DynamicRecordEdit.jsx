@@ -400,7 +400,7 @@ export default function DynamicRecordEdit() {
         `https://impulso-local-back.onrender.com/api/inscriptions/tables/${tableName}/record/${recordId}/file/${selectedFileForCompliance.id}/compliance`,
         {
           cumple: complianceCumple,
-          'descripcion cumplimiento': complianceDescripcion,
+          descripcion_cumplimiento: complianceDescripcion, // Asegúrate de usar el nombre correcto
         },
         {
           headers: {
