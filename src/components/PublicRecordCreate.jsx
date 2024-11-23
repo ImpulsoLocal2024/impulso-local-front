@@ -548,6 +548,15 @@ Por favor, estar atento(a) a los datos de contacto que suministró.`;
         !personalDataTextInserted &&
         normalizedColumnName === normalize('Nombres')
       ) {
+        // Agregar el nuevo texto con el enlace
+        elements.push(
+          <p key="document-list">
+            <a href="/impulso.png" target="_blank" rel="noopener noreferrer">
+              Descargue aquí el listado de documentos que debe adjuntar al finalizar este formulario
+            </a>
+          </p>
+        );
+
         elements.push(
           <p key="personal-data-intro">
             A continuación usted debe proporcionar sus datos personales
@@ -635,8 +644,11 @@ Por favor, estar atento(a) a los datos de contacto que suministró.`;
 
   return (
     <div className="container-fluid d-flex">
-      <aside className="sidebar-public bg-red">
-        <h2>Inscripción</h2>
+      <aside className="sidebar-public">
+        <img src="/Logo_IL.png" alt="Logo" className="sidebar-logo" />
+        <div className="sidebar-text">
+          <h2>Inscripción</h2>
+        </div>
       </aside>
       <main className="form-wrapper">
         <section className="form-header">
