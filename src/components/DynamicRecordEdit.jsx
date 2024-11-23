@@ -193,7 +193,8 @@ export default function DynamicRecordEdit() {
             },
           }
         );
-        setUploadedFiles(filesResponse.data.files);
+        console.log('Archivos subidos:', filesResponse.data);
+        setUploadedFiles(filesResponse.data);
 
         // Manejar 'Calificacion' si existe
         const calificacionValue = recordResponse.data.record.Calificacion;
@@ -329,7 +330,7 @@ export default function DynamicRecordEdit() {
           },
         }
       );
-      setUploadedFiles(filesResponse.data.files);
+      setUploadedFiles(filesResponse.data);
       setFile(null);
       setFileName('');
       setShowUploadForm(false);
@@ -363,7 +364,7 @@ export default function DynamicRecordEdit() {
             },
           }
         );
-        setUploadedFiles(filesResponse.data.files);
+        setUploadedFiles(filesResponse.data);
       } catch (error) {
         console.error('Error eliminando el archivo:', error);
         setError('Error eliminando el archivo');
@@ -374,8 +375,14 @@ export default function DynamicRecordEdit() {
   // Manejar apertura del modal de cumplimiento
   const handleOpenComplianceModal = (file) => {
     setSelectedFileForCompliance(file);
-    setComplianceCumple(file.cumple);
-    setComplianceDescripcion(file['descripcion cumplimiento'] || '');
+    setComplianceCumple(
+      file.cumple === 'true' || file.cumple === true || file.cumple === 1
+        ? true
+        : file.cumple === 'false' || file.cumple === false || file.cumple === 0
+        ? false
+        : null
+    );
+    setComplianceDescripcion(file.descripcionCumplimiento || '');
   };
 
   // Manejar cierre del modal de cumplimiento
@@ -393,7 +400,7 @@ export default function DynamicRecordEdit() {
         `https://impulso-local-back.onrender.com/api/inscriptions/tables/${tableName}/record/${recordId}/file/${selectedFileForCompliance.id}/compliance`,
         {
           cumple: complianceCumple,
-          descripcion_cumplimiento: complianceDescripcion,
+          descripcionCumplimiento: complianceDescripcion,
         },
         {
           headers: {
@@ -409,7 +416,7 @@ export default function DynamicRecordEdit() {
             ? {
                 ...file,
                 cumple: complianceCumple,
-                'descripcion cumplimiento': complianceDescripcion,
+                descripcionCumplimiento: complianceDescripcion,
               }
             : file
         )
@@ -807,9 +814,13 @@ export default function DynamicRecordEdit() {
                                 className="badge"
                                 style={{
                                   backgroundColor:
-                                    file.cumple === true
+                                    file.cumple === true ||
+                                    file.cumple === 'true' ||
+                                    file.cumple === 1
                                       ? 'green'
-                                      : file.cumple === false
+                                      : file.cumple === false ||
+                                        file.cumple === 'false' ||
+                                        file.cumple === 0
                                       ? 'red'
                                       : 'gray',
                                   color: '#fff',
@@ -819,11 +830,17 @@ export default function DynamicRecordEdit() {
                                   marginTop: '5px',
                                   display: 'inline-block',
                                 }}
-                                onClick={() => handleOpenComplianceModal(file)}
+                                onClick={() =>
+                                  handleOpenComplianceModal(file)
+                                }
                               >
-                                {file.cumple === true
+                                {file.cumple === true ||
+                                file.cumple === 'true' ||
+                                file.cumple === 1
                                   ? 'Cumple'
-                                  : file.cumple === false
+                                  : file.cumple === false ||
+                                    file.cumple === 'false' ||
+                                    file.cumple === 0
                                   ? 'No Cumple'
                                   : 'Cumplimiento'}
                               </span>
@@ -848,6 +865,7 @@ export default function DynamicRecordEdit() {
     </div>
   );
 }
+
 
 
 
