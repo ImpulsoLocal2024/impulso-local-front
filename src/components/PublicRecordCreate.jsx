@@ -213,7 +213,7 @@ export default function PublicRecordCreate() {
         // Excluir además el campo "Acepta terminos"
         const filteredFields = fieldsResponse.data.filter(
           (field) =>
-            !['estado', 'asesor', 'id', 'acepta terminos'].includes(
+            !['estado', 'asesor', 'id', 'acepta terminos', 'created_at', 'updated_at',].includes(
               field.column_name.toLowerCase()
             )
         );
