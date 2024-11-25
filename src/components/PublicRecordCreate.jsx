@@ -551,7 +551,7 @@ Por favor, estar atento(a) a los datos de contacto que suministró.`;
         // Agregar el nuevo texto con el enlace
         elements.push(
           <p key="document-list">
-            <a href="/impulso.png" target="_blank" rel="noopener noreferrer">
+            <a href="/Impulso-2.jpeg" target="_blank" rel="noopener noreferrer">
               Descargue aquí el listado de documentos que debe adjuntar al finalizar este formulario
             </a>
           </p>
