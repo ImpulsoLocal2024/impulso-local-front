@@ -44,6 +44,12 @@ export default function DynamicRecordEdit() {
   const [complianceCumple, setComplianceCumple] = useState(null); // true, false, or null
   const [complianceDescripcion, setComplianceDescripcion] = useState('');
 
+  // Estados para comentarios
+  const [comments, setComments] = useState([]);
+  const [newComment, setNewComment] = useState('');
+  const [commentsLoading, setCommentsLoading] = useState(false);
+  const [commentsError, setCommentsError] = useState(null);
+
   // Funciones para manejar el modal de estado
   const handleOpenStatusModal = () => {
     setNewStatus(record.Estado || '');
@@ -71,6 +77,32 @@ export default function DynamicRecordEdit() {
     } catch (error) {
       console.error('Error actualizando el estado:', error);
       setError('Error actualizando el estado');
+    }
+  };
+
+  // Función para obtener los comentarios
+  const fetchComments = async () => {
+    setCommentsLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      const commentsResponse = await axios.get(
+        `https://impulso-local-back.onrender.com/api/inscriptions/tables/${tableName}/record/${recordId}/comments`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      console.log('Comentarios obtenidos:', commentsResponse.data);
+      setComments(commentsResponse.data.comments || []);
+      setCommentsLoading(false);
+    } catch (error) {
+      console.error('Error obteniendo los comentarios:', error);
+      if (error.response) {
+        console.error('Detalles del error:', error.response.data);
+      }
+      setCommentsError('Error obteniendo los comentarios');
+      setCommentsLoading(false);
     }
   };
 
@@ -203,6 +235,9 @@ export default function DynamicRecordEdit() {
         } else {
           setCalificacion(0);
         }
+
+        // Obtener comentarios
+        await fetchComments();
 
         setLoading(false);
       } catch (error) {
@@ -426,6 +461,38 @@ export default function DynamicRecordEdit() {
     } catch (error) {
       console.error('Error actualizando el cumplimiento:', error);
       setError('Error actualizando el cumplimiento');
+    }
+  };
+
+  // Función para manejar el envío de un nuevo comentario
+  const handleAddComment = async (e) => {
+    e.preventDefault();
+    const token = localStorage.getItem('token');
+
+    if (!newComment.trim()) {
+      alert('Por favor, escribe un comentario.');
+      return;
+    }
+
+    try {
+      const response = await axios.post(
+        `https://impulso-local-back.onrender.com/api/inscriptions/tables/${tableName}/record/${recordId}/comments`,
+        {
+          comment: newComment.trim(),
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      // Agregar el nuevo comentario a la lista
+      setComments((prevComments) => [response.data.comment, ...prevComments]);
+      setNewComment('');
+    } catch (error) {
+      console.error('Error añadiendo el comentario:', error);
+      setCommentsError('Error añadiendo el comentario');
     }
   };
 
@@ -861,6 +928,54 @@ export default function DynamicRecordEdit() {
                           </li>
                         ))}
                       </ul>
+                    )}
+                  </div>
+
+                  {/* Nueva Sección: Comentarios */}
+                  <div className="mt-4" style={{ width: '100%' }}>
+                    <h5>Comentarios</h5>
+
+                    {/* Formulario para agregar un nuevo comentario */}
+                    <form onSubmit={handleAddComment}>
+                      <div className="form-group">
+                        <label>Escribe tu comentario:</label>
+                        <textarea
+                          className="form-control"
+                          value={newComment}
+                          onChange={(e) => setNewComment(e.target.value)}
+                          rows="3"
+                          required
+                        ></textarea>
+                      </div>
+                      <button type="submit" className="btn btn-primary btn-sm btn-block mb-2">
+                        Agregar Comentario
+                      </button>
+                    </form>
+
+                    {/* Mostrar errores relacionados con los comentarios */}
+                    {commentsError && (
+                      <div className="alert alert-danger">{commentsError}</div>
+                    )}
+
+                    {/* Mostrar comentarios existentes */}
+                    {commentsLoading ? (
+                      <div>Cargando comentarios...</div>
+                    ) : comments.length > 0 ? (
+                      <ul className="list-group mt-3">
+                        {comments.map((comment) => (
+                          <li key={comment.id} className="list-group-item">
+                            <div className="d-flex justify-content-between">
+                              <strong>{comment.User?.username || 'Usuario'}</strong>
+                              <small>
+                                {new Date(comment.created_at).toLocaleString()}
+                              </small>
+                            </div>
+                            <p>{comment.comment}</p>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="mt-3">No hay comentarios aún.</p>
                     )}
                   </div>
                 </div>
