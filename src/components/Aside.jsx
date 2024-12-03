@@ -109,8 +109,8 @@ export default function Aside() {
                 </li>
               )}
 
-              {/* Empresas: visible para roles 1, 2, 3, 4 */}
-              {(role === 1 || role === 2 || role === 3 || role === 4) && (
+              {/* Empresas: visible para roles 1, 2, 3, 4, 5 */}
+              {(role === 1 || role === 2 || role === 3 || role === 4 || role === 5) && (
                 <li className="nav-item">
                   <Link to="/dynamic-tables" className="nav-link">
                     <i className="nav-icon fas fa-building" />
