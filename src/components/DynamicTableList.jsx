@@ -48,6 +48,12 @@ export default function DynamicTableList() {
     return localStorage.getItem('role_id') || null;
   };
 
+  // Estados para los filtros adicionales
+  const [selectedLocalidad, setSelectedLocalidad] = useState('');
+  const [selectedEstado, setSelectedEstado] = useState('');
+  const [localidadOptions, setLocalidadOptions] = useState([]);
+  const [estadoOptions, setEstadoOptions] = useState([]);
+
   // Función para obtener columnas y registros de la tabla seleccionada
   const fetchTableData = async (tableName, savedVisibleColumns = null) => {
     try {
@@ -272,20 +278,60 @@ export default function DynamicTableList() {
     }
   };
 
-  // Aplicar el filtro de búsqueda
-  const filteredRecords = search
-    ? records.filter((record) => {
-        return visibleColumns.some((column) => {
+  // Actualizar las opciones de los filtros cuando cambien los registros
+  useEffect(() => {
+    if (records.length > 0) {
+      // Extraer valores únicos para 'Localidad de la unidad de negocio' y 'Estado'
+      const localidadSet = new Set();
+      const estadoSet = new Set();
+
+      records.forEach((record) => {
+        if (record['Localidad de la unidad de negocio']) {
+          localidadSet.add(record['Localidad de la unidad de negocio']);
+        }
+        if (record['Estado']) {
+          estadoSet.add(record['Estado']);
+        }
+      });
+
+      setLocalidadOptions([...localidadSet]);
+      setEstadoOptions([...estadoSet]);
+    } else {
+      setLocalidadOptions([]);
+      setEstadoOptions([]);
+    }
+  }, [records]);
+
+  // Aplicar el filtro de búsqueda y los filtros adicionales
+  const filteredRecords = records
+    .filter((record) => {
+      // Aplicar filtro de búsqueda
+      if (search) {
+        const matchesSearch = visibleColumns.some((column) => {
           const value = getColumnDisplayValue(record, column);
           return value?.toString()?.toLowerCase().includes(search.toLowerCase());
         });
-      })
-    : records;
+        if (!matchesSearch) return false;
+      }
+      // Aplicar filtro de Localidad
+      if (selectedLocalidad) {
+        if (record['Localidad de la unidad de negocio'] !== selectedLocalidad) {
+          return false;
+        }
+      }
+      // Aplicar filtro de Estado
+      if (selectedEstado) {
+        if (record['Estado'] !== selectedEstado) {
+          return false;
+        }
+      }
+      return true;
+    });
 
   // Resetear la página actual cuando cambian los registros filtrados o la búsqueda
   useEffect(() => {
     setCurrentPage(1);
-  }, [search, records]);
+  }, [search, records, selectedLocalidad, selectedEstado]);
 
   // Paginación
   const totalPages = Math.ceil(filteredRecords.length / recordsPerPage);
@@ -300,6 +346,8 @@ export default function DynamicTableList() {
     localStorage.removeItem(LOCAL_STORAGE_COLUMNS_KEY); // Limpiar filtros persistentes
     localStorage.removeItem(LOCAL_STORAGE_SEARCH_KEY); // Limpiar búsqueda persistente
     setCurrentPage(1); // Resetear la página actual
+    setSelectedLocalidad(''); // Limpiar filtro de Localidad
+    setSelectedEstado(''); // Limpiar filtro de Estado
 
     // Volver a cargar todos los registros de la tabla seleccionada
     fetchTableData(selectedTable); // Restablecer la tabla completa sin filtros
@@ -430,23 +478,58 @@ export default function DynamicTableList() {
                 </div>
               )}
 
-              {/* Select de columnas */}
+              {/* Dropdowns para filtrar */}
               {columns.length > 0 && (
-                <div className="form-group mb-3">
-                  <label>Selecciona las columnas a mostrar:</label>
-                  <select
-                    ref={selectRef}
-                    className="select2 form-control"
-                    multiple="multiple"
-                    style={{ width: '100%' }}
-                  >
-                    {columns.map((column) => (
-                      <option key={column} value={column}>
-                        {column}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                <>
+                  <div className="form-group mb-3">
+                    <label>Filtrar por Localidad de la unidad de negocio:</label>
+                    <select
+                      className="form-control"
+                      value={selectedLocalidad}
+                      onChange={(e) => setSelectedLocalidad(e.target.value)}
+                    >
+                      <option value="">-- Todas --</option>
+                      {localidadOptions.map((localidad) => (
+                        <option key={localidad} value={localidad}>
+                          {localidad}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="form-group mb-3">
+                    <label>Filtrar por Estado:</label>
+                    <select
+                      className="form-control"
+                      value={selectedEstado}
+                      onChange={(e) => setSelectedEstado(e.target.value)}
+                    >
+                      <option value="">-- Todos --</option>
+                      {estadoOptions.map((estado) => (
+                        <option key={estado} value={estado}>
+                          {estado}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Select de columnas */}
+                  <div className="form-group mb-3">
+                    <label>Selecciona las columnas a mostrar:</label>
+                    <select
+                      ref={selectRef}
+                      className="select2 form-control"
+                      multiple="multiple"
+                      style={{ width: '100%' }}
+                    >
+                      {columns.map((column) => (
+                        <option key={column} value={column}>
+                          {column}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </>
               )}
 
               {/* Tabla de registros */}
