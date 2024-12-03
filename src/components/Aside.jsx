@@ -99,8 +99,8 @@ export default function Aside() {
                 </Link>
               </li>
 
-              {/* Gestionar Tablas: visible solo para SuperAdmin y Administrador */}
-              {(role === 1 || role === 2) && (
+              {/* Gestionar Tablas: visible solo para SuperAdmin (role === 1) */}
+              {role === 1 && (
                 <li className="nav-item">
                   <Link to="/list-tables" className="nav-link">
                     <i className="nav-icon fas fa-list-alt" />
@@ -109,39 +109,47 @@ export default function Aside() {
                 </li>
               )}
 
-              {/* Enlace a las tablas dinámicas de Empresas */}
-              <li className="nav-item">
-                <Link to="/dynamic-tables" className="nav-link">
-                  <i className="nav-icon fas fa-building" />
-                  <p>Empresas</p>
-                </Link>
-              </li>
+              {/* Empresas: visible para roles 1, 2, 3, 4 */}
+              {(role === 1 || role === 2 || role === 3 || role === 4) && (
+                <li className="nav-item">
+                  <Link to="/dynamic-tables" className="nav-link">
+                    <i className="nav-icon fas fa-building" />
+                    <p>Empresas</p>
+                  </Link>
+                </li>
+              )}
 
-              {/* Enlace a las tablas dinámicas de Proveedores */}
-              <li className="nav-item">
-                <Link to="/provider-tables" className="nav-link">
-                  <i className="nav-icon fas fa-briefcase" />
-                  <p>Proveedores</p>
-                </Link>
-              </li>
+              {/* Proveedores: visible para roles 1 y 2 */}
+              {(role === 1 || role === 2) && (
+                <li className="nav-item">
+                  <Link to="/provider-tables" className="nav-link">
+                    <i className="nav-icon fas fa-briefcase" />
+                    <p>Proveedores</p>
+                  </Link>
+                </li>
+              )}
 
-              {/* Nuevo enlace a las tablas de Plan de Inversión */}
-              <li className="nav-item">
-                <Link to="/pi-tables" className="nav-link">
-                  <i className="nav-icon fas fa-chart-line" />
-                  <p>Plan de Inversión</p>
-                </Link>
-              </li>
+              {/* Plan de Inversión: visible para roles 1 y 2 */}
+              {(role === 1 || role === 2) && (
+                <li className="nav-item">
+                  <Link to="/pi-tables" className="nav-link">
+                    <i className="nav-icon fas fa-chart-line" />
+                    <p>Plan de Inversión</p>
+                  </Link>
+                </li>
+              )}
 
-              {/* Enlace para Descarga Masiva */}
-              <li className="nav-item">
-                <Link to="/download-zip" className="nav-link">
-                  <i className="nav-icon fas fa-download" />
-                  <p>Descarga Masiva</p>
-                </Link>
-              </li>
+              {/* Descarga Masiva: visible solo para SuperAdmin (role === 1) */}
+              {role === 1 && (
+                <li className="nav-item">
+                  <Link to="/download-zip" className="nav-link">
+                    <i className="nav-icon fas fa-download" />
+                    <p>Descarga Masiva</p>
+                  </Link>
+                </li>
+              )}
 
-              {/* Usuarios: visible solo para SuperAdmin y Administrador */}
+              {/* Usuarios: visible para roles 1 y 2 */}
               {(role === 1 || role === 2) && (
                 <li className="nav-item">
                   <Link to="/usuarios" className="nav-link">
