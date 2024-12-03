@@ -21,7 +21,6 @@ export default function DynamicTableList() {
   const [selectedRecords, setSelectedRecords] = useState([]); // Registros seleccionados
   const [multiSelectFields, setMultiSelectFields] = useState([]); // Campos de llave foránea
   const [bulkUpdateData, setBulkUpdateData] = useState({}); // Datos para actualización masiva
-  const [fieldOptions, setFieldOptions] = useState({}); // Opciones para campos de llave foránea
   const [fieldOptionsLoaded, setFieldOptionsLoaded] = useState(false); // Estado de carga de opciones
   const [relatedData, setRelatedData] = useState({}); // Datos relacionados para claves foráneas
 
@@ -116,7 +115,7 @@ export default function DynamicTableList() {
         // Si el usuario es SuperAdmin (1), rol 3 o rol 4, no se aplica el filtro y se muestran todos los registros
       }
 
-      // **Añadido: Ordenar los registros por 'id' en orden ascendente**
+      // Ordenar los registros por 'id' en orden ascendente
       filteredRecords.sort((a, b) => {
         const idA = typeof a.id === 'number' ? a.id : parseInt(a.id, 10);
         const idB = typeof b.id === 'number' ? b.id : parseInt(b.id, 10);
@@ -281,52 +280,66 @@ export default function DynamicTableList() {
   // Actualizar las opciones de los filtros cuando cambien los registros
   useEffect(() => {
     if (records.length > 0) {
-      // Extraer valores únicos para 'Localidad de la unidad de negocio' y 'Estado'
-      const localidadSet = new Set();
-      const estadoSet = new Set();
+      // Extraer IDs y valores de visualización únicos para 'Localidad de la unidad de negocio' y 'Estado'
+      const localidadMap = new Map();
+      const estadoMap = new Map();
 
       records.forEach((record) => {
-        if (record['Localidad de la unidad de negocio']) {
-          localidadSet.add(record['Localidad de la unidad de negocio']);
+        const localidadId = record['Localidad de la unidad de negocio'];
+        const localidadDisplayValue = getColumnDisplayValue(record, 'Localidad de la unidad de negocio');
+        if (localidadId && localidadDisplayValue) {
+          localidadMap.set(localidadId, localidadDisplayValue);
         }
-        if (record['Estado']) {
-          estadoSet.add(record['Estado']);
+
+        const estadoId = record['Estado'];
+        const estadoDisplayValue = getColumnDisplayValue(record, 'Estado');
+        if (estadoId && estadoDisplayValue) {
+          estadoMap.set(estadoId, estadoDisplayValue);
         }
       });
 
-      setLocalidadOptions([...localidadSet]);
-      setEstadoOptions([...estadoSet]);
+      const localidadOptionsArray = Array.from(localidadMap.entries()).map(([id, displayValue]) => ({
+        id,
+        displayValue,
+      }));
+
+      const estadoOptionsArray = Array.from(estadoMap.entries()).map(([id, displayValue]) => ({
+        id,
+        displayValue,
+      }));
+
+      setLocalidadOptions(localidadOptionsArray);
+      setEstadoOptions(estadoOptionsArray);
     } else {
       setLocalidadOptions([]);
       setEstadoOptions([]);
     }
-  }, [records]);
+  }, [records, relatedData]);
 
   // Aplicar el filtro de búsqueda y los filtros adicionales
-  const filteredRecords = records
-    .filter((record) => {
-      // Aplicar filtro de búsqueda
-      if (search) {
-        const matchesSearch = visibleColumns.some((column) => {
-          const value = getColumnDisplayValue(record, column);
-          return value?.toString()?.toLowerCase().includes(search.toLowerCase());
-        });
-        if (!matchesSearch) return false;
+  const filteredRecords = records.filter((record) => {
+    // Aplicar filtro de búsqueda
+    if (search) {
+      const matchesSearch = visibleColumns.some((column) => {
+        const value = getColumnDisplayValue(record, column);
+        return value?.toString()?.toLowerCase().includes(search.toLowerCase());
+      });
+      if (!matchesSearch) return false;
+    }
+    // Aplicar filtro de Localidad
+    if (selectedLocalidad) {
+      if (String(record['Localidad de la unidad de negocio']) !== selectedLocalidad) {
+        return false;
       }
-      // Aplicar filtro de Localidad
-      if (selectedLocalidad) {
-        if (record['Localidad de la unidad de negocio'] !== selectedLocalidad) {
-          return false;
-        }
+    }
+    // Aplicar filtro de Estado
+    if (selectedEstado) {
+      if (String(record['Estado']) !== selectedEstado) {
+        return false;
       }
-      // Aplicar filtro de Estado
-      if (selectedEstado) {
-        if (record['Estado'] !== selectedEstado) {
-          return false;
-        }
-      }
-      return true;
-    });
+    }
+    return true;
+  });
 
   // Resetear la página actual cuando cambian los registros filtrados o la búsqueda
   useEffect(() => {
@@ -481,36 +494,37 @@ export default function DynamicTableList() {
               {/* Dropdowns para filtrar */}
               {columns.length > 0 && (
                 <>
-                  <div className="form-group mb-3">
-                    <label>Filtrar por Localidad de la unidad de negocio:</label>
-                    <select
-                      className="form-control"
-                      value={selectedLocalidad}
-                      onChange={(e) => setSelectedLocalidad(e.target.value)}
-                    >
-                      <option value="">-- Todas --</option>
-                      {localidadOptions.map((localidad) => (
-                        <option key={localidad} value={localidad}>
-                          {localidad}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className="form-group mb-3">
-                    <label>Filtrar por Estado:</label>
-                    <select
-                      className="form-control"
-                      value={selectedEstado}
-                      onChange={(e) => setSelectedEstado(e.target.value)}
-                    >
-                      <option value="">-- Todos --</option>
-                      {estadoOptions.map((estado) => (
-                        <option key={estado} value={estado}>
-                          {estado}
-                        </option>
-                      ))}
-                    </select>
+                  <div className="form-group mb-3 d-flex">
+                    <div style={{ flex: 1, marginRight: '10px' }}>
+                      <label>Filtrar por Localidad de la unidad de negocio:</label>
+                      <select
+                        className="form-control"
+                        value={selectedLocalidad}
+                        onChange={(e) => setSelectedLocalidad(e.target.value)}
+                      >
+                        <option value="">-- Todas --</option>
+                        {localidadOptions.map((option) => (
+                          <option key={option.id} value={option.id}>
+                            {option.displayValue}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <label>Filtrar por Estado:</label>
+                      <select
+                        className="form-control"
+                        value={selectedEstado}
+                        onChange={(e) => setSelectedEstado(e.target.value)}
+                      >
+                        <option value="">-- Todos --</option>
+                        {estadoOptions.map((option) => (
+                          <option key={option.id} value={option.id}>
+                            {option.displayValue}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
                   </div>
 
                   {/* Select de columnas */}
