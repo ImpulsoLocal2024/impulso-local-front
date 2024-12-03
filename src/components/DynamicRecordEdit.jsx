@@ -50,6 +50,13 @@ export default function DynamicRecordEdit() {
   const [commentsLoading, setCommentsLoading] = useState(false);
   const [commentsError, setCommentsError] = useState(null);
 
+  // Obtener el role_id del usuario logueado desde el localStorage
+  const getLoggedUserRoleId = () => {
+    return localStorage.getItem('role_id') || null;
+  };
+
+  const role = getLoggedUserRoleId();
+
   // Funciones para manejar el modal de estado
   const handleOpenStatusModal = () => {
     setNewStatus(record.Estado || '');
@@ -695,6 +702,7 @@ export default function DynamicRecordEdit() {
                           name={field.column_name}
                           value={record[field.column_name] || ''}
                           onChange={handleChange}
+                          disabled={role === '3'}
                         >
                           <option value="">-- Selecciona un Asesor --</option>
                           {asesors.map((asesor) => (
@@ -710,6 +718,7 @@ export default function DynamicRecordEdit() {
                           name={field.column_name}
                           value={record[field.column_name] || ''}
                           onChange={handleChange}
+                          disabled={role === '3'}
                         >
                           <option value="">-- Selecciona una opción --</option>
                           {relatedData[field.column_name]?.map(
@@ -731,14 +740,17 @@ export default function DynamicRecordEdit() {
                           value={record[field.column_name] || ''}
                           onChange={handleChange}
                           className="form-control"
+                          readOnly={role === '3'}
                         />
                       )}
                     </div>
                   ))}
 
-                  <button type="submit" className="btn btn-primary">
-                    Guardar Cambios
-                  </button>
+                  {role !== '3' && (
+                    <button type="submit" className="btn btn-primary">
+                      Guardar Cambios
+                    </button>
+                  )}
                 </form>
               </div>
 
@@ -802,19 +814,21 @@ export default function DynamicRecordEdit() {
                       <div style={estadoStyle}>
                         {currentEstado?.label || 'Sin estado'}
                       </div>
-                      <button
-                        className="btn btn-secondary btn-sm btn-block mt-2"
-                        onClick={handleOpenStatusModal}
-                      >
-                        Cambiar estado
-                      </button>
+                      {role !== '3' && (
+                        <button
+                          className="btn btn-secondary btn-sm btn-block mt-2"
+                          onClick={handleOpenStatusModal}
+                        >
+                          Cambiar estado
+                        </button>
+                      )}
                     </div>
                   )}
 
                   {/* Sección de Archivos adicionales */}
                   <div className="mt-4" style={{ width: '100%' }}>
                     <h5>Archivos adicionales</h5>
-                    {!showUploadForm && (
+                    {!showUploadForm && role !== '3' && (
                       <button
                         type="button"
                         className="btn btn-primary btn-sm btn-block mb-2"
@@ -824,7 +838,7 @@ export default function DynamicRecordEdit() {
                       </button>
                     )}
 
-                    {showUploadForm && (
+                    {showUploadForm && role !== '3' && (
                       <form onSubmit={handleFileUpload}>
                         <div className="form-group">
                           <label>Nombre del archivo</label>
@@ -899,7 +913,9 @@ export default function DynamicRecordEdit() {
                                   marginTop: '5px',
                                   display: 'inline-block',
                                 }}
-                                onClick={() => handleOpenComplianceModal(file)}
+                                onClick={() =>
+                                  role !== '3' && handleOpenComplianceModal(file)
+                                }
                               >
                                 {file.cumple === true ||
                                 file.cumple === 'true' ||
@@ -919,12 +935,14 @@ export default function DynamicRecordEdit() {
                                 </p>
                               )}
                             </div>
-                            <button
-                              className="btn btn-danger btn-sm"
-                              onClick={() => handleFileDelete(file.id)}
-                            >
-                              Eliminar
-                            </button>
+                            {role !== '3' && (
+                              <button
+                                className="btn btn-danger btn-sm"
+                                onClick={() => handleFileDelete(file.id)}
+                              >
+                                Eliminar
+                              </button>
+                            )}
                           </li>
                         ))}
                       </ul>
@@ -936,21 +954,26 @@ export default function DynamicRecordEdit() {
                     <h5>Comentarios</h5>
 
                     {/* Formulario para agregar un nuevo comentario */}
-                    <form onSubmit={handleAddComment}>
-                      <div className="form-group">
-                        <label>Escribe tu comentario:</label>
-                        <textarea
-                          className="form-control"
-                          value={newComment}
-                          onChange={(e) => setNewComment(e.target.value)}
-                          rows="3"
-                          required
-                        ></textarea>
-                      </div>
-                      <button type="submit" className="btn btn-primary btn-sm btn-block mb-2">
-                        Agregar Comentario
-                      </button>
-                    </form>
+                    {role !== '3' && (
+                      <form onSubmit={handleAddComment}>
+                        <div className="form-group">
+                          <label>Escribe tu comentario:</label>
+                          <textarea
+                            className="form-control"
+                            value={newComment}
+                            onChange={(e) => setNewComment(e.target.value)}
+                            rows="3"
+                            required
+                          ></textarea>
+                        </div>
+                        <button
+                          type="submit"
+                          className="btn btn-primary btn-sm btn-block mb-2"
+                        >
+                          Agregar Comentario
+                        </button>
+                      </form>
+                    )}
 
                     {/* Mostrar errores relacionados con los comentarios */}
                     {commentsError && (
