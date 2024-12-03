@@ -101,13 +101,13 @@ export default function DynamicTableList() {
 
       // Filtrar los registros según el rol y el usuario
       if (tableName === 'inscription_caracterizacion') {
-        if (loggedUserRoleId !== '1' && loggedUserId) {
-          // Usuario NO es SuperAdmin y está logueado
+        if (!['1', '3', '4'].includes(loggedUserRoleId) && loggedUserId) {
+          // Usuario NO es SuperAdmin (1), ni rol 3, ni rol 4, y está logueado
           filteredRecords = filteredRecords.filter(
             (record) => String(record.Asesor) === String(loggedUserId)
           );
         }
-        // Si el usuario es 'SuperAdmin' (role_id '1'), no se aplica el filtro y se muestran todos los registros
+        // Si el usuario es SuperAdmin (1), rol 3 o rol 4, no se aplica el filtro y se muestran todos los registros
       }
 
       // **Añadido: Ordenar los registros por 'id' en orden ascendente**
