@@ -83,18 +83,29 @@ export default function PiTableList() {
         }
       );
 
-      // Antes de filtrar, imprime los registros para verificar los datos
-      console.log('Registros obtenidos:', recordsResponse.data);
-
       let filteredRecords = recordsResponse.data;
+
+      // Imprimir registros obtenidos
+      console.log('Registros obtenidos:', filteredRecords);
+
+      // Verificar los valores de 'Estado'
+      const estadoValues = filteredRecords.map((record) => record.Estado);
+      console.log('Valores de Estado:', estadoValues);
 
       // Filtrar los registros con Estado == 7
       filteredRecords = filteredRecords.filter((record) => {
-        const estadoValue = record.Estado || record.estado; // Manejar mayúsculas/minúsculas
-        return estadoValue && parseInt(estadoValue, 10) === 7;
+        const estadoValue = record.Estado;
+        if (estadoValue === undefined || estadoValue === null) {
+          return false;
+        }
+        // Convertir a número o comparar como cadena después de eliminar espacios
+        const estadoTrimmed = estadoValue.toString().trim();
+        return estadoTrimmed === '7' || parseInt(estadoTrimmed, 10) === 7;
       });
 
-      // Filtrar los registros según el rol y el usuario (puedes comentar esta sección si no aplica)
+      console.log('Registros con Estado == 7:', filteredRecords);
+
+      // Filtrar los registros según el rol y el usuario (si aplica)
       if (loggedUserRoleId !== '1' && loggedUserId) {
         // Usuario NO es SuperAdmin y está logueado
         filteredRecords = filteredRecords.filter(
@@ -160,7 +171,7 @@ export default function PiTableList() {
       }
     }
 
-    const savedSearch = JSON.parse(localStorage.getItem('piSearchQuery'));
+    const savedSearch = localStorage.getItem('piSearchQuery');
     if (savedSearch) {
       setSearch(savedSearch);
     }
@@ -243,7 +254,7 @@ export default function PiTableList() {
                             value={search}
                             onChange={(e) => {
                               setSearch(e.target.value);
-                              localStorage.setItem('piSearchQuery', JSON.stringify(e.target.value));
+                              localStorage.setItem('piSearchQuery', e.target.value);
                             }}
                           />
                         </div>
