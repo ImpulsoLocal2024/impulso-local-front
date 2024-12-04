@@ -119,22 +119,12 @@ export default function Aside() {
                 </li>
               )}
 
-              {/* Proveedores: visible para roles 1 y 2 */}
-              {(role === 1 || role === 2) && (
-                <li className="nav-item">
-                  <Link to="/provider-tables" className="nav-link">
-                    <i className="nav-icon fas fa-briefcase" />
-                    <p>Proveedores</p>
-                  </Link>
-                </li>
-              )}
-
-              {/* Plan de Inversión: visible para roles 1 y 2 */}
+              {/* Listado Final: visible para roles 1 y 2 */}
               {(role === 1 || role === 2) && (
                 <li className="nav-item">
                   <Link to="/pi-tables" className="nav-link">
                     <i className="nav-icon fas fa-chart-line" />
-                    <p>Plan de Inversión</p>
+                    <p>Listado Final</p>
                   </Link>
                 </li>
               )}
