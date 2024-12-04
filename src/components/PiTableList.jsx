@@ -14,7 +14,6 @@ export default function PiTableList() {
   const [showSearchBar, setShowSearchBar] = useState(false);
 
   const [multiSelectFields, setMultiSelectFields] = useState([]);
-  const [relatedData, setRelatedData] = useState({}); // Para datos relacionados de claves foráneas
 
   const navigate = useNavigate();
 
@@ -66,7 +65,7 @@ export default function PiTableList() {
 
       // Si hay columnas visibles guardadas en localStorage, úsalas; si no, muestra todas las columnas por defecto
       const localVisibleColumns =
-        savedVisibleColumns || JSON.parse(localStorage.getItem('piVisibleColumns')) || [];
+        savedVisibleColumns || JSON.parse(localStorage.getItem('visibleColumns')) || [];
       if (localVisibleColumns.length > 0) {
         setVisibleColumns(localVisibleColumns);
       } else {
@@ -85,9 +84,9 @@ export default function PiTableList() {
 
       let filteredRecords = recordsResponse.data;
 
-      // Filtrar los registros con Estado == 7
+      // Filtrar los registros con Estado == 4
       filteredRecords = filteredRecords.filter((record) => {
-        return parseInt(record.Estado, 10) === 7;
+        return parseInt(record.Estado, 10) === 4;
       });
 
       // Filtrar los registros según el rol y el usuario
@@ -97,19 +96,7 @@ export default function PiTableList() {
           (record) => String(record.Asesor) === String(loggedUserId)
         );
       }
-      // Si el usuario es 'SuperAdmin' (role_id '1'), no se aplica el filtro y se muestran todos los registros con Estado == 7
-
-      // Obtener datos relacionados para claves foráneas
-      const relatedDataResponse = await axios.get(
-        `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/${tableName}/related-data`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      setRelatedData(relatedDataResponse.data.relatedData || {});
+      // Si el usuario es 'SuperAdmin' (role_id '1'), no se aplica el filtro y se muestran todos los registros con Estado == 4
 
       setRecords(filteredRecords);
 
@@ -147,49 +134,26 @@ export default function PiTableList() {
           (option) => option.value
         );
         setVisibleColumns(selectedOptions);
-        localStorage.setItem('piVisibleColumns', JSON.stringify(selectedOptions));
+        localStorage.setItem('visibleColumns', JSON.stringify(selectedOptions));
       });
 
-      const savedVisibleColumns = JSON.parse(localStorage.getItem('piVisibleColumns'));
+      const savedVisibleColumns = JSON.parse(localStorage.getItem('visibleColumns'));
       if (savedVisibleColumns && savedVisibleColumns.length > 0) {
         window.$('.select2').val(savedVisibleColumns).trigger('change');
       }
     }
 
-    const savedSearch = localStorage.getItem('piSearchQuery');
+    const savedSearch = localStorage.getItem('searchQuery');
     if (savedSearch) {
       setSearch(savedSearch);
     }
   }, [columns]);
 
-  // Función para obtener el valor a mostrar en una columna
-  const getColumnDisplayValue = (record, column) => {
-    if (multiSelectFields.includes(column)) {
-      // Es un campo de llave foránea
-      const foreignKeyValue = record[column];
-
-      if (relatedData[column]) {
-        const relatedRecord = relatedData[column].find(
-          (item) => String(item.id) === String(foreignKeyValue)
-        );
-        if (relatedRecord) {
-          return relatedRecord.displayValue || `ID: ${relatedRecord.id}`;
-        } else {
-          return `ID: ${foreignKeyValue}`;
-        }
-      } else {
-        return `ID: ${foreignKeyValue}`;
-      }
-    } else {
-      return record[column];
-    }
-  };
-
   // Aplicar el filtro de búsqueda
   const displayedRecords = search
     ? records.filter((record) => {
         return visibleColumns.some((column) => {
-          const value = getColumnDisplayValue(record, column);
+          const value = record[column];
           return value?.toString()?.toLowerCase().includes(search.toLowerCase());
         });
       })
@@ -202,7 +166,7 @@ export default function PiTableList() {
         <div className="container-fluid">
           <div className="row mb-2">
             <div className="col-sm-6">
-              <h1>Listado Final</h1>
+              <h1>Plan de Inversión</h1>
             </div>
             <div className="col-sm-6 d-flex justify-content-end">
               <button
@@ -239,7 +203,7 @@ export default function PiTableList() {
                             value={search}
                             onChange={(e) => {
                               setSearch(e.target.value);
-                              localStorage.setItem('piSearchQuery', e.target.value);
+                              localStorage.setItem('searchQuery', e.target.value);
                             }}
                           />
                         </div>
@@ -280,7 +244,7 @@ export default function PiTableList() {
                           displayedRecords.map((record) => (
                             <tr key={record.id}>
                               {visibleColumns.map((column) => (
-                                <td key={column}>{getColumnDisplayValue(record, column)}</td>
+                                <td key={column}>{record[column]}</td>
                               ))}
                               <td>
                                 <button
@@ -319,8 +283,8 @@ export default function PiTableList() {
                       onClick={() => {
                         setVisibleColumns(columns);
                         setSearch('');
-                        localStorage.removeItem('piVisibleColumns');
-                        localStorage.removeItem('piSearchQuery');
+                        localStorage.removeItem('visibleColumns');
+                        localStorage.removeItem('searchQuery');
                         fetchTableData();
                       }}
                     >
