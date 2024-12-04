@@ -47,6 +47,9 @@ export default function DynamicTableList() {
     return localStorage.getItem('role_id') || null;
   };
 
+  // Obtener el role_id del usuario
+  const roleId = getLoggedUserRoleId();
+
   // Estados para los filtros adicionales
   const [selectedLocalidad, setSelectedLocalidad] = useState('');
   const [selectedEstado, setSelectedEstado] = useState('');
@@ -149,27 +152,33 @@ export default function DynamicTableList() {
     const fetchTables = async () => {
       try {
         const token = localStorage.getItem('token');
-        const response = await axios.get('https://impulso-local-back.onrender.com/api/inscriptions/tables', {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
+        const response = await axios.get(
+          'https://impulso-local-back.onrender.com/api/inscriptions/tables',
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
         setTables(response.data || []); // Asegurar que `tables` es un array
 
-        // Cargar la tabla seleccionada y las columnas visibles guardadas desde el localStorage
-        const savedTable = localStorage.getItem(LOCAL_STORAGE_TABLE_KEY);
-        const savedVisibleColumns = JSON.parse(localStorage.getItem(LOCAL_STORAGE_COLUMNS_KEY));
+        // Determinar la tabla a mostrar
+        let initialTable = 'inscription_caracterizacion'; // Tabla por defecto para usuarios no administradores
 
-        if (savedTable) {
-          setSelectedTable(savedTable);
-
-          const selectedTableObj = response.data.find(
-            (table) => table.table_name === savedTable
-          );
-          setIsPrimaryTable(selectedTableObj?.is_primary || false); // Actualizar estado
-
-          fetchTableData(savedTable, savedVisibleColumns);
+        if (roleId === '1') {
+          // Si es rol 1, cargar la tabla seleccionada desde localStorage o usar la primera tabla
+          const savedTable = localStorage.getItem(LOCAL_STORAGE_TABLE_KEY);
+          initialTable = savedTable || response.data[0]?.table_name || initialTable;
         }
+
+        setSelectedTable(initialTable);
+
+        const selectedTableObj = response.data.find(
+          (table) => table.table_name === initialTable
+        );
+        setIsPrimaryTable(selectedTableObj?.is_primary || false); // Actualizar estado
+
+        fetchTableData(initialTable);
       } catch (error) {
         console.error('Error obteniendo las tablas:', error);
         setError('Error obteniendo las tablas');
@@ -177,7 +186,7 @@ export default function DynamicTableList() {
     };
 
     fetchTables();
-  }, []);
+  }, [roleId]);
 
   // Manejar Select2 con persistencia
   useEffect(() => {
@@ -232,9 +241,9 @@ export default function DynamicTableList() {
     if (savedSearch) {
       setSearch(savedSearch);
     }
-  }, [columns, selectedTable]); // Eliminar visibleColumns de las dependencias
+  }, [columns, selectedTable]);
 
-  // Manejar la selección de tabla
+  // Manejar la selección de tabla (solo para role_id === '1')
   const handleTableSelect = (e) => {
     const tableName = e.target.value;
     setSelectedTable(tableName);
@@ -286,7 +295,10 @@ export default function DynamicTableList() {
 
       records.forEach((record) => {
         const localidadId = record['Localidad de la unidad de negocio'];
-        const localidadDisplayValue = getColumnDisplayValue(record, 'Localidad de la unidad de negocio');
+        const localidadDisplayValue = getColumnDisplayValue(
+          record,
+          'Localidad de la unidad de negocio'
+        );
         if (localidadId && localidadDisplayValue) {
           localidadMap.set(localidadId, localidadDisplayValue);
         }
@@ -298,10 +310,12 @@ export default function DynamicTableList() {
         }
       });
 
-      const localidadOptionsArray = Array.from(localidadMap.entries()).map(([id, displayValue]) => ({
-        id,
-        displayValue,
-      }));
+      const localidadOptionsArray = Array.from(localidadMap.entries()).map(
+        ([id, displayValue]) => ({
+          id,
+          displayValue,
+        })
+      );
 
       const estadoOptionsArray = Array.from(estadoMap.entries()).map(([id, displayValue]) => ({
         id,
@@ -446,21 +460,23 @@ export default function DynamicTableList() {
               >
                 {showSearchBar ? 'Ocultar búsqueda' : 'Mostrar búsqueda'}
               </button>
-              <select
-                id="tableSelect"
-                className="form-control"
-                value={selectedTable}
-                onChange={handleTableSelect}
-                style={{ maxWidth: '250px' }}
-              >
-                <option value="">-- Selecciona una tabla --</option>
-                {tables.length > 0 &&
-                  tables.map((table) => (
-                    <option key={table.table_name} value={table.table_name}>
-                      {table.table_name}
-                    </option>
-                  ))}
-              </select>
+              {roleId === '1' && (
+                <select
+                  id="tableSelect"
+                  className="form-control"
+                  value={selectedTable}
+                  onChange={handleTableSelect}
+                  style={{ maxWidth: '250px' }}
+                >
+                  <option value="">-- Selecciona una tabla --</option>
+                  {tables.length > 0 &&
+                    tables.map((table) => (
+                      <option key={table.table_name} value={table.table_name}>
+                        {table.table_name}
+                      </option>
+                    ))}
+                </select>
+              )}
             </div>
           </div>
         </div>
@@ -592,7 +608,9 @@ export default function DynamicTableList() {
                               ))
                             ) : (
                               <td
-                                colSpan={isPrimaryTable ? columns.length + 2 : columns.length + 1}
+                                colSpan={
+                                  isPrimaryTable ? columns.length + 2 : columns.length + 1
+                                }
                                 className="text-center"
                               >
                                 No hay columnas seleccionadas para mostrar.
