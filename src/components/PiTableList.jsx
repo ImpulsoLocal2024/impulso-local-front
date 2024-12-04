@@ -83,14 +83,18 @@ export default function PiTableList() {
         }
       );
 
+      // Antes de filtrar, imprime los registros para verificar los datos
+      console.log('Registros obtenidos:', recordsResponse.data);
+
       let filteredRecords = recordsResponse.data;
 
       // Filtrar los registros con Estado == 7
       filteredRecords = filteredRecords.filter((record) => {
-        return parseInt(record.Estado, 10) === 7;
+        const estadoValue = record.Estado || record.estado; // Manejar mayúsculas/minúsculas
+        return estadoValue && parseInt(estadoValue, 10) === 7;
       });
 
-      // Filtrar los registros según el rol y el usuario
+      // Filtrar los registros según el rol y el usuario (puedes comentar esta sección si no aplica)
       if (loggedUserRoleId !== '1' && loggedUserId) {
         // Usuario NO es SuperAdmin y está logueado
         filteredRecords = filteredRecords.filter(
@@ -156,7 +160,7 @@ export default function PiTableList() {
       }
     }
 
-    const savedSearch = localStorage.getItem('piSearchQuery');
+    const savedSearch = JSON.parse(localStorage.getItem('piSearchQuery'));
     if (savedSearch) {
       setSearch(savedSearch);
     }
@@ -239,7 +243,7 @@ export default function PiTableList() {
                             value={search}
                             onChange={(e) => {
                               setSearch(e.target.value);
-                              localStorage.setItem('piSearchQuery', e.target.value);
+                              localStorage.setItem('piSearchQuery', JSON.stringify(e.target.value));
                             }}
                           />
                         </div>
