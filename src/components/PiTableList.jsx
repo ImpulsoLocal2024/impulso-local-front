@@ -84,9 +84,9 @@ export default function PiTableList() {
 
       let filteredRecords = recordsResponse.data;
 
-      // Filtrar los registros con Estado == 4
+      // Filtrar los registros con Estado == 5
       filteredRecords = filteredRecords.filter((record) => {
-        return parseInt(record.Estado, 10) === 4;
+        return parseInt(record.Estado, 10) === 5;
       });
 
       // Filtrar los registros según el rol y el usuario
