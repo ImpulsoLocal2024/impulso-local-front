@@ -72,19 +72,19 @@ export default function DiagnosticoTab({ id }) {
 
         // Mapear las respuestas recuperadas
         const records = response.data.reduce((acc, record) => {
-          acc[record.Pregunta] = record.Respuesta;
+          acc[record.Pregunta] = record.Respuesta; // Mapea la pregunta con su respuesta
           return acc;
         }, {});
 
         // Asignar respuestas a las preguntas iniciales
         const updatedAnswers = initialQuestions.reduce((acc, section) => {
           section.questions.forEach((q) => {
-            acc[q.text] = records[q.text] ?? null; // Usar respuesta existente o null
+            acc[q.text] = records[q.text] ?? null; // Si no hay respuesta, dejar como null
           });
           return acc;
         }, {});
 
-        setAnswers(updatedAnswers);
+        setAnswers(updatedAnswers); // Actualiza el estado con las respuestas
       } catch (error) {
         console.error("Error obteniendo registros existentes:", error);
       } finally {
@@ -96,7 +96,7 @@ export default function DiagnosticoTab({ id }) {
   }, [id]);
 
   const handleAnswerChange = (questionText, value) => {
-    setAnswers((prev) => ({ ...prev, [questionText]: value }));
+    setAnswers((prev) => ({ ...prev, [questionText]: value })); // Actualiza el estado local
   };
 
   const handleSubmit = async () => {
