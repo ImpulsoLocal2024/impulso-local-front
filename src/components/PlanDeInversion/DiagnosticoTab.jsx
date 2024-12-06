@@ -100,6 +100,30 @@ export default function DiagnosticoTab({ id }) {
     return (totalScore / questions.length).toFixed(2);
   };
 
+  const saveRecord = async (token, requestData, questionText) => {
+    try {
+      if (recordIds[questionText]) {
+        // Actualizar registro existente
+        await axios.put(
+          `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/pi_diagnostico_cap/record/${recordIds[questionText]}`,
+          requestData,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+      } else {
+        // Crear nuevo registro
+        const response = await axios.post(
+          `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/pi_diagnostico_cap/record`,
+          requestData,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        // Guardar el nuevo ID en recordIds
+        setRecordIds((prev) => ({ ...prev, [questionText]: response.data.id }));
+      }
+    } catch (error) {
+      console.error(`Error guardando la pregunta "${questionText}":`, error);
+    }
+  };
+
   const handleSubmit = async () => {
     try {
       const token = localStorage.getItem("token");
@@ -108,8 +132,8 @@ export default function DiagnosticoTab({ id }) {
         return;
       }
 
-      const requests = initialQuestions.flatMap((section) =>
-        section.questions.map(async (question) => {
+      for (const section of initialQuestions) {
+        for (const question of section.questions) {
           const requestData = {
             caracterizacion_id: id,
             Componente: section.component,
@@ -118,23 +142,10 @@ export default function DiagnosticoTab({ id }) {
             Puntaje: answers[question.text] ? 1 : 0,
           };
 
-          if (recordIds[question.text]) {
-            await axios.put(
-              `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/pi_diagnostico_cap/record/${recordIds[question.text]}`,
-              requestData,
-              { headers: { Authorization: `Bearer ${token}` } }
-            );
-          } else {
-            await axios.post(
-              `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/pi_diagnostico_cap/record`,
-              requestData,
-              { headers: { Authorization: `Bearer ${token}` } }
-            );
-          }
-        })
-      );
+          await saveRecord(token, requestData, question.text);
+        }
+      }
 
-      await Promise.all(requests);
       alert("Diagnóstico guardado exitosamente");
     } catch (error) {
       console.error("Error guardando el diagnóstico:", error);
