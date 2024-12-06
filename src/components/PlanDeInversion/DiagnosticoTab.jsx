@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import PropTypes from 'prop-types';
-import axios from 'axios';
+import React, { useState, useEffect } from "react";
+import PropTypes from "prop-types";
+import axios from "axios";
 
 export default function DiagnosticoTab({ id }) {
   const initialQuestions = [
@@ -52,7 +52,6 @@ export default function DiagnosticoTab({ id }) {
   ];
 
   const [answers, setAnswers] = useState({});
-  const [existingRecords, setExistingRecords] = useState({});
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -65,28 +64,27 @@ export default function DiagnosticoTab({ id }) {
           return;
         }
 
+        // Obtener registros existentes por caracterizacion_id
         const response = await axios.get(
           `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/pi_diagnostico_cap/records?caracterizacion_id=${id}`,
           { headers: { Authorization: `Bearer ${token}` } }
         );
 
+        // Mapear las respuestas recuperadas
         const records = response.data.reduce((acc, record) => {
-          acc[record.Pregunta] = {
-            Respuesta: record.Respuesta,
-            id: record.id,
-          };
+          acc[record.Pregunta] = record.Respuesta;
           return acc;
         }, {});
 
-        setExistingRecords(records);
-        setAnswers(
-          initialQuestions.reduce((acc, section) => {
-            section.questions.forEach((q) => {
-              acc[q.text] = records[q.text]?.Respuesta ?? null;
-            });
-            return acc;
-          }, {})
-        );
+        // Asignar respuestas a las preguntas iniciales
+        const updatedAnswers = initialQuestions.reduce((acc, section) => {
+          section.questions.forEach((q) => {
+            acc[q.text] = records[q.text] ?? null; // Usar respuesta existente o null
+          });
+          return acc;
+        }, {});
+
+        setAnswers(updatedAnswers);
       } catch (error) {
         console.error("Error obteniendo registros existentes:", error);
       } finally {
@@ -109,11 +107,8 @@ export default function DiagnosticoTab({ id }) {
         return;
       }
 
-      const requests = [];
-
-      for (const section of initialQuestions) {
-        for (const question of section.questions) {
-          const existingRecord = existingRecords[question.text];
+      const requests = initialQuestions.flatMap((section) =>
+        section.questions.map((question) => {
           const requestData = {
             caracterizacion_id: id,
             Componente: section.component,
@@ -122,30 +117,15 @@ export default function DiagnosticoTab({ id }) {
             Puntaje: answers[question.text] ? 1 : 0,
           };
 
-          if (existingRecord) {
-            // Actualizar registro existente
-            requests.push(
-              axios.put(
-                `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/pi_diagnostico_cap/record/${existingRecord.id}`,
-                requestData,
-                { headers: { Authorization: `Bearer ${token}` } }
-              )
-            );
-          } else {
-            // Crear nuevo registro
-            requests.push(
-              axios.post(
-                `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/pi_diagnostico_cap/record`,
-                requestData,
-                { headers: { Authorization: `Bearer ${token}` } }
-              )
-            );
-          }
-        }
-      }
+          return axios.post(
+            `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/pi_diagnostico_cap/record`,
+            requestData,
+            { headers: { Authorization: `Bearer ${token}` } }
+          );
+        })
+      );
 
       await Promise.all(requests);
-
       alert("Diagnóstico guardado exitosamente");
     } catch (error) {
       console.error("Error guardando el diagnóstico:", error);
