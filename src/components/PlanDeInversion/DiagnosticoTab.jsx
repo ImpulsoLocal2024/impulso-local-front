@@ -65,19 +65,15 @@ export default function DiagnosticoTab({ id }) {
           return;
         }
 
-        // Obtener registros existentes por caracterizacion_id
         const response = await axios.get(
           `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/pi_diagnostico_cap/records?caracterizacion_id=${id}`,
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
+          { headers: { Authorization: `Bearer ${token}` } }
         );
 
-        // Mapear los registros existentes
         const records = response.data.reduce((acc, record) => {
           acc[record.Pregunta] = {
             Respuesta: record.Respuesta,
-            id: record.id, // ID del registro para actualizar
+            id: record.id,
           };
           return acc;
         }, {});
@@ -86,7 +82,7 @@ export default function DiagnosticoTab({ id }) {
         setAnswers(
           initialQuestions.reduce((acc, section) => {
             section.questions.forEach((q) => {
-              acc[q.text] = records[q.text]?.Respuesta ?? null; // Usar respuesta existente o null
+              acc[q.text] = records[q.text]?.Respuesta ?? null;
             });
             return acc;
           }, {})
@@ -113,7 +109,8 @@ export default function DiagnosticoTab({ id }) {
         return;
       }
 
-      // Procesar las respuestas
+      const requests = [];
+
       for (const section of initialQuestions) {
         for (const question of section.questions) {
           const existingRecord = existingRecords[question.text];
@@ -122,26 +119,32 @@ export default function DiagnosticoTab({ id }) {
             Componente: section.component,
             Pregunta: question.text,
             Respuesta: answers[question.text],
-            Puntaje: answers[question.text] ? 1 : 0, // Puntaje basado en la respuesta
+            Puntaje: answers[question.text] ? 1 : 0,
           };
 
           if (existingRecord) {
             // Actualizar registro existente
-            await axios.put(
-              `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/pi_diagnostico_cap/record/${existingRecord.id}`,
-              requestData,
-              { headers: { Authorization: `Bearer ${token}` } }
+            requests.push(
+              axios.put(
+                `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/pi_diagnostico_cap/record/${existingRecord.id}`,
+                requestData,
+                { headers: { Authorization: `Bearer ${token}` } }
+              )
             );
           } else {
             // Crear nuevo registro
-            await axios.post(
-              `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/pi_diagnostico_cap/record`,
-              requestData,
-              { headers: { Authorization: `Bearer ${token}` } }
+            requests.push(
+              axios.post(
+                `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/pi_diagnostico_cap/record`,
+                requestData,
+                { headers: { Authorization: `Bearer ${token}` } }
+              )
             );
           }
         }
       }
+
+      await Promise.all(requests);
 
       alert("Diagnóstico guardado exitosamente");
     } catch (error) {
