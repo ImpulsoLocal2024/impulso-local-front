@@ -72,6 +72,8 @@ export default function DiagnosticoTab({ id }) {
 
         const records = response.data.reduce(
           (acc, record) => {
+            // Suponemos que la API devuelve booleanos (true/false) en record.Respuesta
+            // De lo contrario, parsear: acc.answers[record.Pregunta.trim()] = record.Respuesta === "true"
             acc.answers[record.Pregunta.trim()] = record.Respuesta;
             acc.recordIds[record.Pregunta.trim()] = record.id;
             return acc;
@@ -92,6 +94,7 @@ export default function DiagnosticoTab({ id }) {
   }, [id]);
 
   const handleAnswerChange = (questionText, value) => {
+    // value será true o false
     setAnswers((prev) => ({ ...prev, [questionText]: value }));
   };
 
@@ -110,21 +113,24 @@ export default function DiagnosticoTab({ id }) {
 
       const requests = initialQuestions.flatMap((section) =>
         section.questions.map(async (question) => {
+          const currentAnswer = answers[question.text];
           const requestData = {
             caracterizacion_id: id,
             Componente: section.component,
             Pregunta: question.text,
-            Respuesta: answers[question.text],
-            Puntaje: answers[question.text] ? 1 : 0,
+            Respuesta: currentAnswer, // booleano
+            Puntaje: currentAnswer ? 1 : 0,
           };
 
           if (recordIds[question.text]) {
+            // Existe el registro, actualizar
             await axios.put(
               `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/pi_diagnostico_cap/record/${recordIds[question.text]}`,
               requestData,
               { headers: { Authorization: `Bearer ${token}` } }
             );
           } else {
+            // No existe el registro, crearlo
             const response = await axios.post(
               `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/pi_diagnostico_cap/record`,
               requestData,
