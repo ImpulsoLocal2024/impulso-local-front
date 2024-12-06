@@ -100,30 +100,6 @@ export default function DiagnosticoTab({ id }) {
     return (totalScore / questions.length).toFixed(2);
   };
 
-  const saveRecord = async (token, requestData, questionText) => {
-    try {
-      if (recordIds[questionText]) {
-        // Actualizar registro existente
-        await axios.put(
-          `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/pi_diagnostico_cap/record/${recordIds[questionText]}`,
-          requestData,
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-      } else {
-        // Crear nuevo registro
-        const response = await axios.post(
-          `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/pi_diagnostico_cap/record`,
-          requestData,
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-        // Guardar el nuevo ID en recordIds
-        setRecordIds((prev) => ({ ...prev, [questionText]: response.data.id }));
-      }
-    } catch (error) {
-      console.error(`Error guardando la pregunta "${questionText}":`, error);
-    }
-  };
-
   const handleSubmit = async () => {
     try {
       const token = localStorage.getItem("token");
@@ -131,6 +107,8 @@ export default function DiagnosticoTab({ id }) {
         alert("No se encontró el token de autenticación");
         return;
       }
+
+      const newRecordIds = { ...recordIds };
 
       for (const section of initialQuestions) {
         for (const question of section.questions) {
@@ -142,10 +120,30 @@ export default function DiagnosticoTab({ id }) {
             Puntaje: answers[question.text] ? 1 : 0,
           };
 
-          await saveRecord(token, requestData, question.text);
+          try {
+            if (newRecordIds[question.text]) {
+              // Actualizar registro existente
+              await axios.put(
+                `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/pi_diagnostico_cap/record/${newRecordIds[question.text]}`,
+                requestData,
+                { headers: { Authorization: `Bearer ${token}` } }
+              );
+            } else {
+              // Crear nuevo registro
+              const response = await axios.post(
+                `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/pi_diagnostico_cap/record`,
+                requestData,
+                { headers: { Authorization: `Bearer ${token}` } }
+              );
+              newRecordIds[question.text] = response.data.id;
+            }
+          } catch (error) {
+            console.error(`Error guardando la pregunta "${question.text}":`, error);
+          }
         }
       }
 
+      setRecordIds(newRecordIds); // Actualizar el estado después de completar todas las operaciones
       alert("Diagnóstico guardado exitosamente");
     } catch (error) {
       console.error("Error guardando el diagnóstico:", error);
