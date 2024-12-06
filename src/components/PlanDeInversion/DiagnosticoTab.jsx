@@ -63,34 +63,33 @@ export default function DiagnosticoTab({ id }) {
           alert("No se encontró el token de autenticación");
           return;
         }
-
+  
         // Obtener registros existentes por caracterizacion_id
         const response = await axios.get(
           `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/pi_diagnostico_cap/records?caracterizacion_id=${id}`,
           { headers: { Authorization: `Bearer ${token}` } }
         );
-
-        // Log del resultado de la API
+  
         console.log("Respuesta de la API:", response.data);
-
+  
         // Mapear las respuestas recuperadas
         const records = response.data.reduce((acc, record) => {
-          acc[record.Pregunta] = record.Respuesta; // Mapea la pregunta con su respuesta
+          acc[record.Pregunta.trim()] = record.Respuesta; // Aseguramos que los nombres coincidan
           return acc;
         }, {});
-
+  
         console.log("Registros mapeados:", records);
-
+  
         // Asignar respuestas a las preguntas iniciales
         const updatedAnswers = initialQuestions.reduce((acc, section) => {
           section.questions.forEach((q) => {
-            acc[q.text] = records[q.text] ?? null; // Si no hay respuesta, dejar como null
+            acc[q.text.trim()] = records[q.text.trim()] ?? null; // Usar respuesta existente o null
           });
           return acc;
         }, {});
-
+  
         console.log("Estado final de answers:", updatedAnswers);
-
+  
         setAnswers(updatedAnswers); // Actualiza el estado con las respuestas
       } catch (error) {
         console.error("Error obteniendo registros existentes:", error);
@@ -98,9 +97,10 @@ export default function DiagnosticoTab({ id }) {
         setLoading(false);
       }
     };
-
+  
     fetchExistingRecords();
   }, [id]);
+  
 
   const handleAnswerChange = (questionText, value) => {
     setAnswers((prev) => ({ ...prev, [questionText]: value })); // Actualiza el estado local
