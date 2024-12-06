@@ -72,8 +72,7 @@ export default function DiagnosticoTab({ id }) {
 
         const records = response.data.reduce(
           (acc, record) => {
-            // Suponemos que la API devuelve booleanos (true/false) en record.Respuesta
-            // De lo contrario, parsear: acc.answers[record.Pregunta.trim()] = record.Respuesta === "true"
+            // Suponemos que record.Respuesta es booleano (true/false)
             acc.answers[record.Pregunta.trim()] = record.Respuesta;
             acc.recordIds[record.Pregunta.trim()] = record.id;
             return acc;
@@ -111,37 +110,50 @@ export default function DiagnosticoTab({ id }) {
         return;
       }
 
-      const requests = initialQuestions.flatMap((section) =>
-        section.questions.map(async (question) => {
-          const currentAnswer = answers[question.text];
+      // Obtenemos todas las peticiones, creando o actualizando registros
+      const requestPromises = [];
+      const newRecordIds = { ...recordIds }; // Copia actual de recordIds
+
+      for (const section of initialQuestions) {
+        for (const question of section.questions) {
+          const currentAnswer = answers[question.text] === undefined ? false : answers[question.text];
           const requestData = {
             caracterizacion_id: id,
             Componente: section.component,
             Pregunta: question.text,
-            Respuesta: currentAnswer, // booleano
+            Respuesta: currentAnswer, // booleano (true o false)
             Puntaje: currentAnswer ? 1 : 0,
           };
 
-          if (recordIds[question.text]) {
+          if (newRecordIds[question.text]) {
             // Existe el registro, actualizar
-            await axios.put(
-              `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/pi_diagnostico_cap/record/${recordIds[question.text]}`,
+            const updatePromise = axios.put(
+              `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/pi_diagnostico_cap/record/${newRecordIds[question.text]}`,
               requestData,
               { headers: { Authorization: `Bearer ${token}` } }
             );
+            requestPromises.push(updatePromise);
           } else {
             // No existe el registro, crearlo
-            const response = await axios.post(
+            const createPromise = axios.post(
               `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/pi_diagnostico_cap/record`,
               requestData,
               { headers: { Authorization: `Bearer ${token}` } }
-            );
-            setRecordIds((prev) => ({ ...prev, [question.text]: response.data.id }));
+            ).then((response) => {
+              // Guardamos el id recién creado en newRecordIds
+              newRecordIds[question.text] = response.data.id;
+            });
+            requestPromises.push(createPromise);
           }
-        })
-      );
+        }
+      }
 
-      await Promise.all(requests);
+      // Esperamos a que todas las peticiones finalicen
+      await Promise.all(requestPromises);
+
+      // Actualizamos los recordIds una sola vez, ya con todos los IDs nuevos
+      setRecordIds(newRecordIds);
+
       alert("Diagnóstico guardado exitosamente");
     } catch (error) {
       console.error("Error guardando el diagnóstico:", error);
