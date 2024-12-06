@@ -65,20 +65,19 @@ export default function DiagnosticoTab({ id }) {
           return;
         }
 
-        // Obtener registros existentes por caracterizacion_id
         const response = await axios.get(
           `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/pi_diagnostico_cap/records?caracterizacion_id=${id}`,
           { headers: { Authorization: `Bearer ${token}` } }
         );
 
-        console.log("Respuesta de la API:", response.data);
-
-        // Mapear las respuestas recuperadas
-        const records = response.data.reduce((acc, record) => {
-          acc.answers[record.Pregunta.trim()] = record.Respuesta;
-          acc.recordIds[record.Pregunta.trim()] = record.id; // Guardar el ID del registro
-          return acc;
-        }, { answers: {}, recordIds: {} });
+        const records = response.data.reduce(
+          (acc, record) => {
+            acc.answers[record.Pregunta.trim()] = record.Respuesta;
+            acc.recordIds[record.Pregunta.trim()] = record.id;
+            return acc;
+          },
+          { answers: {}, recordIds: {} }
+        );
 
         setAnswers(records.answers);
         setRecordIds(records.recordIds);
@@ -96,6 +95,11 @@ export default function DiagnosticoTab({ id }) {
     setAnswers((prev) => ({ ...prev, [questionText]: value }));
   };
 
+  const calculateAverage = (questions) => {
+    const totalScore = questions.reduce((sum, q) => sum + (answers[q.text.trim()] ? 1 : 0), 0);
+    return (totalScore / questions.length).toFixed(2);
+  };
+
   const handleSubmit = async () => {
     try {
       const token = localStorage.getItem("token");
@@ -105,7 +109,7 @@ export default function DiagnosticoTab({ id }) {
       }
 
       const requests = initialQuestions.flatMap((section) =>
-        section.questions.map((question) => {
+        section.questions.map(async (question) => {
           const requestData = {
             caracterizacion_id: id,
             Componente: section.component,
@@ -115,15 +119,13 @@ export default function DiagnosticoTab({ id }) {
           };
 
           if (recordIds[question.text]) {
-            // Actualizar registro existente
-            return axios.put(
+            await axios.put(
               `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/pi_diagnostico_cap/record/${recordIds[question.text]}`,
               requestData,
               { headers: { Authorization: `Bearer ${token}` } }
             );
           } else {
-            // Crear nuevo registro
-            return axios.post(
+            await axios.post(
               `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/pi_diagnostico_cap/record`,
               requestData,
               { headers: { Authorization: `Bearer ${token}` } }
@@ -186,6 +188,12 @@ export default function DiagnosticoTab({ id }) {
                     <td>{answers[question.text] ? 1 : 0}</td>
                   </tr>
                 ))}
+                <tr>
+                  <td colSpan="4" className="text-end">
+                    Promedio del componente:
+                  </td>
+                  <td>{calculateAverage(section.questions)}</td>
+                </tr>
               </React.Fragment>
             ))}
           </tbody>
