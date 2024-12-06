@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
+import axios from 'axios';
 
 export default function DiagnosticoTab({ id }) {
   const initialQuestions = [
@@ -50,32 +51,97 @@ export default function DiagnosticoTab({ id }) {
     },
   ];
 
-  const [answers, setAnswers] = useState(() =>
-    initialQuestions.reduce((acc, section) => {
-      section.questions.forEach((q) => {
-        acc[q.field] = null; // null indica que aún no se ha respondido
-      });
-      return acc;
-    }, {})
-  );
+  const [answers, setAnswers] = useState({});
+  const [existingRecords, setExistingRecords] = useState({});
+  const [loading, setLoading] = useState(true);
 
-  const handleAnswerChange = (field, value) => {
-    setAnswers((prev) => ({ ...prev, [field]: value }));
+  useEffect(() => {
+    const fetchExistingRecords = async () => {
+      setLoading(true);
+      try {
+        const token = localStorage.getItem("token");
+        if (!token) {
+          alert("No se encontró el token de autenticación");
+          return;
+        }
+
+        // Obtener registros existentes por caracterizacion_id
+        const response = await axios.get(
+          `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/pi_diagnostico_cap/records?caracterizacion_id=${id}`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
+
+        // Mapear los registros existentes
+        const records = response.data.reduce((acc, record) => {
+          acc[record.Pregunta] = {
+            Respuesta: record.Respuesta,
+            id: record.id, // ID del registro para actualizar
+          };
+          return acc;
+        }, {});
+
+        setExistingRecords(records);
+        setAnswers(
+          initialQuestions.reduce((acc, section) => {
+            section.questions.forEach((q) => {
+              acc[q.text] = records[q.text]?.Respuesta ?? null; // Usar respuesta existente o null
+            });
+            return acc;
+          }, {})
+        );
+      } catch (error) {
+        console.error("Error obteniendo registros existentes:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchExistingRecords();
+  }, [id]);
+
+  const handleAnswerChange = (questionText, value) => {
+    setAnswers((prev) => ({ ...prev, [questionText]: value }));
   };
 
   const handleSubmit = async () => {
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem("token");
       if (!token) {
         alert("No se encontró el token de autenticación");
         return;
       }
 
-      await axios.post(
-        `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/pi_diagnostico/record`,
-        { caracterizacion_id: id, ...answers },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      // Procesar las respuestas
+      for (const section of initialQuestions) {
+        for (const question of section.questions) {
+          const existingRecord = existingRecords[question.text];
+          const requestData = {
+            caracterizacion_id: id,
+            Componente: section.component,
+            Pregunta: question.text,
+            Respuesta: answers[question.text],
+            Puntaje: answers[question.text] ? 1 : 0, // Puntaje basado en la respuesta
+          };
+
+          if (existingRecord) {
+            // Actualizar registro existente
+            await axios.put(
+              `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/pi_diagnostico_cap/record/${existingRecord.id}`,
+              requestData,
+              { headers: { Authorization: `Bearer ${token}` } }
+            );
+          } else {
+            // Crear nuevo registro
+            await axios.post(
+              `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/pi_diagnostico_cap/record`,
+              requestData,
+              { headers: { Authorization: `Bearer ${token}` } }
+            );
+          }
+        }
+      }
 
       alert("Diagnóstico guardado exitosamente");
     } catch (error) {
@@ -87,46 +153,52 @@ export default function DiagnosticoTab({ id }) {
   return (
     <div>
       <h3>Diagnóstico</h3>
-      <table className="table table-bordered">
-        <thead>
-          <tr>
-            <th>Componente</th>
-            <th>Pregunta</th>
-            <th>Sí</th>
-            <th>No</th>
-          </tr>
-        </thead>
-        <tbody>
-          {initialQuestions.map((section) => (
-            <React.Fragment key={section.component}>
-              {section.questions.map((question, index) => (
-                <tr key={question.field}>
-                  {index === 0 && (
-                    <td rowSpan={section.questions.length}>{section.component}</td>
-                  )}
-                  <td>{question.text}</td>
-                  <td>
-                    <input
-                      type="radio"
-                      name={question.field}
-                      checked={answers[question.field] === true}
-                      onChange={() => handleAnswerChange(question.field, true)}
-                    />
-                  </td>
-                  <td>
-                    <input
-                      type="radio"
-                      name={question.field}
-                      checked={answers[question.field] === false}
-                      onChange={() => handleAnswerChange(question.field, false)}
-                    />
-                  </td>
-                </tr>
-              ))}
-            </React.Fragment>
-          ))}
-        </tbody>
-      </table>
+      {loading ? (
+        <p>Cargando...</p>
+      ) : (
+        <table className="table table-bordered">
+          <thead>
+            <tr>
+              <th>Componente</th>
+              <th>Pregunta</th>
+              <th>Sí</th>
+              <th>No</th>
+            </tr>
+          </thead>
+          <tbody>
+            {initialQuestions.map((section) => (
+              <React.Fragment key={section.component}>
+                {section.questions.map((question, index) => (
+                  <tr key={question.text}>
+                    {index === 0 && (
+                      <td rowSpan={section.questions.length}>
+                        {section.component}
+                      </td>
+                    )}
+                    <td>{question.text}</td>
+                    <td>
+                      <input
+                        type="radio"
+                        name={question.text}
+                        checked={answers[question.text] === true}
+                        onChange={() => handleAnswerChange(question.text, true)}
+                      />
+                    </td>
+                    <td>
+                      <input
+                        type="radio"
+                        name={question.text}
+                        checked={answers[question.text] === false}
+                        onChange={() => handleAnswerChange(question.text, false)}
+                      />
+                    </td>
+                  </tr>
+                ))}
+              </React.Fragment>
+            ))}
+          </tbody>
+        </table>
+      )}
       <button className="btn btn-primary" onClick={handleSubmit}>
         Guardar
       </button>
@@ -137,3 +209,4 @@ export default function DiagnosticoTab({ id }) {
 DiagnosticoTab.propTypes = {
   id: PropTypes.string.isRequired,
 };
+
