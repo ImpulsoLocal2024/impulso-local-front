@@ -52,6 +52,7 @@ export default function DiagnosticoTab({ id }) {
   ];
 
   const [answers, setAnswers] = useState({});
+  const [recordIds, setRecordIds] = useState({});
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -63,48 +64,40 @@ export default function DiagnosticoTab({ id }) {
           alert("No se encontró el token de autenticación");
           return;
         }
-  
-        // Obtener registros existentes por caracterizacion_id
+
         const response = await axios.get(
           `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/pi_diagnostico_cap/records?caracterizacion_id=${id}`,
           { headers: { Authorization: `Bearer ${token}` } }
         );
-  
-        console.log("Respuesta de la API:", response.data);
-  
-        // Mapear las respuestas recuperadas
-        const records = response.data.reduce((acc, record) => {
-          acc[record.Pregunta.trim()] = record.Respuesta; // Aseguramos que los nombres coincidan
-          return acc;
-        }, {});
-  
-        console.log("Registros mapeados:", records);
-  
-        // Asignar respuestas a las preguntas iniciales
-        const updatedAnswers = initialQuestions.reduce((acc, section) => {
-          section.questions.forEach((q) => {
-            acc[q.text.trim()] = records[q.text.trim()] ?? null; // Usar respuesta existente o null
-          });
-          return acc;
-        }, {});
-  
-        console.log("Estado final de answers:", updatedAnswers);
-  
-        setAnswers(updatedAnswers); // Actualiza el estado con las respuestas
+
+        const records = response.data.reduce(
+          (acc, record) => {
+            acc.answers[record.Pregunta.trim()] = record.Respuesta;
+            acc.recordIds[record.Pregunta.trim()] = record.id;
+            return acc;
+          },
+          { answers: {}, recordIds: {} }
+        );
+
+        setAnswers(records.answers);
+        setRecordIds(records.recordIds);
       } catch (error) {
         console.error("Error obteniendo registros existentes:", error);
       } finally {
         setLoading(false);
       }
     };
-  
+
     fetchExistingRecords();
   }, [id]);
-  
 
   const handleAnswerChange = (questionText, value) => {
-    setAnswers((prev) => ({ ...prev, [questionText]: value })); // Actualiza el estado local
-    console.log("Estado actualizado answers:", answers); // Verificar cambios en tiempo real
+    setAnswers((prev) => ({ ...prev, [questionText]: value }));
+  };
+
+  const calculateAverage = (questions) => {
+    const totalScore = questions.reduce((sum, q) => sum + (answers[q.text.trim()] ? 1 : 0), 0);
+    return (totalScore / questions.length).toFixed(2);
   };
 
   const handleSubmit = async () => {
@@ -116,7 +109,7 @@ export default function DiagnosticoTab({ id }) {
       }
 
       const requests = initialQuestions.flatMap((section) =>
-        section.questions.map((question) => {
+        section.questions.map(async (question) => {
           const requestData = {
             caracterizacion_id: id,
             Componente: section.component,
@@ -125,13 +118,20 @@ export default function DiagnosticoTab({ id }) {
             Puntaje: answers[question.text] ? 1 : 0,
           };
 
-          console.log("Datos a enviar (requestData):", requestData);
-
-          return axios.post(
-            `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/pi_diagnostico_cap/record`,
-            requestData,
-            { headers: { Authorization: `Bearer ${token}` } }
-          );
+          if (recordIds[question.text]) {
+            await axios.put(
+              `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/pi_diagnostico_cap/record/${recordIds[question.text]}`,
+              requestData,
+              { headers: { Authorization: `Bearer ${token}` } }
+            );
+          } else {
+            const response = await axios.post(
+              `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/pi_diagnostico_cap/record`,
+              requestData,
+              { headers: { Authorization: `Bearer ${token}` } }
+            );
+            setRecordIds((prev) => ({ ...prev, [question.text]: response.data.id }));
+          }
         })
       );
 
@@ -156,6 +156,7 @@ export default function DiagnosticoTab({ id }) {
               <th>Pregunta</th>
               <th>Sí</th>
               <th>No</th>
+              <th>Puntaje</th>
             </tr>
           </thead>
           <tbody>
@@ -185,8 +186,15 @@ export default function DiagnosticoTab({ id }) {
                         onChange={() => handleAnswerChange(question.text, false)}
                       />
                     </td>
+                    <td>{answers[question.text] ? 1 : 0}</td>
                   </tr>
                 ))}
+                <tr>
+                  <td colSpan="4" className="text-end">
+                    Promedio del componente:
+                  </td>
+                  <td>{calculateAverage(section.questions)}</td>
+                </tr>
               </React.Fragment>
             ))}
           </tbody>
