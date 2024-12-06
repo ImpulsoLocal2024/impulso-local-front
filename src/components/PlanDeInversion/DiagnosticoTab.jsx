@@ -118,9 +118,9 @@ export default function DiagnosticoTab({ id }) {
         alert("No se encontró el token de autenticación");
         return;
       }
-
+  
       const requests = initialQuestions.flatMap((section) =>
-        section.questions.map((question) => {
+        section.questions.map(async (question) => {
           const requestData = {
             caracterizacion_id: id,
             Componente: section.component,
@@ -128,17 +128,32 @@ export default function DiagnosticoTab({ id }) {
             Respuesta: answers[question.text],
             Puntaje: answers[question.text] ? 1 : 0,
           };
-
+  
           console.log("Datos a enviar (requestData):", requestData);
-
-          return axios.post(
-            `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/pi_diagnostico_cap/record`,
-            requestData,
-            { headers: { Authorization: `Bearer ${token}` } }
-          );
+  
+          try {
+            // Intenta actualizar el registro existente con PUT
+            await axios.put(
+              `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/pi_diagnostico_cap/record`,
+              requestData,
+              { headers: { Authorization: `Bearer ${token}` } }
+            );
+          } catch (error) {
+            if (error.response && error.response.status === 404) {
+              // Si el registro no existe, crea uno nuevo con POST
+              await axios.post(
+                `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/pi_diagnostico_cap/record`,
+                requestData,
+                { headers: { Authorization: `Bearer ${token}` } }
+              );
+            } else {
+              console.error("Error en el manejo del registro:", error);
+              throw error;
+            }
+          }
         })
       );
-
+  
       await Promise.all(requests);
       alert("Diagnóstico guardado exitosamente");
     } catch (error) {
@@ -146,6 +161,7 @@ export default function DiagnosticoTab({ id }) {
       alert("Hubo un error al guardar el diagnóstico");
     }
   };
+  
 
   return (
     <div>
