@@ -35,32 +35,24 @@ export default function CapacitacionTab({ id }) {
           return;
         }
 
-        // Obtenemos los registros para esta caracterización
         const response = await axios.get(
           `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/pi_capacitacion/records?caracterizacion_id=${id}`,
           { headers: { Authorization: `Bearer ${token}` } }
         );
 
-        // Si no hay registros, creamos uno nuevo por defecto
         if (!response.data || response.data.length === 0) {
+          // No existe el registro en BD, inicializamos uno en memoria con todos false
           let newRecord = { caracterizacion_id: id };
           questions.forEach((q) => {
             newRecord[q] = false;
           });
-
-          // Creamos el nuevo registro
-          const createResponse = await axios.post(
-            `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/pi_capacitacion/record`,
-            newRecord,
-            { headers: { Authorization: `Bearer ${token}` } }
-          );
-
-          setRecord(createResponse.data);
-          setRecordId(createResponse.data.id);
+          setRecord(newRecord);
+          setRecordId(null);
         } else {
-          // Tomamos el primer registro encontrado (asumiendo uno por caracterizacion_id)
+          // Existe al menos un registro, tomamos el primero
           const existingRecord = response.data[0];
-          // Aseguramos que todas las preguntas estén definidas; si no lo están, las seteamos en false
+
+          // Asegurar que todas las preguntas existan, si no, ponerlas en false
           questions.forEach((q) => {
             if (existingRecord[q] === undefined || existingRecord[q] === null) {
               existingRecord[q] = false;
@@ -72,13 +64,13 @@ export default function CapacitacionTab({ id }) {
         }
       } catch (error) {
         console.error("Error obteniendo el registro de capacitación:", error);
-        // Si hay un error (por ejemplo 404), intentamos crear uno nuevo por defecto
-        let data = { caracterizacion_id: id };
+        // Si hay error (ej: 404), creamos uno en memoria sin guardarlo aún
+        let newRecord = { caracterizacion_id: id };
         questions.forEach((q) => {
-          data[q] = false;
+          newRecord[q] = false;
         });
-        setRecord(data);
-        setRecordId(null); // Aún no existe en la BD
+        setRecord(newRecord);
+        setRecordId(null);
       } finally {
         setLoading(false);
       }
@@ -96,7 +88,6 @@ export default function CapacitacionTab({ id }) {
 
   const handleSubmit = async () => {
     if (!record) return;
-
     try {
       const token = localStorage.getItem("token");
       if (!token) {
@@ -106,22 +97,24 @@ export default function CapacitacionTab({ id }) {
 
       if (recordId) {
         // Actualizar registro existente
-        const response = await axios.put(
+        await axios.put(
           `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/pi_capacitacion/record/${recordId}`,
           record,
           { headers: { Authorization: `Bearer ${token}` } }
         );
-        setRecord(response.data);
+        // No sobrescribimos el estado con la respuesta, confiamos en el estado local
         alert("Capacitación guardada exitosamente");
       } else {
-        // Crear nuevo registro (en caso de que no se haya creado antes)
+        // Crear nuevo registro
         const createResponse = await axios.post(
           `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/pi_capacitacion/record`,
           record,
           { headers: { Authorization: `Bearer ${token}` } }
         );
-        setRecord(createResponse.data);
-        setRecordId(createResponse.data.id);
+        // Ajustar recordId con el devuelto por el backend
+        if (createResponse.data && createResponse.data.id) {
+          setRecordId(createResponse.data.id);
+        }
         alert("Capacitación guardada exitosamente");
       }
     } catch (error) {
