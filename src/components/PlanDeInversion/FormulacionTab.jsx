@@ -21,6 +21,8 @@ export default function FormulacionTab({ id }) {
     "Equipoy/o similares",
   ];
 
+  const montoDisponible = 3000000; // 3 millones
+
   const fetchRecords = async () => {
     setLoading(true);
     try {
@@ -118,6 +120,7 @@ export default function FormulacionTab({ id }) {
   });
 
   const totalInversion = resumenPorRubro.reduce((sum, item) => sum + item.total, 0);
+  const contrapartida = totalInversion > montoDisponible ? totalInversion - montoDisponible : 0;
 
   return (
     <div>
@@ -168,7 +171,7 @@ export default function FormulacionTab({ id }) {
               <div className="col-md-4">
                 <label><strong>Rubro</strong></label>
                 <select
-                  className="form-select w-100" // w-100 para ancho completo
+                  className="form-select w-100"
                   name="Rubro"
                   value={newRubro["Rubro"]}
                   onChange={handleChange}
@@ -183,7 +186,7 @@ export default function FormulacionTab({ id }) {
                 <label><strong>Elemento</strong></label>
                 <input
                   type="text"
-                  className="form-control w-100" // w-100 para ancho completo
+                  className="form-control w-100"
                   name="Elemento"
                   value={newRubro["Elemento"]}
                   onChange={handleChange}
@@ -255,11 +258,13 @@ export default function FormulacionTab({ id }) {
               </tr>
               <tr>
                 <td>Monto disponible</td>
-                <td>$3.000.000</td>
+                <td>${montoDisponible.toLocaleString()}</td>
               </tr>
               <tr>
                 <td>Contrapartida</td>
-                <td style={{color: "red"}}>$600.000</td>
+                <td style={{color: contrapartida > 0 ? "red" : "black"}}>
+                  ${contrapartida.toLocaleString()}
+                </td>
               </tr>
             </tbody>
           </table>
