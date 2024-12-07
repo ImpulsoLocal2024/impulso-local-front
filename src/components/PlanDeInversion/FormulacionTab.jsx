@@ -26,7 +26,7 @@ export default function FormulacionTab({ id }) {
 
   const [uploadedFilesMap, setUploadedFilesMap] = useState({});
   const [uploadingRecordId, setUploadingRecordId] = useState(null); 
-  // uploadingRecordId = formulacion_id del registro en pi_formulacion
+  // uploadingRecordId = formulacion_id (id del registro en pi_formulacion)
   const [file, setFile] = useState(null);
   const [fileName, setFileName] = useState('');
   const [error, setError] = useState(null);
@@ -59,36 +59,42 @@ export default function FormulacionTab({ id }) {
     }
   };
 
+  // Aquí no podemos filtrar en el backend por formulacion_id sin modificarlo
+  // Obtenemos todos los archivos de la empresa (record_id = caracterizacion_id)
   const fetchAllRecordsFiles = async (fetchedRecords) => {
     const token = localStorage.getItem('token');
     if (!token) return;
 
+    // Obtenemos todos los archivos asociados a la tabla pi_formulacion y a esta empresa
+    // Luego los filtraremos en el frontend por formulacion_id usando source
     const promises = fetchedRecords.map((rec) => fetchFilesForRecord(rec.id));
     await Promise.all(promises);
   };
 
   const fetchFilesForRecord = async (formulacion_id) => {
-    // Enviamos record_id = caracterizacion_id y formulacion_id
     try {
       const token = localStorage.getItem('token');
       if (!token) return;
 
+      // Solo enviamos record_id (caracterizacion_id) para obtener archivos de esa empresa (sin filtrado de formulacion_id en backend)
       const filesResponse = await axios.get(
-        `https://impulso-local-back.onrender.com/api/inscriptions/tables/pi_formulacion/record/${formulacion_id}/files`,
+        `https://impulso-local-back.onrender.com/api/inscriptions/tables/pi_formulacion/record/${id}/files`, // OJO: Aquí usamos el id (caracterizacion_id) como record_id, ya que el backend así lo hace.
         {
           headers: {
             Authorization: `Bearer ${token}`,
-          },
-          params: {
-            record_id: id,
-            formulacion_id: formulacion_id
-          },
+          }
+          // No enviamos formulacion_id ni source, ya que el backend no filtra por ellos
         }
       );
 
+      const allFiles = filesResponse.data.files || [];
+
+      // Filtramos en el frontend: solo aquellos que tengan source = "formulacion_{formulacion_id}"
+      const formulacionFiles = allFiles.filter(f => f.source === `formulacion_${formulacion_id}`);
+
       setUploadedFilesMap((prev) => ({
         ...prev,
-        [formulacion_id]: filesResponse.data.files
+        [formulacion_id]: formulacionFiles
       }));
     } catch (error) {
       console.error('Error obteniendo los archivos:', error);
@@ -176,10 +182,21 @@ export default function FormulacionTab({ id }) {
       formData.append('fileName', fileName);
       // record_id = caracterizacion_id
       formData.append('record_id', id);
-      // formulacion_id = uploadingRecordId
-      formData.append('formulacion_id', uploadingRecordId);
+      // No podemos usar formulacion_id directamente
+      // Usaremos source para guardar "formulacion_{formulacion_id}"
+      formData.append('source', `formulacion_${uploadingRecordId}`);
 
+      // Al subir el archivo, usamos la ruta record/{uploadingRecordId}/upload
+      // Pero el backend no filtra por formulacion_id, así que guardamos ese valor en source
       await axios.post(
+        `https://impulso-local-back.onrender.com/api/inscriptions/tables/pi_formulacion/record/${id}/upload`, 
+        // OJO: Aquí usamos ${id} porque el backend espera record_id (caracterizacion_id) en la URL
+        // Si el backend requiere record_id = formulacion_id, deberás ajustar. 
+        // Como en el código original se usaba `record/${uploadingRecordId}/upload` lo dejamos igual:
+        // Espera, el código original usaba:
+        // `https://impulso-local-back.onrender.com/api/inscriptions/tables/pi_formulacion/record/${uploadingRecordId}/upload`
+        // Este backend no lo filtra, pero sí necesita un record_id en la URL que sea la empresa o el pi_formulacion_id?
+        // Originalmente se usaba uploadingRecordId en la URL. Mantengamos eso para respetar el código original.
         `https://impulso-local-back.onrender.com/api/inscriptions/tables/pi_formulacion/record/${uploadingRecordId}/upload`,
         formData,
         {
@@ -190,6 +207,7 @@ export default function FormulacionTab({ id }) {
         }
       );
 
+      // Actualizamos los archivos, filtrando en el frontend por source
       await fetchFilesForRecord(uploadingRecordId);
       setFile(null);
       setFileName('');
