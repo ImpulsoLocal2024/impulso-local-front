@@ -6,13 +6,12 @@ export default function FormulacionTab({ id }) {
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Campos del nuevo rubro
   const [newRubro, setNewRubro] = useState({
-    Rubro: "",
-    Elemento: "",
-    Descripcion: "",
-    Cantidad: "",
-    Valor_Unitario: "",
+    "Rubro": "",
+    "Elemento": "",
+    "Descripción": "",
+    "Cantidad": "",
+    "Valor Unitario": "",
   });
 
   const rubrosOptions = [
@@ -22,30 +21,30 @@ export default function FormulacionTab({ id }) {
     "Equipoy/o similares",
   ];
 
-  useEffect(() => {
-    const fetchRecords = async () => {
-      setLoading(true);
-      try {
-        const token = localStorage.getItem("token");
-        if (!token) {
-          alert("No se encontró el token de autenticación");
-          setLoading(false);
-          return;
-        }
-
-        const response = await axios.get(
-          `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/pi_formulacion/records?caracterizacion_id=${id}`,
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-
-        setRecords(response.data || []);
-      } catch (error) {
-        console.error("Error obteniendo registros de formulación:", error);
-      } finally {
+  const fetchRecords = async () => {
+    setLoading(true);
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        alert("No se encontró el token de autenticación");
         setLoading(false);
+        return;
       }
-    };
 
+      const response = await axios.get(
+        `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/pi_formulacion/records?caracterizacion_id=${id}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      setRecords(response.data || []);
+    } catch (error) {
+      console.error("Error obteniendo registros de formulación:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchRecords();
   }, [id]);
 
@@ -65,40 +64,38 @@ export default function FormulacionTab({ id }) {
         return;
       }
 
-      if (!newRubro.Rubro || !newRubro.Elemento || !newRubro.Cantidad || !newRubro.Valor_Unitario) {
-        alert("Por favor completa todos los campos obligatorios (Rubro, Elemento, Cantidad, Valor Unitario).");
+      const { Rubro, Elemento, Descripción, Cantidad, "Valor Unitario": ValorUnitario } = newRubro;
+
+      if (!Rubro || !Elemento || !Cantidad || !ValorUnitario) {
+        alert("Por favor completa Rubro, Elemento, Cantidad y Valor Unitario.");
         return;
       }
 
       const requestData = {
         caracterizacion_id: id,
-        Rubro: newRubro.Rubro,
-        Elemento: newRubro.Elemento,
-        Descripcion: newRubro.Descripcion || "", // Si el usuario no escribe nada, lo enviamos como ""
-        Cantidad: parseInt(newRubro.Cantidad, 10) || 0,
-        "Valor Unitario": parseFloat(newRubro.Valor_Unitario) || 0,
+        "Rubro": Rubro,
+        "Elemento": Elemento,
+        "Descripción": Descripción || "",
+        "Cantidad": parseInt(Cantidad, 10) || 0,
+        "Valor Unitario": parseFloat(ValorUnitario) || 0,
       };
 
-      const response = await axios.post(
+      await axios.post(
         `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/pi_formulacion/record`,
         requestData,
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      // Agregar el nuevo registro a la lista local
-      const newRecord = response.data;
-      // Asegurar campos numéricos por si vienen null
-      if (!newRecord.Cantidad) newRecord.Cantidad = 0;
-      if (!newRecord["Valor Unitario"]) newRecord["Valor Unitario"] = 0;
-      setRecords((prev) => [...prev, newRecord]);
+      // Refrescar la lista desde la BD
+      await fetchRecords();
 
       // Resetear el formulario
       setNewRubro({
-        Rubro: "",
-        Elemento: "",
-        Descripcion: "",
-        Cantidad: "",
-        Valor_Unitario: "",
+        "Rubro": "",
+        "Elemento": "",
+        "Descripción": "",
+        "Cantidad": "",
+        "Valor Unitario": "",
       });
 
       alert("Rubro guardado exitosamente");
@@ -111,10 +108,10 @@ export default function FormulacionTab({ id }) {
   // Calcular resumen por rubro
   const resumenPorRubro = rubrosOptions.map((r) => {
     const total = records
-      .filter((rec) => rec.Rubro === r)
+      .filter((rec) => rec["Rubro"] === r)
       .reduce((sum, rec) => {
-        const cantidad = rec.Cantidad ? rec.Cantidad : 0;
-        const valorUnitario = rec["Valor Unitario"] ? rec["Valor Unitario"] : 0;
+        const cantidad = rec["Cantidad"] || 0;
+        const valorUnitario = rec["Valor Unitario"] || 0;
         return sum + (cantidad * valorUnitario);
       }, 0);
     return { rubro: r, total };
@@ -133,13 +130,13 @@ export default function FormulacionTab({ id }) {
           {records.length > 0 ? (
             <div className="mb-3">
               {records.map((rec, index) => {
-                const rubro = rec.Rubro || "";
-                const elemento = rec.Elemento || "";
-                const descripcion = rec.Descripcion !== null && rec.Descripcion !== undefined && rec.Descripcion !== ""
-                  ? rec.Descripcion
+                const rubro = rec["Rubro"] || "";
+                const elemento = rec["Elemento"] || "";
+                const descripcion = (rec["Descripción"] && rec["Descripción"].trim() !== "") 
+                  ? rec["Descripción"] 
                   : "Sin descripción";
-                const cantidad = rec.Cantidad ? rec.Cantidad : 0;
-                const valorUnitario = rec["Valor Unitario"] ? rec["Valor Unitario"] : 0;
+                const cantidad = rec["Cantidad"] || 0;
+                const valorUnitario = rec["Valor Unitario"] || 0;
                 const valorTotal = cantidad * valorUnitario;
 
                 return (
@@ -148,12 +145,12 @@ export default function FormulacionTab({ id }) {
                       <h5 className="card-title">
                         {index + 1}. {rubro} <span className="text-success">✔️</span>
                       </h5>
-                      <p className="card-text">
+                      <p className="card-text" style={{ lineHeight: "1.5" }}>
                         <strong>Elemento:</strong> {elemento}<br />
                         <strong>Descripción:</strong> {descripcion}<br />
                         <strong>Cantidad:</strong> {cantidad.toLocaleString()}<br />
-                        <strong>Valor Unitario:</strong> ${Number(valorUnitario).toLocaleString()}<br />
-                        <strong>Valor Total:</strong> ${Number(valorTotal).toLocaleString()}
+                        <strong>Valor Unitario:</strong> ${valorUnitario.toLocaleString()}<br />
+                        <strong>Valor Total:</strong> ${valorTotal.toLocaleString()}
                       </p>
                     </div>
                   </div>
@@ -173,7 +170,7 @@ export default function FormulacionTab({ id }) {
                 <select
                   className="form-select"
                   name="Rubro"
-                  value={newRubro.Rubro}
+                  value={newRubro["Rubro"]}
                   onChange={handleChange}
                 >
                   <option value="">Seleccionar...</option>
@@ -188,7 +185,7 @@ export default function FormulacionTab({ id }) {
                   type="text"
                   className="form-control"
                   name="Elemento"
-                  value={newRubro.Elemento}
+                  value={newRubro["Elemento"]}
                   onChange={handleChange}
                   placeholder="Ej: Par, Kgs, Und"
                 />
@@ -198,8 +195,8 @@ export default function FormulacionTab({ id }) {
                 <input
                   type="text"
                   className="form-control"
-                  name="Descripcion"
-                  value={newRubro.Descripcion}
+                  name="Descripción"
+                  value={newRubro["Descripción"]}
                   onChange={handleChange}
                   placeholder="Descripción (opcional)"
                 />
@@ -212,7 +209,7 @@ export default function FormulacionTab({ id }) {
                   type="number"
                   className="form-control"
                   name="Cantidad"
-                  value={newRubro.Cantidad}
+                  value={newRubro["Cantidad"]}
                   onChange={handleChange}
                   placeholder="Cantidad"
                 />
@@ -222,8 +219,8 @@ export default function FormulacionTab({ id }) {
                 <input
                   type="number"
                   className="form-control"
-                  name="Valor_Unitario"
-                  value={newRubro.Valor_Unitario}
+                  name="Valor Unitario"
+                  value={newRubro["Valor Unitario"]}
                   onChange={handleChange}
                   placeholder="Valor Unitario"
                 />
