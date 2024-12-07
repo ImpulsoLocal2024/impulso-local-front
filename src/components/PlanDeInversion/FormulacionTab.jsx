@@ -22,6 +22,13 @@ export default function FormulacionTab({ id }) {
   ];
 
   const montoDisponible = 3000000; // 3 millones
+  
+  // Estados para la funcionalidad de archivos
+  const [uploadedFilesMap, setUploadedFilesMap] = useState({}); 
+  const [uploadingRecordId, setUploadingRecordId] = useState(null); 
+  const [file, setFile] = useState(null);
+  const [fileName, setFileName] = useState('');
+  const [error, setError] = useState(null);
 
   const fetchRecords = async () => {
     setLoading(true);
@@ -38,11 +45,53 @@ export default function FormulacionTab({ id }) {
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      setRecords(response.data || []);
+      const fetchedRecords = response.data || [];
+      setRecords(fetchedRecords);
+
+      // Después de obtener los registros, obtener los archivos de cada uno
+      await fetchAllRecordsFiles(fetchedRecords);
+
     } catch (error) {
       console.error("Error obteniendo registros de formulación:", error);
+      setError('Error obteniendo los registros de formulación');
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Obtener archivos de cada registro
+  const fetchAllRecordsFiles = async (fetchedRecords) => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    const promises = fetchedRecords.map((rec) => fetchFilesForRecord(rec.id));
+    await Promise.all(promises);
+  };
+
+  const fetchFilesForRecord = async (recordId) => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+
+      const filesResponse = await axios.get(
+        `https://impulso-local-back.onrender.com/api/inscriptions/tables/pi_formulacion/record/${recordId}/files`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          params: {
+            source: 'formulacion',
+          },
+        }
+      );
+
+      setUploadedFilesMap((prev) => ({
+        ...prev,
+        [recordId]: filesResponse.data.files
+      }));
+    } catch (error) {
+      console.error('Error obteniendo los archivos:', error);
+      setError('Error obteniendo los archivos');
     }
   };
 
@@ -107,6 +156,71 @@ export default function FormulacionTab({ id }) {
     }
   };
 
+  // Funciones de manejo de archivos
+  const handleFileChange = (e) => {
+    setFile(e.target.files[0]);
+  };
+
+  const handleFileNameChange = (e) => {
+    setFileName(e.target.value);
+  };
+
+  const handleFileUpload = async (e) => {
+    e.preventDefault();
+    if (!file || !fileName) {
+      alert('Por favor, ingresa un nombre y selecciona un archivo');
+      return;
+    }
+    try {
+      const token = localStorage.getItem('token');
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('fileName', fileName);
+      formData.append('caracterizacion_id', id);
+      formData.append('source', 'formulacion');
+
+      await axios.post(
+        `https://impulso-local-back.onrender.com/api/inscriptions/tables/pi_formulacion/record/${uploadingRecordId}/upload`,
+        formData,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'multipart/form-data',
+          },
+        }
+      );
+
+      await fetchFilesForRecord(uploadingRecordId);
+      setFile(null);
+      setFileName('');
+      setUploadingRecordId(null);
+    } catch (error) {
+      console.error('Error subiendo el archivo:', error);
+      setError('Error subiendo el archivo');
+    }
+  };
+
+  const handleFileDelete = async (recordId, fileId) => {
+    if (window.confirm('¿Estás seguro de que deseas eliminar este archivo?')) {
+      try {
+        const token = localStorage.getItem('token');
+        await axios.delete(
+          `https://impulso-local-back.onrender.com/api/inscriptions/tables/pi_formulacion/record/${recordId}/file/${fileId}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+
+        await fetchFilesForRecord(recordId);
+      } catch (error) {
+        console.error('Error eliminando el archivo:', error);
+        setError('Error eliminando el archivo');
+      }
+    }
+  };
+
   // Calcular resumen por rubro
   const resumenPorRubro = rubrosOptions.map((r) => {
     const total = records
@@ -127,12 +241,15 @@ export default function FormulacionTab({ id }) {
       <h3>Formulación del Plan de Inversión</h3>
       {loading ? (
         <p>Cargando...</p>
+      ) : error ? (
+        <div className="alert alert-danger">{error}</div>
       ) : (
         <div>
           {/* Lista de registros existentes */}
           {records.length > 0 ? (
             <div className="mb-3">
               {records.map((rec, index) => {
+                const recordId = rec.id;
                 const rubro = rec["Rubro"] || "";
                 const elemento = rec["Elemento"] || "";
                 const descripcion = (rec["Descripción"] && rec["Descripción"].trim() !== "") 
@@ -142,8 +259,10 @@ export default function FormulacionTab({ id }) {
                 const valorUnitario = rec["Valor Unitario"] || 0;
                 const valorTotal = cantidad * valorUnitario;
 
+                const files = uploadedFilesMap[recordId] || [];
+
                 return (
-                  <div key={rec.id} className="card mb-2" style={{ borderLeft: "5px solid #28a745" }}>
+                  <div key={recordId} className="card mb-2" style={{ borderLeft: "5px solid #28a745" }}>
                     <div className="card-body">
                       <h5 className="card-title">
                         {index + 1}. {rubro} <span className="text-success">✔️</span>
@@ -155,6 +274,81 @@ export default function FormulacionTab({ id }) {
                         <strong>Valor Unitario:</strong> ${valorUnitario.toLocaleString()}<br />
                         <strong>Valor Total:</strong> ${valorTotal.toLocaleString()}
                       </p>
+
+                      {/* Sección de archivos para este registro */}
+                      <div className="mt-4" style={{ width: '100%' }}>
+                        <h6>Archivos adjuntos</h6>
+                        {uploadingRecordId === recordId ? (
+                          // Formulario de subida de archivo
+                          <form onSubmit={handleFileUpload}>
+                            <div className="form-group mb-2">
+                              <label>Nombre del archivo</label>
+                              <input
+                                type="text"
+                                className="form-control"
+                                value={fileName}
+                                onChange={handleFileNameChange}
+                              />
+                            </div>
+                            <div className="form-group mb-2">
+                              <label>Seleccionar archivo</label>
+                              <input
+                                type="file"
+                                className="form-control"
+                                onChange={handleFileChange}
+                              />
+                            </div>
+                            <button type="submit" className="btn btn-success btn-sm mb-2 w-100">
+                              Cargar archivo
+                            </button>
+                            <button
+                              type="button"
+                              className="btn btn-secondary btn-sm w-100"
+                              onClick={() => {setUploadingRecordId(null); setFile(null); setFileName('');}}
+                            >
+                              Cancelar
+                            </button>
+                          </form>
+                        ) : (
+                          <button
+                            className="btn btn-primary btn-sm mb-2 w-100"
+                            onClick={() => {setUploadingRecordId(recordId); setFile(null); setFileName('');}}
+                          >
+                            Subir documento
+                          </button>
+                        )}
+
+                        {files.length > 0 ? (
+                          <ul className="list-group mt-3">
+                            {files.map((f) => (
+                              <li
+                                key={f.id}
+                                className="list-group-item d-flex justify-content-between align-items-center"
+                              >
+                                <div>
+                                  <strong>{f.name}</strong>
+                                  <br />
+                                  <a
+                                    href={`https://impulso-local-back.onrender.com${f.url}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                  >
+                                    Ver archivo
+                                  </a>
+                                </div>
+                                <button
+                                  className="btn btn-danger btn-sm"
+                                  onClick={() => handleFileDelete(recordId, f.id)}
+                                >
+                                  Eliminar
+                                </button>
+                              </li>
+                            ))}
+                          </ul>
+                        ) : (
+                          <p>No hay archivos subidos aún para este registro.</p>
+                        )}
+                      </div>
                     </div>
                   </div>
                 );
@@ -277,4 +471,3 @@ export default function FormulacionTab({ id }) {
 FormulacionTab.propTypes = {
   id: PropTypes.string.isRequired,
 };
-
