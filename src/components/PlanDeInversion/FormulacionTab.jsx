@@ -1,410 +1,244 @@
-import { useState, useEffect, useMemo } from 'react';
-import PropTypes from 'prop-types';
-import axios from 'axios';
+import React, { useState, useEffect } from "react";
+import PropTypes from "prop-types";
+import axios from "axios";
 
 export default function FormulacionTab({ id }) {
-  const [fields, setFields] = useState([]);
   const [records, setRecords] = useState([]);
-  const [rubros, setRubros] = useState([]);
-  const [selectedRubro, setSelectedRubro] = useState('');
-  const [elementos, setElementos] = useState([]);
-  const [selectedElemento, setSelectedElemento] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [approvedRecords, setApprovedRecords] = useState([]);
-  const tableName = 'provider_proveedores';
-  const rubroTableName = 'provider_rubro';
-  const elementoTableName = 'provider_elemento';
-  const piFormulacionTableName = 'pi_formulacion';
+  const [loading, setLoading] = useState(true);
 
-  const displayedFieldNames = [
-    "Nombre Proveedor",
-    "Elemento",
-    "Precio",
-    "Calificacion",
-    "Descripción producto"
+  // Campos del nuevo rubro a agregar
+  const [newRubro, setNewRubro] = useState({
+    Rubro: "",
+    Elemento: "",
+    Descripcion: "",
+    Cantidad: "",
+    Valor_Unitario: "",
+  });
+
+  const rubrosOptions = [
+    "Maquinaria",
+    "Herramientas",
+    "Mobiliario",
+    "Equipoy/o similares",
   ];
 
-  // Hook para obtener los campos y datos iniciales
-  useEffect(() => {
-    const fetchFieldsAndData = async () => {
-      setLoading(true);
-      try {
-        const token = localStorage.getItem('token');
-        if (!token) {
-          throw new Error('No se encontró el token de autenticación.');
-        }
-
-        const fieldsUrl = `https://impulso-local-back.onrender.com/api/inscriptions/tables/${tableName}/fields`;
-        const rubrosUrl = `https://impulso-local-back.onrender.com/api/inscriptions/tables/${rubroTableName}/records`;
-        const elementosUrl = `https://impulso-local-back.onrender.com/api/inscriptions/tables/${elementoTableName}/records`;
-
-        const [fieldsResponse, rubrosResponse, elementosResponse] = await Promise.all([
-          axios.get(fieldsUrl, { headers: { Authorization: `Bearer ${token}` } }),
-          axios.get(rubrosUrl, { headers: { Authorization: `Bearer ${token}` } }),
-          axios.get(elementosUrl, { headers: { Authorization: `Bearer ${token}` } }),
-        ]);
-
-        const filteredFields = fieldsResponse.data.filter((field) =>
-          displayedFieldNames.includes(field.column_name)
-        );
-        setFields(filteredFields);
-        setRubros(rubrosResponse.data);
-        setElementos(elementosResponse.data);
-
-        console.log('Rubros cargados:', rubrosResponse.data);
-        setLoading(false);
-      } catch (error) {
-        console.error('Error obteniendo los campos o datos:', error);
-        setError(
-          error.response?.data?.message || 'Error obteniendo los campos o datos'
-        );
-        setLoading(false);
-      }
-    };
-
-    fetchFieldsAndData();
-  }, []);
-
-  // Hook para obtener los registros basados en Rubro y Elemento
   useEffect(() => {
     const fetchRecords = async () => {
-      if (!selectedRubro) {
-        setRecords([]);
-        return;
-      }
-
       setLoading(true);
       try {
-        const token = localStorage.getItem('token');
-        let recordsUrl = `https://impulso-local-back.onrender.com/api/inscriptions/tables/${tableName}/records?caracterizacion_id=${id}&Rubro=${selectedRubro}`;
-        if (selectedElemento) {
-          recordsUrl += `&Elemento=${selectedElemento}`;
+        const token = localStorage.getItem("token");
+        if (!token) {
+          alert("No se encontró el token de autenticación");
+          setLoading(false);
+          return;
         }
 
-        const recordsResponse = await axios.get(recordsUrl, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-
-        const sortedRecords = recordsResponse.data.sort(
-          (a, b) => b.Calificacion - a.Calificacion
+        const response = await axios.get(
+          `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/pi_formulacion/records?caracterizacion_id=${id}`,
+          { headers: { Authorization: `Bearer ${token}` } }
         );
-        const topThreeRecords = sortedRecords.slice(0, 3);
 
-        setRecords(topThreeRecords);
-        setLoading(false);
+        setRecords(response.data || []);
       } catch (error) {
-        console.error('Error obteniendo los registros:', error);
-        setError(
-          error.response?.data?.message || 'Error obteniendo los registros'
-        );
+        console.error("Error obteniendo registros de formulación:", error);
+      } finally {
         setLoading(false);
       }
     };
 
     fetchRecords();
-  }, [id, selectedRubro, selectedElemento]);
+  }, [id]);
 
-  // Hook para obtener los registros aprobados y enriquecerlos con datos del proveedor
-  useEffect(() => {
-    const fetchApprovedRecords = async () => {
-      // Asegurarse de que 'rubros' esté cargado
-      if (rubros.length === 0) {
-        console.log('Rubros aún no están cargados. Esperando...');
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setNewRubro((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
+  const handleSubmit = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        alert("No se encontró el token de autenticación");
         return;
       }
 
-      try {
-        const token = localStorage.getItem('token');
-        const approvedUrl = `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/${piFormulacionTableName}/records?caracterizacion_id=${id}&Aprobación comité=true`;
-        console.log('Fetching approved records:', approvedUrl);
-
-        const response = await axios.get(approvedUrl, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-
-        console.log('Approved records fetched:', response.data);
-
-        // Obtener los detalles del proveedor para cada registro aprobado.
-        const enrichedRecords = await Promise.all(
-          response.data.map(async (record) => {
-            try {
-              const providerUrl = `https://impulso-local-back.onrender.com/api/inscriptions/tables/${tableName}/record/${record.rel_id_prov}`;
-              console.log('Fetching provider details:', providerUrl);
-
-              const providerResponse = await axios.get(providerUrl, {
-                headers: { Authorization: `Bearer ${token}` },
-              });
-
-              console.log('Provider details fetched:', providerResponse.data);
-
-              // Ajustar según la estructura real de providerResponse.data
-              const providerData = providerResponse.data.record || providerResponse.data;
-              console.log('Provider data:', providerData);
-
-              const rubroId = providerData?.Rubro;
-              const precio = providerData?.Precio || 0;
-
-              // Obtener el nombre del rubro usando la función getRubroNameById
-              const rubro = getRubroNameById(rubroId) || 'Desconocido';
-
-              // Log para verificar los datos extraídos
-              console.log(`Rubro: ${rubro}, Precio: ${precio} para rel_id_prov: ${record.rel_id_prov}`);
-
-              return {
-                ...record,
-                Rubro: rubro,
-                Precio: precio,
-              };
-            } catch (error) {
-              console.error('Error obteniendo detalles del proveedor:', error);
-              return {
-                ...record,
-                Rubro: 'Desconocido',
-                Precio: 0,
-              };
-            }
-          })
-        );
-
-        console.log('Enriched records:', enrichedRecords);
-        setApprovedRecords(enrichedRecords);
-      } catch (error) {
-        console.error('Error obteniendo los registros aprobados:', error);
+      // Validaciones mínimas
+      if (!newRubro.Rubro || !newRubro.Elemento || !newRubro.Cantidad || !newRubro.Valor_Unitario) {
+        alert("Por favor completa todos los campos requeridos.");
+        return;
       }
-    };
 
-    fetchApprovedRecords();
-  }, [id, rubros]); // Asegurarse de que 'rubros' esté en las dependencias
-
-  // Función para manejar cambios en el Rubro seleccionado
-  const handleRubroChange = (e) => {
-    setSelectedRubro(e.target.value);
-    setSelectedElemento('');
-  };
-
-  // Función para manejar cambios en el Elemento seleccionado
-  const handleElementoChange = (e) => {
-    setSelectedElemento(e.target.value);
-  };
-
-  // Función para obtener el nombre del Elemento
-  const getElementoName = (elementoId) => {
-    const elemento = elementos.find((el) => el.id === elementoId);
-    return elemento ? elemento.Elemento : 'Desconocido';
-  };
-
-  // Función para manejar cambios en la aprobación
-  const handleApprovalChange = async (record, field, value) => {
-    try {
-      const token = localStorage.getItem('token');
-      const endpoint = `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/${piFormulacionTableName}/record`;
-      const recordData = {
+      const requestData = {
         caracterizacion_id: id,
-        rel_id_prov: record.id,
-        [field]: value,
+        Rubro: newRubro.Rubro,
+        Elemento: newRubro.Elemento,
+        Descripcion: newRubro.Descripcion,
+        Cantidad: parseInt(newRubro.Cantidad, 10),
+        "Valor Unitario": parseFloat(newRubro.Valor_Unitario),
       };
 
-      await axios.post(endpoint, recordData, {
-        headers: { Authorization: `Bearer ${token}` },
+      const response = await axios.post(
+        `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/pi_formulacion/record`,
+        requestData,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      // Agregar el nuevo registro a la lista local
+      setRecords((prev) => [...prev, response.data]);
+      // Resetear el formulario
+      setNewRubro({
+        Rubro: "",
+        Elemento: "",
+        Descripcion: "",
+        Cantidad: "",
+        Valor_Unitario: "",
       });
 
-      if (field === "Aprobación comité") {
-        setApprovedRecords((prevRecords) =>
-          value
-            ? [...prevRecords, { ...record, "Aprobación comité": true }]
-            : prevRecords.filter((rec) => rec.rel_id_prov !== record.rel_id_prov)
-        );
-      }
-
-      setRecords((prevRecords) =>
-        prevRecords.map((rec) =>
-          rec.id === record.id ? { ...rec, [field]: value } : rec
-        )
-      );
+      alert("Rubro guardado exitosamente");
     } catch (error) {
-      console.error('Error al cambiar la aprobación:', error);
+      console.error("Error guardando el rubro:", error);
+      alert("Hubo un error al guardar el rubro");
     }
   };
 
-  // Función para obtener el nombre del Rubro por su ID
-  const getRubroNameById = (rubroId) => {
-    const rubro = rubros.find((r) => String(r.id) === String(rubroId));
-    return rubro ? rubro.Rubro : 'Desconocido';
-  };
+  // Calcular resumen por rubro
+  const resumenPorRubro = rubrosOptions.map((r) => {
+    const total = records
+      .filter((rec) => rec.Rubro === r)
+      .reduce((sum, rec) => sum + (rec.Cantidad * rec["Valor Unitario"]), 0);
+    return { rubro: r, total };
+  });
 
-  // Agrupar Rubros y sumar los Valores
-  const groupedRubros = useMemo(() => {
-    const rubroMap = {};
-
-    approvedRecords.forEach(record => {
-      const rubro = record.Rubro;
-      const precio = parseFloat(record.Precio) || 0;
-
-      if (rubroMap[rubro]) {
-        rubroMap[rubro] += precio;
-      } else {
-        rubroMap[rubro] = precio;
-      }
-    });
-
-    // Convertir el mapa a un array de objetos
-    return Object.entries(rubroMap).map(([rubro, total]) => ({
-      rubro,
-      total: total.toFixed(2) // Opcional: Formatear a 2 decimales
-    }));
-  }, [approvedRecords]);
-
-  // Calcular el total de la inversión a partir de los rubros agrupados
-  const totalInversion = groupedRubros.reduce(
-    (acc, record) => acc + parseFloat(record.total || 0),
-    0
-  ).toFixed(2);
+  const totalInversion = resumenPorRubro.reduce((sum, item) => sum + item.total, 0);
 
   return (
     <div>
-      <h3>Formulación</h3>
+      <h3>Formulación del Plan de Inversión</h3>
       {loading ? (
-        <p>Cargando datos...</p>
-      ) : error ? (
-        <div className="alert alert-danger">{error}</div>
+        <p>Cargando...</p>
       ) : (
-        <>
-          <div className="form-group">
-            <label>Rubro</label>
-            <select
-              className="form-control"
-              value={selectedRubro}
-              onChange={handleRubroChange}
-            >
-              <option value="">-- Selecciona un rubro --</option>
-              {rubros.map((rubro) => (
-                <option key={rubro.id} value={rubro.id}>
-                  {rubro.Rubro}
-                </option>
-              ))}
-            </select>
+        <div>
+          {/* Lista de registros existentes */}
+          <ol className="list-group list-group-numbered mb-3">
+            {records.map((rec, index) => (
+              <li key={rec.id} className="list-group-item">
+                <div>
+                  <strong>{index + 1}. {rec.Rubro}</strong> - {rec.Elemento} - {rec.Descripcion || "Sin descripción"}
+                  <br />
+                  Cantidad: {rec.Cantidad} | Valor Unitario: ${rec["Valor Unitario"].toLocaleString()}
+                  <br />
+                  Valor Total: ${(rec.Cantidad * rec["Valor Unitario"]).toLocaleString()}
+                </div>
+              </li>
+            ))}
+          </ol>
+
+          {/* Formulario para agregar nuevo rubro */}
+          <div className="card p-3 mb-3">
+            <h5>Agregar nuevo rubro</h5>
+            <div className="row mb-2">
+              <div className="col-md-4">
+                <label>Rubro</label>
+                <select
+                  className="form-select"
+                  name="Rubro"
+                  value={newRubro.Rubro}
+                  onChange={handleChange}
+                >
+                  <option value="">Seleccionar...</option>
+                  {rubrosOptions.map((r) => (
+                    <option key={r} value={r}>{r}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="col-md-4">
+                <label>Elemento</label>
+                <input
+                  type="text"
+                  className="form-control"
+                  name="Elemento"
+                  value={newRubro.Elemento}
+                  onChange={handleChange}
+                  placeholder="Ej: Par, Kgs, Und"
+                />
+              </div>
+              <div className="col-md-4">
+                <label>Descripción</label>
+                <input
+                  type="text"
+                  className="form-control"
+                  name="Descripcion"
+                  value={newRubro.Descripcion}
+                  onChange={handleChange}
+                  placeholder="Descripción"
+                />
+              </div>
+            </div>
+            <div className="row mb-2">
+              <div className="col-md-4">
+                <label>Cantidad</label>
+                <input
+                  type="number"
+                  className="form-control"
+                  name="Cantidad"
+                  value={newRubro.Cantidad}
+                  onChange={handleChange}
+                  placeholder="Cantidad"
+                />
+              </div>
+              <div className="col-md-4">
+                <label>Valor Unitario</label>
+                <input
+                  type="number"
+                  className="form-control"
+                  name="Valor_Unitario"
+                  value={newRubro.Valor_Unitario}
+                  onChange={handleChange}
+                  placeholder="Valor Unitario"
+                />
+              </div>
+              <div className="col-md-4 d-flex align-items-end">
+                <button className="btn btn-primary w-100" onClick={handleSubmit}>
+                  Guardar rubro
+                </button>
+              </div>
+            </div>
           </div>
 
-          <div className="form-group mt-3">
-            <label>Elemento</label>
-            <select
-              className="form-control"
-              value={selectedElemento}
-              onChange={handleElementoChange}
-              disabled={!selectedRubro}
-            >
-              <option value="">-- Selecciona un elemento --</option>
-              {elementos.map((elemento) => (
-                <option key={elemento.id} value={elemento.id}>
-                  {elemento.Elemento}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <table className="table mt-3">
+          {/* Resumen de la inversión */}
+          <h5>Resumen de la inversión</h5>
+          <table className="table table-bordered">
             <thead>
               <tr>
-                {fields.map((field) => (
-                  <th key={field.column_name}>
-                    {field.column_name.replace('_', ' ')}
-                  </th>
-                ))}
-                <th>Pre-selección</th>
-                <th>Aprobación Comité</th>
-                <th>Acciones</th>
+                <th>Rubro</th>
+                <th>Valor</th>
               </tr>
             </thead>
             <tbody>
-              {records.length > 0 ? (
-                records.map((record) => (
-                  <tr
-                    key={record.id}
-                    style={{
-                      backgroundColor: record["Aprobación comité"]
-                        ? '#d4edda'
-                        : 'transparent',
-                    }}
-                  >
-                    {fields.map((field) => (
-                      <td key={field.column_name}>
-                        {field.column_name === 'Elemento'
-                          ? getElementoName(record.Elemento)
-                          : record[field.column_name]}
-                      </td>
-                    ))}
-                    <td>
-                      <input
-                        type="checkbox"
-                        checked={record["pre-Selección"] || false}
-                        onChange={(e) =>
-                          handleApprovalChange(
-                            record,
-                            "pre-Selección",
-                            e.target.checked
-                          )
-                        }
-                      />
-                    </td>
-                    <td>
-                      <input
-                        type="checkbox"
-                        checked={record["Aprobación comité"] || false}
-                        onChange={(e) =>
-                          handleApprovalChange(
-                            record,
-                            "Aprobación comité",
-                            e.target.checked
-                          )
-                        }
-                      />
-                    </td>
-                    <td>
-                      <button className="btn btn-secondary">Ver</button>
-                    </td>
-                  </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan={fields.length + 3} className="text-center">
-                    No hay coincidencias.
-                  </td>
+              {resumenPorRubro.map((r) => (
+                <tr key={r.rubro}>
+                  <td>{r.rubro}</td>
+                  <td>${r.total.toLocaleString()}</td>
                 </tr>
-              )}
+              ))}
+              <tr>
+                <td><strong>Total</strong></td>
+                <td><strong>${totalInversion.toLocaleString()}</strong></td>
+              </tr>
+              <tr>
+                <td>Monto disponible</td>
+                <td>$3.000.000</td>
+              </tr>
+              <tr>
+                <td>Contrapartida</td>
+                <td style={{color: "red"}}>$600.000</td>
+              </tr>
             </tbody>
           </table>
-
-          <div className="mt-4">
-            <h5>Resumen de la Inversión</h5>
-            {groupedRubros.length > 0 ? (
-              <table className="table">
-                <thead>
-                  <tr>
-                    <th>Rubro</th>
-                    <th>Valor</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {groupedRubros.map((record) => (
-                    <tr key={record.rubro}>
-                      <td>{record.rubro}</td>
-                      <td>{record.total}</td>
-                    </tr>
-                  ))}
-                </tbody>
-                <tfoot>
-                  <tr>
-                    <td>Total</td>
-                    <td>{totalInversion}</td>
-                  </tr>
-                </tfoot>
-              </table>
-            ) : (
-              <p>No hay productos aprobados para el comité.</p>
-            )}
-          </div>
-        </>
+        </div>
       )}
     </div>
   );
