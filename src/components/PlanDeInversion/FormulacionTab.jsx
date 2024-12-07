@@ -168,7 +168,7 @@ export default function FormulacionTab({ id }) {
               <div className="col-md-4">
                 <label><strong>Rubro</strong></label>
                 <select
-                  className="form-select"
+                  className="form-select w-100" // w-100 para ancho completo
                   name="Rubro"
                   value={newRubro["Rubro"]}
                   onChange={handleChange}
@@ -183,7 +183,7 @@ export default function FormulacionTab({ id }) {
                 <label><strong>Elemento</strong></label>
                 <input
                   type="text"
-                  className="form-control"
+                  className="form-control w-100" // w-100 para ancho completo
                   name="Elemento"
                   value={newRubro["Elemento"]}
                   onChange={handleChange}
@@ -194,7 +194,7 @@ export default function FormulacionTab({ id }) {
                 <label><strong>Descripción</strong></label>
                 <input
                   type="text"
-                  className="form-control"
+                  className="form-control w-100"
                   name="Descripción"
                   value={newRubro["Descripción"]}
                   onChange={handleChange}
@@ -207,7 +207,7 @@ export default function FormulacionTab({ id }) {
                 <label><strong>Cantidad</strong></label>
                 <input
                   type="number"
-                  className="form-control"
+                  className="form-control w-100"
                   name="Cantidad"
                   value={newRubro["Cantidad"]}
                   onChange={handleChange}
@@ -218,7 +218,7 @@ export default function FormulacionTab({ id }) {
                 <label><strong>Valor Unitario</strong></label>
                 <input
                   type="number"
-                  className="form-control"
+                  className="form-control w-100"
                   name="Valor Unitario"
                   value={newRubro["Valor Unitario"]}
                   onChange={handleChange}
