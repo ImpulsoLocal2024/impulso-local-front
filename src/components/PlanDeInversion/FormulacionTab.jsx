@@ -3,7 +3,7 @@ import PropTypes from "prop-types";
 import axios from "axios";
 
 export default function FormulacionTab({ id }) {
-  // id es el caracterizacion_id (empresa)
+  // id = caracterizacion_id (empresa)
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -26,7 +26,7 @@ export default function FormulacionTab({ id }) {
 
   const [uploadedFilesMap, setUploadedFilesMap] = useState({});
   const [uploadingRecordId, setUploadingRecordId] = useState(null); 
-  // uploadingRecordId = formulacion_id (id del registro en pi_formulacion)
+  // uploadingRecordId = formulacion_id del registro en pi_formulacion
   const [file, setFile] = useState(null);
   const [fileName, setFileName] = useState('');
   const [error, setError] = useState(null);
@@ -41,7 +41,6 @@ export default function FormulacionTab({ id }) {
         return;
       }
 
-      // Obtener registros de pi_formulacion asociados a caracterizacion_id
       const response = await axios.get(
         `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/pi_formulacion/records?caracterizacion_id=${id}`,
         { headers: { Authorization: `Bearer ${token}` } }
@@ -69,8 +68,7 @@ export default function FormulacionTab({ id }) {
   };
 
   const fetchFilesForRecord = async (formulacion_id) => {
-    // formulacion_id es el id del registro en pi_formulacion
-    // record_id es el caracterizacion_id de la empresa (id)
+    // Enviamos record_id = caracterizacion_id y formulacion_id
     try {
       const token = localStorage.getItem('token');
       if (!token) return;
@@ -82,9 +80,8 @@ export default function FormulacionTab({ id }) {
             Authorization: `Bearer ${token}`,
           },
           params: {
-            source: 'formulacion',
-            record_id: id,         // record_id = caracterizacion_id
-            formulacion_id: formulacion_id // formulacion_id = id del registro pi_formulacion
+            record_id: id,
+            formulacion_id: formulacion_id
           },
         }
       );
@@ -177,10 +174,10 @@ export default function FormulacionTab({ id }) {
       const formData = new FormData();
       formData.append('file', file);
       formData.append('fileName', fileName);
-      formData.append('caracterizacion_id', id);   // record_id = caracterizacion_id
-      formData.append('source', 'formulacion');
-      formData.append('record_id', id);            // record_id en files = caracterizacion_id
-      formData.append('formulacion_id', uploadingRecordId); // formulacion_id = id del registro en pi_formulacion
+      // record_id = caracterizacion_id
+      formData.append('record_id', id);
+      // formulacion_id = uploadingRecordId
+      formData.append('formulacion_id', uploadingRecordId);
 
       await axios.post(
         `https://impulso-local-back.onrender.com/api/inscriptions/tables/pi_formulacion/record/${uploadingRecordId}/upload`,
