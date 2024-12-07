@@ -3,6 +3,7 @@ import PropTypes from "prop-types";
 import axios from "axios";
 
 export default function FormulacionTab({ id }) {
+  // id es el caracterizacion_id (empresa)
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -22,10 +23,10 @@ export default function FormulacionTab({ id }) {
   ];
 
   const montoDisponible = 3000000; // 3 millones
-  
-  // Estados para la funcionalidad de archivos
-  const [uploadedFilesMap, setUploadedFilesMap] = useState({}); 
+
+  const [uploadedFilesMap, setUploadedFilesMap] = useState({});
   const [uploadingRecordId, setUploadingRecordId] = useState(null); 
+  // uploadingRecordId = formulacion_id (id del registro en pi_formulacion)
   const [file, setFile] = useState(null);
   const [fileName, setFileName] = useState('');
   const [error, setError] = useState(null);
@@ -40,7 +41,7 @@ export default function FormulacionTab({ id }) {
         return;
       }
 
-      // RUTA DE REGISTROS CON /pi/
+      // Obtener registros de pi_formulacion asociados a caracterizacion_id
       const response = await axios.get(
         `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/pi_formulacion/records?caracterizacion_id=${id}`,
         { headers: { Authorization: `Bearer ${token}` } }
@@ -49,7 +50,6 @@ export default function FormulacionTab({ id }) {
       const fetchedRecords = response.data || [];
       setRecords(fetchedRecords);
 
-      // Después de obtener los registros, obtener los archivos de cada uno
       await fetchAllRecordsFiles(fetchedRecords);
 
     } catch (error) {
@@ -60,7 +60,6 @@ export default function FormulacionTab({ id }) {
     }
   };
 
-  // Obtener archivos de cada registro
   const fetchAllRecordsFiles = async (fetchedRecords) => {
     const token = localStorage.getItem('token');
     if (!token) return;
@@ -69,27 +68,30 @@ export default function FormulacionTab({ id }) {
     await Promise.all(promises);
   };
 
-  const fetchFilesForRecord = async (recordId) => {
+  const fetchFilesForRecord = async (formulacion_id) => {
+    // formulacion_id es el id del registro en pi_formulacion
+    // record_id es el caracterizacion_id de la empresa (id)
     try {
       const token = localStorage.getItem('token');
       if (!token) return;
 
-      // RUTA DE ARCHIVOS SIN /pi/
       const filesResponse = await axios.get(
-        `https://impulso-local-back.onrender.com/api/inscriptions/tables/pi_formulacion/record/${recordId}/files`,
+        `https://impulso-local-back.onrender.com/api/inscriptions/tables/pi_formulacion/record/${formulacion_id}/files`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
           },
           params: {
             source: 'formulacion',
+            record_id: id,         // record_id = caracterizacion_id
+            formulacion_id: formulacion_id // formulacion_id = id del registro pi_formulacion
           },
         }
       );
 
       setUploadedFilesMap((prev) => ({
         ...prev,
-        [recordId]: filesResponse.data.files
+        [formulacion_id]: filesResponse.data.files
       }));
     } catch (error) {
       console.error('Error obteniendo los archivos:', error);
@@ -133,17 +135,14 @@ export default function FormulacionTab({ id }) {
         "Valor Unitario": parseFloat(ValorUnitario) || 0,
       };
 
-      // RUTA DE CREACIÓN DE REGISTRO CON /pi/
       await axios.post(
         `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/pi_formulacion/record`,
         requestData,
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      // Refrescar la lista desde la BD
       await fetchRecords();
 
-      // Resetear el formulario
       setNewRubro({
         "Rubro": "",
         "Elemento": "",
@@ -159,7 +158,6 @@ export default function FormulacionTab({ id }) {
     }
   };
 
-  // Funciones de manejo de archivos
   const handleFileChange = (e) => {
     setFile(e.target.files[0]);
   };
@@ -179,10 +177,11 @@ export default function FormulacionTab({ id }) {
       const formData = new FormData();
       formData.append('file', file);
       formData.append('fileName', fileName);
-      formData.append('caracterizacion_id', id);
+      formData.append('caracterizacion_id', id);   // record_id = caracterizacion_id
       formData.append('source', 'formulacion');
+      formData.append('record_id', id);            // record_id en files = caracterizacion_id
+      formData.append('formulacion_id', uploadingRecordId); // formulacion_id = id del registro en pi_formulacion
 
-      // RUTA DE SUBIDA DE ARCHIVO SIN /pi/
       await axios.post(
         `https://impulso-local-back.onrender.com/api/inscriptions/tables/pi_formulacion/record/${uploadingRecordId}/upload`,
         formData,
@@ -204,14 +203,12 @@ export default function FormulacionTab({ id }) {
     }
   };
 
-  const handleFileDelete = async (recordId, fileId) => {
+  const handleFileDelete = async (formulacion_id, fileId) => {
     if (window.confirm('¿Estás seguro de que deseas eliminar este archivo?')) {
       try {
         const token = localStorage.getItem('token');
-
-        // RUTA DE BORRADO DE ARCHIVO SIN /pi/
         await axios.delete(
-          `https://impulso-local-back.onrender.com/api/inscriptions/tables/pi_formulacion/record/${recordId}/file/${fileId}`,
+          `https://impulso-local-back.onrender.com/api/inscriptions/tables/pi_formulacion/record/${formulacion_id}/file/${fileId}`,
           {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -219,7 +216,7 @@ export default function FormulacionTab({ id }) {
           }
         );
 
-        await fetchFilesForRecord(recordId);
+        await fetchFilesForRecord(formulacion_id);
       } catch (error) {
         console.error('Error eliminando el archivo:', error);
         setError('Error eliminando el archivo');
@@ -227,7 +224,6 @@ export default function FormulacionTab({ id }) {
     }
   };
 
-  // Calcular resumen por rubro
   const resumenPorRubro = rubrosOptions.map((r) => {
     const total = records
       .filter((rec) => rec["Rubro"] === r)
@@ -251,11 +247,10 @@ export default function FormulacionTab({ id }) {
         <div className="alert alert-danger">{error}</div>
       ) : (
         <div>
-          {/* Lista de registros existentes */}
           {records.length > 0 ? (
             <div className="mb-3">
               {records.map((rec, index) => {
-                const recordId = rec.id;
+                const formulacion_id = rec.id; 
                 const rubro = rec["Rubro"] || "";
                 const elemento = rec["Elemento"] || "";
                 const descripcion = (rec["Descripción"] && rec["Descripción"].trim() !== "") 
@@ -265,10 +260,10 @@ export default function FormulacionTab({ id }) {
                 const valorUnitario = rec["Valor Unitario"] || 0;
                 const valorTotal = cantidad * valorUnitario;
 
-                const files = uploadedFilesMap[recordId] || [];
+                const files = uploadedFilesMap[formulacion_id] || [];
 
                 return (
-                  <div key={recordId} className="card mb-2" style={{ borderLeft: "5px solid #28a745" }}>
+                  <div key={formulacion_id} className="card mb-2" style={{ borderLeft: "5px solid #28a745" }}>
                     <div className="card-body">
                       <h5 className="card-title">
                         {index + 1}. {rubro} <span className="text-success">✔️</span>
@@ -281,11 +276,9 @@ export default function FormulacionTab({ id }) {
                         <strong>Valor Total:</strong> ${valorTotal.toLocaleString()}
                       </p>
 
-                      {/* Sección de archivos para este registro */}
                       <div className="mt-4" style={{ width: '100%' }}>
                         <h6>Archivos adjuntos</h6>
-                        {uploadingRecordId === recordId ? (
-                          // Formulario de subida de archivo
+                        {uploadingRecordId === formulacion_id ? (
                           <form onSubmit={handleFileUpload}>
                             <div className="form-group mb-2">
                               <label>Nombre del archivo</label>
@@ -318,7 +311,7 @@ export default function FormulacionTab({ id }) {
                         ) : (
                           <button
                             className="btn btn-primary btn-sm mb-2 w-100"
-                            onClick={() => {setUploadingRecordId(recordId); setFile(null); setFileName('');}}
+                            onClick={() => {setUploadingRecordId(formulacion_id); setFile(null); setFileName('');}}
                           >
                             Subir documento
                           </button>
@@ -344,7 +337,7 @@ export default function FormulacionTab({ id }) {
                                 </div>
                                 <button
                                   className="btn btn-danger btn-sm"
-                                  onClick={() => handleFileDelete(recordId, f.id)}
+                                  onClick={() => handleFileDelete(formulacion_id, f.id)}
                                 >
                                   Eliminar
                                 </button>
@@ -364,7 +357,6 @@ export default function FormulacionTab({ id }) {
             <p>No hay registros agregados aún.</p>
           )}
 
-          {/* Formulario para agregar nuevo rubro */}
           <div className="card p-3 mb-3">
             <h5>Agregar nuevo rubro</h5>
             <div className="row mb-2">
@@ -436,7 +428,6 @@ export default function FormulacionTab({ id }) {
             </div>
           </div>
 
-          {/* Resumen de la inversión */}
           <h5>Resumen de la inversión</h5>
           <table className="table table-bordered">
             <thead>
