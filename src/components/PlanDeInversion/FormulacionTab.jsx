@@ -6,7 +6,7 @@ export default function FormulacionTab({ id }) {
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Campos del nuevo rubro a agregar
+  // Campos del nuevo rubro
   const [newRubro, setNewRubro] = useState({
     Rubro: "",
     Elemento: "",
@@ -65,9 +65,8 @@ export default function FormulacionTab({ id }) {
         return;
       }
 
-      // Validaciones mínimas
       if (!newRubro.Rubro || !newRubro.Elemento || !newRubro.Cantidad || !newRubro.Valor_Unitario) {
-        alert("Por favor completa todos los campos requeridos.");
+        alert("Por favor completa todos los campos obligatorios (Rubro, Elemento, Cantidad, Valor Unitario).");
         return;
       }
 
@@ -75,9 +74,9 @@ export default function FormulacionTab({ id }) {
         caracterizacion_id: id,
         Rubro: newRubro.Rubro,
         Elemento: newRubro.Elemento,
-        Descripcion: newRubro.Descripcion,
-        Cantidad: parseInt(newRubro.Cantidad, 10),
-        "Valor Unitario": parseFloat(newRubro.Valor_Unitario),
+        Descripcion: newRubro.Descripcion || "", // Si el usuario no escribe nada, lo enviamos como ""
+        Cantidad: parseInt(newRubro.Cantidad, 10) || 0,
+        "Valor Unitario": parseFloat(newRubro.Valor_Unitario) || 0,
       };
 
       const response = await axios.post(
@@ -87,7 +86,12 @@ export default function FormulacionTab({ id }) {
       );
 
       // Agregar el nuevo registro a la lista local
-      setRecords((prev) => [...prev, response.data]);
+      const newRecord = response.data;
+      // Asegurar campos numéricos por si vienen null
+      if (!newRecord.Cantidad) newRecord.Cantidad = 0;
+      if (!newRecord["Valor Unitario"]) newRecord["Valor Unitario"] = 0;
+      setRecords((prev) => [...prev, newRecord]);
+
       // Resetear el formulario
       setNewRubro({
         Rubro: "",
@@ -108,7 +112,11 @@ export default function FormulacionTab({ id }) {
   const resumenPorRubro = rubrosOptions.map((r) => {
     const total = records
       .filter((rec) => rec.Rubro === r)
-      .reduce((sum, rec) => sum + (rec.Cantidad * rec["Valor Unitario"]), 0);
+      .reduce((sum, rec) => {
+        const cantidad = rec.Cantidad ? rec.Cantidad : 0;
+        const valorUnitario = rec["Valor Unitario"] ? rec["Valor Unitario"] : 0;
+        return sum + (cantidad * valorUnitario);
+      }, 0);
     return { rubro: r, total };
   });
 
@@ -122,26 +130,46 @@ export default function FormulacionTab({ id }) {
       ) : (
         <div>
           {/* Lista de registros existentes */}
-          <ol className="list-group list-group-numbered mb-3">
-            {records.map((rec, index) => (
-              <li key={rec.id} className="list-group-item">
-                <div>
-                  <strong>{index + 1}. {rec.Rubro}</strong> - {rec.Elemento} - {rec.Descripcion || "Sin descripción"}
-                  <br />
-                  Cantidad: {rec.Cantidad} | Valor Unitario: ${rec["Valor Unitario"].toLocaleString()}
-                  <br />
-                  Valor Total: ${(rec.Cantidad * rec["Valor Unitario"]).toLocaleString()}
-                </div>
-              </li>
-            ))}
-          </ol>
+          {records.length > 0 ? (
+            <div className="mb-3">
+              {records.map((rec, index) => {
+                const rubro = rec.Rubro || "";
+                const elemento = rec.Elemento || "";
+                const descripcion = rec.Descripcion !== null && rec.Descripcion !== undefined && rec.Descripcion !== ""
+                  ? rec.Descripcion
+                  : "Sin descripción";
+                const cantidad = rec.Cantidad ? rec.Cantidad : 0;
+                const valorUnitario = rec["Valor Unitario"] ? rec["Valor Unitario"] : 0;
+                const valorTotal = cantidad * valorUnitario;
+
+                return (
+                  <div key={rec.id} className="card mb-2" style={{ borderLeft: "5px solid #28a745" }}>
+                    <div className="card-body">
+                      <h5 className="card-title">
+                        {index + 1}. {rubro} <span className="text-success">✔️</span>
+                      </h5>
+                      <p className="card-text">
+                        <strong>Elemento:</strong> {elemento}<br />
+                        <strong>Descripción:</strong> {descripcion}<br />
+                        <strong>Cantidad:</strong> {cantidad.toLocaleString()}<br />
+                        <strong>Valor Unitario:</strong> ${Number(valorUnitario).toLocaleString()}<br />
+                        <strong>Valor Total:</strong> ${Number(valorTotal).toLocaleString()}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <p>No hay registros agregados aún.</p>
+          )}
 
           {/* Formulario para agregar nuevo rubro */}
           <div className="card p-3 mb-3">
             <h5>Agregar nuevo rubro</h5>
             <div className="row mb-2">
               <div className="col-md-4">
-                <label>Rubro</label>
+                <label><strong>Rubro</strong></label>
                 <select
                   className="form-select"
                   name="Rubro"
@@ -155,7 +183,7 @@ export default function FormulacionTab({ id }) {
                 </select>
               </div>
               <div className="col-md-4">
-                <label>Elemento</label>
+                <label><strong>Elemento</strong></label>
                 <input
                   type="text"
                   className="form-control"
@@ -166,20 +194,20 @@ export default function FormulacionTab({ id }) {
                 />
               </div>
               <div className="col-md-4">
-                <label>Descripción</label>
+                <label><strong>Descripción</strong></label>
                 <input
                   type="text"
                   className="form-control"
                   name="Descripcion"
                   value={newRubro.Descripcion}
                   onChange={handleChange}
-                  placeholder="Descripción"
+                  placeholder="Descripción (opcional)"
                 />
               </div>
             </div>
             <div className="row mb-2">
               <div className="col-md-4">
-                <label>Cantidad</label>
+                <label><strong>Cantidad</strong></label>
                 <input
                   type="number"
                   className="form-control"
@@ -190,7 +218,7 @@ export default function FormulacionTab({ id }) {
                 />
               </div>
               <div className="col-md-4">
-                <label>Valor Unitario</label>
+                <label><strong>Valor Unitario</strong></label>
                 <input
                   type="number"
                   className="form-control"
@@ -221,12 +249,12 @@ export default function FormulacionTab({ id }) {
               {resumenPorRubro.map((r) => (
                 <tr key={r.rubro}>
                   <td>{r.rubro}</td>
-                  <td>${r.total.toLocaleString()}</td>
+                  <td>${Number(r.total).toLocaleString()}</td>
                 </tr>
               ))}
               <tr>
                 <td><strong>Total</strong></td>
-                <td><strong>${totalInversion.toLocaleString()}</strong></td>
+                <td><strong>${Number(totalInversion).toLocaleString()}</strong></td>
               </tr>
               <tr>
                 <td>Monto disponible</td>
