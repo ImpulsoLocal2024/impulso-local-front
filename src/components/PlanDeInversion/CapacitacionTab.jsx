@@ -5,8 +5,8 @@ import axios from "axios";
 export default function CapacitacionTab({ id }) {
   const questions = [
     "224 - Fortaleciendo mis capacidades",
-    "225 - Gestión Administrativa de mi negocio (La importancia y consejos para un buen manejo documental)",
-    "226 - Manejo eficiente del tiempo.",
+    "225 - Gestión Administrativa de mi negocio (La importancia y c",
+    "226 - Manejo eficiente del tiempo",
     "227 - Conociendo el mercado para mi producto",
     "228 - Finanzas saludables",
     "229 - Separar finanzas personales y comerciales",
