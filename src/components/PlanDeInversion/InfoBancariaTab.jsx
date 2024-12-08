@@ -44,7 +44,6 @@ export default function InfoBancariaTab({ id }) {
     "BANCOLOMBIA",
     "BANCOOMEVA S.A.",
     "CONFIAR COOPERATIVA FINANCIERA",
-    "NEQUI",
     "DAVIPLATA",
     "LULO BANK",
     "MOVII S.A.",
@@ -119,14 +118,15 @@ export default function InfoBancariaTab({ id }) {
         });
       }
 
-      // Obtener archivos asociados (si los hay)
+      // Obtener archivos asociados
       const filesResponse = await axios.get(
         `https://impulso-local-back.onrender.com/api/inscriptions/tables/pi_informacion_bancaria/record/${id}/files`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
       const allFiles = filesResponse.data.files || [];
-      const infoFile = allFiles.find(f => f.source === 'info_bancaria') || null;
+      // Filtrar el archivo cuyo nombre contenga 'info_bancaria_'
+      const infoFile = allFiles.find(f => f.name.includes('info_bancaria_')) || null;
       setUploadedFile(infoFile);
 
       setLoading(false);
@@ -151,7 +151,6 @@ export default function InfoBancariaTab({ id }) {
       setData({ ...originalData });
       setFile(null);
       setFileName("");
-      // Si se cancelan los cambios, restaurar el archivo original
       fetchData();
     }
   };
@@ -210,11 +209,12 @@ export default function InfoBancariaTab({ id }) {
     }
     try {
       const token = localStorage.getItem('token');
+      // Agregamos el prefijo 'info_bancaria_' al nombre
+      const fileNameWithPrefix = `info_bancaria_${fileName}`;
       const formData = new FormData();
       formData.append('file', file);
-      formData.append('fileName', fileName);
+      formData.append('fileName', fileNameWithPrefix);
       formData.append('caracterizacion_id', id);
-      formData.append('source', 'info_bancaria');
 
       await axios.post(
         `https://impulso-local-back.onrender.com/api/inscriptions/tables/pi_informacion_bancaria/record/${id}/upload`,
@@ -318,7 +318,6 @@ export default function InfoBancariaTab({ id }) {
               />
             </div>
 
-            {/* Adjuntar archivo justo debajo del campo Número de identificación */}
             <div className="mb-2">
               <label><strong>Adjuntar archivo</strong></label><br/>
               {uploadedFile ? (
