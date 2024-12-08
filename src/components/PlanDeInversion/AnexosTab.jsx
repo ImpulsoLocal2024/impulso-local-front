@@ -14,22 +14,20 @@ export default function AnexosTab({ id }) {
   const [showUploadForm, setShowUploadForm] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState([]);
 
-  // Función para obtener archivos en el frontend, utilizando caracterizacion_id
+  // Función para obtener archivos, filtrando por source='anexos'
   const fetchFiles = useCallback(async () => {
     try {
       const token = localStorage.getItem('token');
       if (!token) return;
 
-      // Obtener archivos asociados a pi_anexos, usando caracterizacion_id en la ruta
-      // y filtrando por source='anexos'
       const filesResponse = await axios.get(
-        `https://impulso-local-back.onrender.com/api/inscriptions/tables/pi_anexos/record/${id}/files`,
+        `https://impulso-local-back.onrender.com/api/inscriptions/tables/pi_anexos/record/${recordId}/files`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
           },
           params: {
-            source: 'anexos', // Filtramos por source 'anexos'
+            source: 'anexos',
           },
         }
       );
@@ -38,27 +36,36 @@ export default function AnexosTab({ id }) {
       console.error('Error obteniendo los archivos:', error);
       setError('Error obteniendo los archivos');
     }
-  }, [tableName, id]);
+  }, [recordId]);
 
   useEffect(() => {
     const fetchFieldsAndData = async () => {
       setLoading(true);
       try {
         const token = localStorage.getItem('token');
-        if (!token) return;
+        if (!token) {
+          setLoading(false);
+          return;
+        }
 
         // Obtener los campos de la tabla `pi_anexos`
-        const fieldsResponse = await axios.get(
-          `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/${tableName}/fields`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
-        setFields(fieldsResponse.data);
+        // Requiere permisos 'view_tables'
+        try {
+          const fieldsResponse = await axios.get(
+            `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/${tableName}/fields`,
+            {
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+            }
+          );
+          setFields(fieldsResponse.data);
+        } catch (fieldError) {
+          console.error('Error obteniendo fields:', fieldError);
+          // Si no es crítico, se puede omitir el error o comentar esta parte.
+        }
 
-        // Verificar si ya existe un registro en `pi_anexos` con `caracterizacion_id`
+        // Verificar si existe un registro en `pi_anexos` para el caracterizacion_id
         const recordsResponse = await axios.get(
           `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/${tableName}/records?caracterizacion_id=${id}`,
           {
@@ -69,13 +76,13 @@ export default function AnexosTab({ id }) {
         );
 
         if (recordsResponse.data.length > 0) {
-          // Si existe el registro, configuramos `recordId` y cargamos los archivos
+          // Existe el registro
           const existingRecord = recordsResponse.data[0];
           setData(existingRecord);
           setRecordId(existingRecord.id);
-          await fetchFiles(); // Obtener archivos
+          await fetchFiles(); // Obtener archivos para el recordId
         } else {
-          // Si no existe, creamos el registro
+          // No existe, crear registro
           const createResponse = await axios.post(
             `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/${tableName}/record`,
             { caracterizacion_id: id },
@@ -85,13 +92,13 @@ export default function AnexosTab({ id }) {
               },
             }
           );
-          setRecordId(createResponse.data.id); // Configuramos el nuevo `recordId`
-          await fetchFiles(); // Obtener archivos
+          setRecordId(createResponse.data.id);
+          await fetchFiles(); // Obtener archivos (vacío por ahora)
         }
 
         setLoading(false);
       } catch (error) {
-        console.error('Error obteniendo los campos o datos:', error);
+        console.error('Error obteniendo los datos:', error);
         setError('Error obteniendo los campos o datos');
         setLoading(false);
       }
@@ -120,7 +127,7 @@ export default function AnexosTab({ id }) {
       formData.append('file', file);
       formData.append('fileName', fileName);
       formData.append('caracterizacion_id', id);
-      formData.append('source', 'anexos'); // asignar el source 'anexos'
+      formData.append('source', 'anexos'); // Filtramos por 'anexos'
 
       await axios.post(
         `https://impulso-local-back.onrender.com/api/inscriptions/tables/${tableName}/record/${recordId}/upload`,
@@ -156,7 +163,7 @@ export default function AnexosTab({ id }) {
           }
         );
 
-        await fetchFiles(); // Actualizar la lista después de eliminar el archivo
+        await fetchFiles(); // Actualizar lista de archivos
       } catch (error) {
         console.error('Error eliminando el archivo:', error);
         setError('Error eliminando el archivo');
@@ -168,7 +175,7 @@ export default function AnexosTab({ id }) {
     <div>
       <h3>Anexos</h3>
       {loading ? (
-        <p>Cargando campos...</p>
+        <p>Cargando...</p>
       ) : error ? (
         <div className="alert alert-danger">{error}</div>
       ) : (
@@ -216,7 +223,6 @@ export default function AnexosTab({ id }) {
               </form>
             )}
 
-            {/* Lista de archivos subidos */}
             {uploadedFiles.length > 0 ? (
               <ul className="list-group mt-3">
                 {uploadedFiles.map((file) => (
