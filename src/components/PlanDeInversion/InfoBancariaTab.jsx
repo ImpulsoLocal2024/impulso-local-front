@@ -97,7 +97,7 @@ export default function InfoBancariaTab({ id }) {
           "Número de identificación": recordData["Número de identificación"] || "",
         });
       } else {
-        // No existe registro, inicializamos vacío
+        // No existe registro, iniciamos vacío
         setRecordId(null);
         setData({
           "Banco": "",
@@ -193,7 +193,7 @@ export default function InfoBancariaTab({ id }) {
             <h5>Información para el pago</h5>
             
             <div className="mb-2">
-              <label><strong>Banco</strong></label>
+              <label><strong>Banco</strong></label><br/>
               <select
                 className="form-select"
                 name="Banco"
@@ -208,7 +208,7 @@ export default function InfoBancariaTab({ id }) {
             </div>
 
             <div className="mb-2">
-              <label><strong>Tipo de cuenta</strong></label>
+              <label><strong>Tipo de cuenta</strong></label><br/>
               <select
                 className="form-select"
                 name="Tipo de cuenta"
@@ -223,9 +223,9 @@ export default function InfoBancariaTab({ id }) {
             </div>
 
             <div className="mb-2">
-              <label><strong>Número de cuenta</strong></label>
+              <label><strong>Número de cuenta</strong></label><br/>
               <input
-                type="text"
+                type="number"
                 className="form-control"
                 name="Número de cuenta"
                 value={data["Número de cuenta"]}
@@ -235,7 +235,7 @@ export default function InfoBancariaTab({ id }) {
             </div>
 
             <div className="mb-2">
-              <label><strong>Tipo de documento titular</strong></label>
+              <label><strong>Tipo de documento titular</strong></label><br/>
               <select
                 className="form-select"
                 name="Tipo de documento titular"
@@ -250,9 +250,9 @@ export default function InfoBancariaTab({ id }) {
             </div>
 
             <div className="mb-2">
-              <label><strong>Número de identificación</strong></label>
+              <label><strong>Número de identificación</strong></label><br/>
               <input
-                type="text"
+                type="number"
                 className="form-control"
                 name="Número de identificación"
                 value={data["Número de identificación"]}
