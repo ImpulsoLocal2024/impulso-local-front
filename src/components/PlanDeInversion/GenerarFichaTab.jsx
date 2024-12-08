@@ -5,25 +5,46 @@ import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import axios from 'axios';
 
-// La imagen del banner está en la carpeta public
+// Ruta de la imagen del banner en la carpeta public
 const bannerImagePath = '/impulso-local-banner-pdf.jpeg';
 
 export default function GenerarFichaTab({ id }) {
+  // Estados para almacenar los datos obtenidos de la API
   const [caracterizacionData, setCaracterizacionData] = useState({});
   const [datosTab, setDatosTab] = useState({});
   const [propuestaMejoraData, setPropuestaMejoraData] = useState([]);
   const [formulacionData, setFormulacionData] = useState([]);
-  const [piFormulacionRecords, setPiFormulacionRecords] = useState([]);
   const [groupedRubros, setGroupedRubros] = useState([]);
   const [totalInversion, setTotalInversion] = useState(0);
   const [relatedData, setRelatedData] = useState({});
-  const [providerRelatedData, setProviderRelatedData] = useState({});
   const [loading, setLoading] = useState(true);
 
-  // Nuevos estados para almacenar los nombres
+  // Estados para almacenar los nombres del asesor y del emprendedor
   const [asesorNombre, setAsesorNombre] = useState('');
   const [emprendedorNombre, setEmprendedorNombre] = useState('');
   const [asesorDocumento, setAsesorDocumento] = useState('');
+
+  // Lista de campos a excluir de la sección de datos
+  const datosKeys = [
+    "Tiempo de dedicacion al negocio (Parcial o Completo)",
+    "Descripcion general del negocio",
+    "Descripcion de el lugar donde desarrolla la actividad",
+    "Descripcion de los activos del negocio",
+    "Valor aproximado de los activos del negocio",
+    "Total costos fijos mensuales",
+    "Total costos variables",
+    "Total gastos mensuales",
+    "Total ventas mensuales del negocio",
+    "Descripcion de la capacidad de produccion",
+    "Valor de los gastos familiares mensuales promedio",
+    "Lleva registros separados de finanzas personales y del negocio",
+    "Usa billeteras moviles",
+    "Cual",
+    "Concepto y justificacion del valor de la capitalizacion",
+    "Como contribuira la inversion a la mejora productiva del negocio",
+    "El negocio es sujeto de participacion en espacios de conexion",
+    "Recomendaciones tecnica, administrativas y financieras"
+  ];
 
   useEffect(() => {
     const fetchData = async () => {
@@ -42,21 +63,21 @@ export default function GenerarFichaTab({ id }) {
         }
         const baseURL = 'https://impulso-local-back.onrender.com/api/inscriptions';
 
-        // Obtener datos de `inscription_caracterizacion`
+        // 1. Obtener datos de `inscription_caracterizacion`
         const caracterizacionResponse = await axios.get(
           `${baseURL}/tables/inscription_caracterizacion/record/${id}`,
           { headers: { Authorization: `Bearer ${token}` } }
         );
         setCaracterizacionData(caracterizacionResponse.data.record);
 
-        // Obtener datos relacionados para claves foráneas
+        // 2. Obtener datos relacionados para claves foráneas (si aplica)
         const fieldsResponse = await axios.get(
           `${baseURL}/pi/tables/inscription_caracterizacion/related-data`,
           { headers: { Authorization: `Bearer ${token}` } }
         );
         setRelatedData(fieldsResponse.data.relatedData || {});
 
-        // Obtener datos del asesor
+        // 3. Obtener datos del asesor
         const asesorId = caracterizacionResponse.data.record.Asesor;
         if (asesorId) {
           const asesorResponse = await axios.get(
@@ -75,7 +96,7 @@ export default function GenerarFichaTab({ id }) {
           setAsesorDocumento('No disponible');
         }
 
-        // Obtener nombre del beneficiario
+        // 4. Obtener nombre del beneficiario
         const nombreEmprendedor = [
           caracterizacionResponse.data.record["Primer nombre"] || '',
           caracterizacionResponse.data.record["Otros nombres"] || '',
@@ -84,7 +105,7 @@ export default function GenerarFichaTab({ id }) {
         ].filter(Boolean).join(' ');
         setEmprendedorNombre(nombreEmprendedor || 'No disponible');
 
-        // Obtener datos de `pi_datos` para el caracterizacion_id
+        // 5. Obtener datos de `pi_datos` para el caracterizacion_id
         const datosResponse = await axios.get(
           `${baseURL}/pi/tables/pi_datos/records?caracterizacion_id=${id}`,
           { headers: { Authorization: `Bearer ${token}` } }
@@ -93,104 +114,45 @@ export default function GenerarFichaTab({ id }) {
           setDatosTab(datosResponse.data[0]);
         }
 
-        // Obtener datos de `pi_propuesta_mejora`
+        // 6. Obtener datos de `pi_propuesta_mejora`
         const propuestaMejoraResponse = await axios.get(
           `${baseURL}/pi/tables/pi_propuesta_mejora/records?caracterizacion_id=${id}`,
           { headers: { Authorization: `Bearer ${token}` } }
         );
         setPropuestaMejoraData(propuestaMejoraResponse.data);
 
-        // Obtener datos de `pi_formulacion`
+        // 7. Obtener datos de `pi_formulacion` sin referencias a `provider_proveedores`
         const formulacionResponse = await axios.get(
           `${baseURL}/pi/tables/pi_formulacion/records?caracterizacion_id=${id}`,
           { headers: { Authorization: `Bearer ${token}` } }
         );
         setFormulacionData(formulacionResponse.data);
 
-        // Obtener datos de pi_formulacion y proveedores asociados
-        const piFormulacionUrl = `${baseURL}/pi/tables/pi_formulacion/records?caracterizacion_id=${id}&Seleccion=true`;
-        const piFormulacionResponse = await axios.get(piFormulacionUrl, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        const piRecords = piFormulacionResponse.data;
+        // 8. Agrupar Rubros y calcular total inversión
+        const rubrosOptions = [
+          "Maquinaria",
+          "Herramientas",
+          "Mobiliario",
+          "Equipo y/o similares",
+        ];
 
-        // Obtener IDs de proveedores
-        const providerIds = piRecords.map((piRecord) => piRecord.rel_id_prov);
-
-        // Obtener detalles de proveedores
-        const providerPromises = providerIds.map((providerId) => {
-          const providerUrl = `${baseURL}/tables/provider_proveedores/record/${providerId}`;
-          return axios.get(providerUrl, {
-            headers: { Authorization: `Bearer ${token}` },
-          });
-        });
-
-        const providersResponses = await Promise.all(providerPromises);
-        const providersData = providersResponses.map((res) => res.data.record);
-
-        // Obtener datos relacionados para proveedores (Rubro y Elemento)
-        const providerFieldsResponse = await axios.get(
-          `${baseURL}/pi/tables/provider_proveedores/related-data`,
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-        setProviderRelatedData(providerFieldsResponse.data.relatedData || {});
-
-        // Combinar pi_formulacion y proveedores
-        const combinedData = piRecords.map((piRecord) => {
-          const providerData = providersData.find(
-            (provider) => String(provider.id) === String(piRecord.rel_id_prov)
-          );
-          return {
-            ...piRecord,
-            providerData,
-          };
+        const resumenPorRubro = rubrosOptions.map((r) => {
+          const total = formulacionResponse.data
+            .filter((rec) => rec["Rubro"] === r)
+            .reduce((sum, rec) => {
+              const cantidad = rec["Cantidad"] || 0;
+              const valorUnitario = rec["Valor Unitario"] || 0;
+              return sum + (cantidad * valorUnitario);
+            }, 0);
+          return { rubro: r, total };
         });
 
-        setPiFormulacionRecords(combinedData);
+        const totalInv = resumenPorRubro.reduce((sum, item) => sum + item.total, 0);
+        const montoDisponible = 3000000; // 3 millones
+        const contrapartida = totalInv > montoDisponible ? totalInv - montoDisponible : 0;
 
-        // Agrupar Rubros y calcular total inversión
-        const rubroMap = {};
-
-        combinedData.forEach((piRecord) => {
-          const provider = piRecord.providerData;
-          if (provider) {
-            const rubroId = provider.Rubro;
-            const precioCatalogo = parseFloat(provider["Valor catalogo"]) || 0;
-            const cantidad = parseFloat(piRecord.Cantidad) || 1;
-            const totalPrice = precioCatalogo * cantidad;
-
-            if (rubroMap[rubroId]) {
-              rubroMap[rubroId] += totalPrice;
-            } else {
-              rubroMap[rubroId] = totalPrice;
-            }
-          }
-        });
-
-        // Mapeo de IDs de Rubro a nombres
-        const rubroNamesMap = {
-          '1': 'Equipo',
-          '2': 'Herramientas',
-          '3': 'Maquinaria',
-          '4': 'Mobiliario',
-          // Agrega más mapeos si es necesario
-        };
-
-        const groupedRubrosArray = Object.entries(rubroMap).map(([rubroId, total]) => {
-          const rubroName = rubroNamesMap[rubroId] || 'No disponible';
-          return {
-            rubro: rubroName,
-            total: total.toFixed(2),
-          };
-        });
-
-        const totalInv = groupedRubrosArray.reduce(
-          (acc, record) => acc + parseFloat(record.total || 0),
-          0
-        ).toFixed(2);
-
-        setGroupedRubros(groupedRubrosArray);
-        setTotalInversion(totalInv);
+        setGroupedRubros(resumenPorRubro);
+        setTotalInversion(totalInv.toFixed(2));
 
         setLoading(false);
       } catch (error) {
@@ -202,6 +164,7 @@ export default function GenerarFichaTab({ id }) {
     fetchData();
   }, [id]);
 
+  // Función para obtener el valor legible de campos relacionados
   const getColumnDisplayValue = (column, value) => {
     if (relatedData[column]) {
       const relatedRecord = relatedData[column].find(
@@ -212,20 +175,10 @@ export default function GenerarFichaTab({ id }) {
     return value;
   };
 
-  const getProviderColumnDisplayValue = (column, value) => {
-    if (providerRelatedData[column]) {
-      const relatedRecord = providerRelatedData[column].find(
-        (item) => String(item.id) === String(value)
-      );
-      return relatedRecord ? relatedRecord.displayValue : `ID: ${value}`;
-    }
-    return value;
-  };
-
+  // Función para generar el PDF completo
   const generateFichaPDF = () => {
     const doc = new jsPDF('p', 'pt', 'a4');
     const pageWidth = doc.internal.pageSize.getWidth();
-    const pageHeight = doc.internal.pageSize.getHeight();
     const margin = 40;
     const maxLineWidth = pageWidth - margin * 2;
     let yPosition = 100;
@@ -261,7 +214,7 @@ export default function GenerarFichaTab({ id }) {
 
       yPosition = 130; // Ajustar la posición vertical después del encabezado
 
-      // Información del Negocio Local
+      // 1. Información del Negocio Local
       doc.setFontSize(fontSizes.subtitle);
       doc.setTextColor(0, 0, 0);
       yPosition += 20;
@@ -294,7 +247,7 @@ export default function GenerarFichaTab({ id }) {
         yPosition += lines.length * 14;
       });
 
-      // Información del Beneficiario
+      // 2. Información del Beneficiario
       doc.setFontSize(fontSizes.subtitle);
       doc.setFont(undefined, 'bold');
       yPosition += 10;
@@ -319,7 +272,7 @@ export default function GenerarFichaTab({ id }) {
         yPosition += lines.length * 14;
       });
 
-      // Sección de Datos (`pi_datos`)
+      // 3. Datos Generales del Negocio (`pi_datos`) excluyendo `datosKeys`
       doc.setFontSize(fontSizes.subtitle);
       doc.setFont(undefined, 'bold');
       yPosition += 20;
@@ -329,28 +282,9 @@ export default function GenerarFichaTab({ id }) {
       doc.setFont(undefined, 'normal');
       yPosition += 10;
 
-      const datosKeys = [
-        "Tiempo de dedicacion al negocio (Parcial o Completo)",
-        "Descripcion general del negocio",
-        "Descripcion de el lugar donde desarrolla la actividad",
-        "Descripcion de los activos del negocio",
-        "Valor aproximado de los activos del negocio",
-        "Total costos fijos mensuales",
-        "Total costos variables",
-        "Total gastos mensuales",
-        "Total ventas mensuales del negocio",
-        "Descripcion de la capacidad de produccion",
-        "Valor de los gastos familiares mensuales promedio",
-        "Lleva registros separados de finanzas personales y del negocio",
-        "Usa billeteras moviles",
-        "Cual",
-        "Concepto y justificacion del valor de la capitalizacion",
-        "Como contribuira la inversion a la mejora productiva del negocio",
-        "El negocio es sujeto de participacion en espacios de conexion",
-        "Recomendaciones tecnica, administrativas y financieras"
-      ];
-
-      datosKeys.forEach(key => {
+      // Filtrar los campos de pi_datos excluyendo `datosKeys` y `caracterizacion_id`
+      const piDatosFields = Object.keys(datosTab).filter(key => !datosKeys.includes(key) && key !== 'caracterizacion_id');
+      piDatosFields.forEach(key => {
         const label = `${key}:`;
         const value = datosTab[key] || 'No disponible';
 
@@ -369,7 +303,7 @@ export default function GenerarFichaTab({ id }) {
         yPosition += valueLines.length * 14 + 5; // Espacio adicional entre entradas
       });
 
-      // Sección de Propuesta de Mejora (`pi_propuesta_mejora`)
+      // 4. Propuesta de Mejora (`pi_propuesta_mejora`)
       doc.setFontSize(fontSizes.subtitle);
       doc.setFont(undefined, 'bold');
       yPosition += 20;
@@ -397,7 +331,7 @@ export default function GenerarFichaTab({ id }) {
         yPosition += 14;
       }
 
-      // Sección de Formulación (`pi_formulacion`)
+      // 5. Formulación del Plan de Inversión (`pi_formulacion`)
       doc.setFontSize(fontSizes.subtitle);
       doc.setFont(undefined, 'bold');
       yPosition += 20;
@@ -424,7 +358,7 @@ export default function GenerarFichaTab({ id }) {
           yPosition += lines.length * 14 + 10;
         });
 
-        // Resumen de la Inversión
+        // 6. Resumen de la Inversión
         doc.setFontSize(fontSizes.subtitle);
         doc.setFont(undefined, 'bold');
         yPosition += 20;
@@ -461,7 +395,7 @@ export default function GenerarFichaTab({ id }) {
         yPosition += 14;
       }
 
-      // Concepto de Viabilidad
+      // 7. Concepto de Viabilidad
       doc.setFontSize(fontSizes.subtitle);
       doc.setFont(undefined, 'bold');
       yPosition += 30;
@@ -490,7 +424,7 @@ export default function GenerarFichaTab({ id }) {
         yPosition += lines.length * 14 + 10; // Espacio adicional entre párrafos
       });
 
-      // Sección de Firmas
+      // 8. Sección de Firmas
       const firmasSectionHeight = 120; // Altura total estimada de la sección de firmas
       yPosition += 10;
       yPosition = checkPageEnd(doc, yPosition, firmasSectionHeight);
@@ -531,7 +465,7 @@ export default function GenerarFichaTab({ id }) {
       doc.text(`C.C. ${emprendedorCC}`, beneficiarioBoxX + boxWidth / 2, yPosition, { align: 'center' });
       doc.text(`C.C. ${asesorDocumento}`, asesorBoxX + boxWidth / 2, yPosition, { align: 'center' });
 
-      // Sección de Fecha y Hora
+      // 9. Sección de Fecha y Hora
       const dateSectionHeight = 30; // Altura total estimada de la sección de fecha y hora
       yPosition += 30;
       yPosition = checkPageEnd(doc, yPosition, dateSectionHeight);
@@ -564,5 +498,5 @@ export default function GenerarFichaTab({ id }) {
         {loading && <p>Cargando datos, por favor espera...</p>}
       </div>
     );
-  }
+}
 }
