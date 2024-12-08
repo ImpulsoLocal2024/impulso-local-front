@@ -1,142 +1,165 @@
-import { useState, useEffect } from 'react';
-import PropTypes from 'prop-types'; // Importar PropTypes
+import React, { useState, useEffect } from 'react';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
 import axios from 'axios';
 
 export default function GenerarFichaTab({ id }) {
-  const [fields, setFields] = useState([]);
-  const [data, setData] = useState({});
-  const [tableName] = useState('pi_generar_ficha'); // Nombre de la tabla pi_generar_ficha
-  const [loading, setLoading] = useState(false);
-  const [recordId, setRecordId] = useState(null);
-  const [error, setError] = useState(null);
+  const [caracterizacionData, setCaracterizacionData] = useState({});
+  const [diagnosticoData, setDiagnosticoData] = useState([]);
+  const [activosData, setActivosData] = useState([]);
+  const [caracteristicasData, setCaracteristicasData] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [asesorNombre, setAsesorNombre] = useState('');
+  const [emprendedorNombre, setEmprendedorNombre] = useState('');
+  const [asesorDocumento, setAsesorDocumento] = useState('');
 
   useEffect(() => {
-    const fetchFieldsAndData = async () => {
-      setLoading(true);
+    const fetchData = async () => {
       try {
+        setLoading(true);
         const token = localStorage.getItem('token');
         if (!token) {
-          // Manejar redirección si no hay token
+          alert('No se encontró el token de autenticación');
           return;
         }
 
-        // Obtener campos de la tabla
-        const fieldsResponse = await axios.get(
-          `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/${tableName}/fields`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
+        // Obtener datos de `inscription_caracterizacion`
+        const caracterizacionResponse = await axios.get(
+          `https://impulso-local-back.onrender.com/api/inscriptions/tables/inscription_caracterizacion/record/${id}`,
+          { headers: { Authorization: `Bearer ${token}` } }
         );
-        setFields(fieldsResponse.data);
+        setCaracterizacionData(caracterizacionResponse.data.record);
 
-        // Obtener registro existente filtrado por caracterizacion_id
-        const recordsResponse = await axios.get(
-          `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/${tableName}/records?caracterizacion_id=${id}`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
-
-        if (recordsResponse.data.length > 0) {
-          const existingRecord = recordsResponse.data[0];
-          setData(existingRecord);
-          setRecordId(existingRecord.id);
+        // Obtener datos del asesor
+        const asesorId = caracterizacionResponse.data.record.Asesor;
+        if (asesorId) {
+          const asesorResponse = await axios.get(
+            `https://impulso-local-back.onrender.com/api/inscriptions/tables/users/record/${asesorId}`,
+            { headers: { Authorization: `Bearer ${token}` } }
+          );
+          const asesorData = asesorResponse.data.record;
+          setAsesorNombre(asesorData.username || 'No asignado');
+          setAsesorDocumento(asesorData.documento || 'No disponible');
+        } else {
+          setAsesorNombre('No asignado');
+          setAsesorDocumento('No disponible');
         }
+
+        // Obtener nombre del beneficiario
+        const nombreEmprendedor = [
+          caracterizacionResponse.data.record["Primer nombre"] || '',
+          caracterizacionResponse.data.record["Otros nombres"] || '',
+          caracterizacionResponse.data.record["Primer apellido"] || '',
+          caracterizacionResponse.data.record["Segundo apellido"] || '',
+        ]
+          .filter(Boolean)
+          .join(' ');
+        setEmprendedorNombre(nombreEmprendedor || 'No disponible');
+
+        // Obtener datos de `pi_diagnostico`
+        const diagnosticoResponse = await axios.get(
+          `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/pi_diagnostico/records?caracterizacion_id=${id}`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        setDiagnosticoData(diagnosticoResponse.data);
+
+        // Obtener datos de `pi_activos`
+        const activosResponse = await axios.get(
+          `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/pi_activos/records?caracterizacion_id=${id}`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        setActivosData(activosResponse.data);
+
+        // Obtener datos de `pi_caracteristicas`
+        const caracteristicasResponse = await axios.get(
+          `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/pi_caracteristicas/records?caracterizacion_id=${id}`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        setCaracteristicasData(caracteristicasResponse.data);
 
         setLoading(false);
       } catch (error) {
-        console.error('Error obteniendo los campos o datos:', error);
-        setError('Error obteniendo los campos o datos');
+        console.error('Error al obtener los datos:', error);
         setLoading(false);
       }
     };
 
-    fetchFieldsAndData();
-  }, [tableName, id]);
+    fetchData();
+  }, [id]);
 
-  // Función para manejar cambios en los campos
-  const handleChange = (e) => {
-    setData({ ...data, [e.target.name]: e.target.value });
-  };
+  const generatePDF = () => {
+    const doc = new jsPDF('p', 'pt', 'a4');
+    const margin = 40;
+    const maxLineWidth = doc.internal.pageSize.getWidth() - margin * 2;
+    let yPosition = 50;
 
-  // Función para manejar el envío del formulario
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        // Manejar redirección si no hay token
-        return;
-      }
+    // Agregar el banner
+    doc.addImage('/impulso-local-banner-pdf.jpeg', 'JPEG', margin, yPosition, maxLineWidth, 60);
+    yPosition += 70;
 
-      const recordData = { ...data, caracterizacion_id: id };
+    // Información del Beneficiario
+    doc.setFont('helvetica', 'bold');
+    doc.text('Información del Beneficiario', margin, yPosition);
+    yPosition += 20;
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Nombre: ${emprendedorNombre}`, margin, yPosition);
+    yPosition += 20;
+    doc.text(`Asesor: ${asesorNombre}`, margin, yPosition);
+    yPosition += 20;
 
-      if (recordId) {
-        // Actualizar registro existente
-        await axios.put(
-          `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/${tableName}/record/${recordId}`,
-          recordData,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
-        alert('Ficha actualizada exitosamente');
-      } else {
-        // Crear nuevo registro
-        await axios.post(
-          `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/${tableName}/record`,
-          recordData,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
-        alert('Ficha guardada exitosamente');
-      }
-    } catch (error) {
-      console.error('Error guardando los datos:', error);
-      setError('Error guardando los datos');
+    // Diagnóstico
+    doc.setFont('helvetica', 'bold');
+    doc.text('Diagnóstico', margin, yPosition);
+    yPosition += 20;
+    if (diagnosticoData.length > 0) {
+      diagnosticoData.forEach((item, index) => {
+        doc.text(`${index + 1}. ${item['Descripción'] || 'No disponible'}`, margin, yPosition);
+        yPosition += 15;
+      });
+    } else {
+      doc.text('No hay datos de diagnóstico disponibles.', margin, yPosition);
+      yPosition += 20;
     }
+
+    // Activos
+    doc.setFont('helvetica', 'bold');
+    doc.text('Activos', margin, yPosition);
+    yPosition += 20;
+    if (activosData.length > 0) {
+      activosData.forEach((item, index) => {
+        doc.text(`${index + 1}. ${item['Descripción'] || 'No disponible'}`, margin, yPosition);
+        yPosition += 15;
+      });
+    } else {
+      doc.text('No hay datos de activos disponibles.', margin, yPosition);
+      yPosition += 20;
+    }
+
+    // Características del Espacio
+    doc.setFont('helvetica', 'bold');
+    doc.text('Características del Espacio', margin, yPosition);
+    yPosition += 20;
+    if (caracteristicasData.length > 0) {
+      caracteristicasData.forEach((item, index) => {
+        doc.text(`${index + 1}. ${item['Descripción'] || 'No disponible'}`, margin, yPosition);
+        yPosition += 15;
+      });
+    } else {
+      doc.text('No hay datos de características del espacio disponibles.', margin, yPosition);
+      yPosition += 20;
+    }
+
+    // Guardar el PDF
+    doc.save(`Informe_Negocio_Local_${id}.pdf`);
   };
 
   return (
     <div>
       <h3>Generar Ficha</h3>
-      {loading ? (
-        <p>Cargando campos...</p>
-      ) : error ? (
-        <div className="alert alert-danger">{error}</div>
-      ) : (
-        <form onSubmit={handleSubmit}>
-          {fields.map((field) => (
-            <div className="form-group" key={field.column_name}>
-              <label>{field.column_name}</label>
-              <input
-                type="text"
-                name={field.column_name}
-                className="form-control"
-                value={data[field.column_name] || ''}
-                onChange={handleChange}
-              />
-            </div>
-          ))}
-          <button type="submit" className="btn btn-primary">
-            {recordId ? 'Actualizar' : 'Guardar'}
-          </button>
-        </form>
-      )}
+      <button onClick={generatePDF} className="btn btn-primary" disabled={loading}>
+        Descargar Ficha en PDF
+      </button>
+      {loading && <p>Cargando datos, por favor espera...</p>}
     </div>
   );
 }
-
-// Definir las validaciones de propiedades
-GenerarFichaTab.propTypes = {
-  id: PropTypes.string.isRequired,
-};
