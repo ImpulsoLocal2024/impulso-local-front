@@ -10,14 +10,6 @@ import AnexosTab from './PlanDeInversion/AnexosTab';
 import EncuestaSalidaTab from './PlanDeInversion/EncuestaSalidaTab';
 import GenerarFichaTab from './PlanDeInversion/GenerarFichaTab';
 
-// Placeholders para las nuevas tabs
-function PropuestaMejoraTab({ id }) {
-  return <div><h4>Propuesta de Mejora</h4><p>Contenido de la propuesta de mejora para {id}.</p></div>;
-}
-
-function EjecucionTab({ id }) {
-  return <div><h4>Ejecución</h4><p>Contenido de la ejecución para {id}.</p></div>;
-}
 
 export default function PlanDeInversion() {
   const { id } = useParams(); // ID del registro de caracterización
