@@ -193,6 +193,16 @@ export default function GenerarFichaTab({ id }) {
     return value;
   };
 
+  // Función para verificar el final de la página y agregar una nueva si es necesario
+  const checkPageEnd = (doc, currentY, addedHeight) => {
+    const pageHeight = doc.internal.pageSize.getHeight();
+    if (currentY + addedHeight > pageHeight - 40) { // Dejamos un margen inferior de 40
+      doc.addPage();
+      currentY = 40; // Reiniciamos yPosition al margen superior después de agregar una nueva página
+    }
+    return currentY;
+  };
+
   // Función para generar el PDF completo
   const generateFichaPDF = () => {
     const doc = new jsPDF('p', 'pt', 'a4');
@@ -499,16 +509,6 @@ export default function GenerarFichaTab({ id }) {
 
       // Descargar PDF
       doc.save(`Ficha_Negocio_Local_${id}.pdf`); // Cambiar nombre del archivo si lo deseas
-    };
-
-    // Función para verificar el final de la página y agregar una nueva si es necesario
-    const checkPageEnd = (doc, currentY, addedHeight) => {
-      const pageHeight = doc.internal.pageSize.getHeight();
-      if (currentY + addedHeight > pageHeight - 40) { // Dejamos un margen inferior de 40
-        doc.addPage();
-        currentY = 40; // Reiniciamos yPosition al margen superior después de agregar una nueva página
-      }
-      return currentY;
     };
 
     return (
