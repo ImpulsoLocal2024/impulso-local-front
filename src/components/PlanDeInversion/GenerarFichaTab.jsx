@@ -509,17 +509,17 @@ export default function GenerarFichaTab({ id }) {
 
       // Descargar PDF
       doc.save(`Ficha_Negocio_Local_${id}.pdf`); // Cambiar nombre del archivo si lo deseas
-    };
+  };
 
-    return (
-      <div>
-        <h3>Generar Ficha</h3>
-        {errorMsg && <div className="alert alert-danger">{errorMsg}</div>}
-        <button onClick={generateFichaPDF} className="btn btn-primary" disabled={loading}>
-          Descargar Ficha PDF
-        </button>
-        {loading && <p>Cargando datos, por favor espera...</p>}
-      </div>
-    );
+  return (
+    <div>
+      <h3>Generar Ficha</h3>
+      {errorMsg && <div className="alert alert-danger">{errorMsg}</div>}
+      <button onClick={generateFichaPDF} className="btn btn-primary" disabled={loading}>
+        Descargar Ficha PDF
+      </button>
+      {loading && <p>Cargando datos, por favor espera...</p>}
+    </div>
+  );
 }
 }
