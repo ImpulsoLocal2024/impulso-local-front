@@ -3,9 +3,8 @@ import PropTypes from 'prop-types';
 import axios from 'axios';
 
 export default function AnexosTab({ id }) {
-  const [fields, setFields] = useState([]);
   const [data, setData] = useState({});
-  const [tableName] = useState('pi_anexos'); // Nombre de la tabla específica para Anexos
+  const [tableName] = useState('pi_anexos');
   const [loading, setLoading] = useState(false);
   const [recordId, setRecordId] = useState(null);
   const [error, setError] = useState(null);
@@ -14,8 +13,8 @@ export default function AnexosTab({ id }) {
   const [showUploadForm, setShowUploadForm] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState([]);
 
-  // Función para obtener archivos, filtrando por source='anexos'
   const fetchFiles = useCallback(async () => {
+    if (!recordId) return; // Si recordId es null o undefined, no llamar a la API
     try {
       const token = localStorage.getItem('token');
       if (!token) return;
@@ -39,33 +38,16 @@ export default function AnexosTab({ id }) {
   }, [recordId]);
 
   useEffect(() => {
-    const fetchFieldsAndData = async () => {
+    const fetchData = async () => {
       setLoading(true);
       try {
         const token = localStorage.getItem('token');
         if (!token) {
+          alert("No se encontró el token de autenticación");
           setLoading(false);
           return;
         }
 
-        // Obtener los campos de la tabla `pi_anexos`
-        // Requiere permisos 'view_tables'
-        try {
-          const fieldsResponse = await axios.get(
-            `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/${tableName}/fields`,
-            {
-              headers: {
-                Authorization: `Bearer ${token}`,
-              },
-            }
-          );
-          setFields(fieldsResponse.data);
-        } catch (fieldError) {
-          console.error('Error obteniendo fields:', fieldError);
-          // Si no es crítico, se puede omitir el error o comentar esta parte.
-        }
-
-        // Verificar si existe un registro en `pi_anexos` para el caracterizacion_id
         const recordsResponse = await axios.get(
           `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/${tableName}/records?caracterizacion_id=${id}`,
           {
@@ -80,9 +62,8 @@ export default function AnexosTab({ id }) {
           const existingRecord = recordsResponse.data[0];
           setData(existingRecord);
           setRecordId(existingRecord.id);
-          await fetchFiles(); // Obtener archivos para el recordId
         } else {
-          // No existe, crear registro
+          // Crear registro
           const createResponse = await axios.post(
             `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/${tableName}/record`,
             { caracterizacion_id: id },
@@ -93,19 +74,25 @@ export default function AnexosTab({ id }) {
             }
           );
           setRecordId(createResponse.data.id);
-          await fetchFiles(); // Obtener archivos (vacío por ahora)
         }
 
         setLoading(false);
       } catch (error) {
         console.error('Error obteniendo los datos:', error);
-        setError('Error obteniendo los campos o datos');
+        setError('Error obteniendo los datos');
         setLoading(false);
       }
     };
 
-    fetchFieldsAndData();
-  }, [tableName, id, fetchFiles]);
+    fetchData();
+  }, [tableName, id]);
+
+  // Nuevo useEffect para obtener archivos una vez que se tenga recordId
+  useEffect(() => {
+    if (recordId) {
+      fetchFiles();
+    }
+  }, [recordId, fetchFiles]);
 
   const handleFileChange = (e) => {
     setFile(e.target.files[0]);
@@ -127,7 +114,7 @@ export default function AnexosTab({ id }) {
       formData.append('file', file);
       formData.append('fileName', fileName);
       formData.append('caracterizacion_id', id);
-      formData.append('source', 'anexos'); // Filtramos por 'anexos'
+      formData.append('source', 'anexos');
 
       await axios.post(
         `https://impulso-local-back.onrender.com/api/inscriptions/tables/${tableName}/record/${recordId}/upload`,
@@ -163,7 +150,7 @@ export default function AnexosTab({ id }) {
           }
         );
 
-        await fetchFiles(); // Actualizar lista de archivos
+        await fetchFiles();
       } catch (error) {
         console.error('Error eliminando el archivo:', error);
         setError('Error eliminando el archivo');
@@ -180,80 +167,78 @@ export default function AnexosTab({ id }) {
         <div className="alert alert-danger">{error}</div>
       ) : (
         <div>
-          <div className="mt-4" style={{ width: '100%' }}>
-            <h5>Archivos adicionales</h5>
-            {!showUploadForm && (
-              <button
-                className="btn btn-primary btn-sm mb-2"
-                onClick={() => setShowUploadForm(true)}
-              >
-                Subir documento
+          <h5>Archivos adicionales</h5>
+          {!showUploadForm && (
+            <button
+              className="btn btn-primary btn-sm mb-2"
+              onClick={() => setShowUploadForm(true)}
+            >
+              Subir documento
+            </button>
+          )}
+
+          {showUploadForm && (
+            <form onSubmit={handleFileUpload}>
+              <div className="form-group">
+                <label>Nombre del archivo</label>
+                <input
+                  type="text"
+                  className="form-control"
+                  value={fileName}
+                  onChange={handleFileNameChange}
+                />
+              </div>
+              <div className="form-group">
+                <label>Seleccionar archivo</label>
+                <input
+                  type="file"
+                  className="form-control"
+                  onChange={handleFileChange}
+                />
+              </div>
+              <button type="submit" className="btn btn-success btn-sm mb-2">
+                Cargar archivo
               </button>
-            )}
+              <button
+                type="button"
+                className="btn btn-secondary btn-sm"
+                onClick={() => setShowUploadForm(false)}
+              >
+                Cancelar
+              </button>
+            </form>
+          )}
 
-            {showUploadForm && (
-              <form onSubmit={handleFileUpload}>
-                <div className="form-group">
-                  <label>Nombre del archivo</label>
-                  <input
-                    type="text"
-                    className="form-control"
-                    value={fileName}
-                    onChange={handleFileNameChange}
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Seleccionar archivo</label>
-                  <input
-                    type="file"
-                    className="form-control"
-                    onChange={handleFileChange}
-                  />
-                </div>
-                <button type="submit" className="btn btn-success btn-sm mb-2">
-                  Cargar archivo
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-secondary btn-sm"
-                  onClick={() => setShowUploadForm(false)}
+          {uploadedFiles.length > 0 ? (
+            <ul className="list-group mt-3">
+              {uploadedFiles.map((file) => (
+                <li
+                  key={file.id}
+                  className="list-group-item d-flex justify-content-between align-items-center"
                 >
-                  Cancelar
-                </button>
-              </form>
-            )}
-
-            {uploadedFiles.length > 0 ? (
-              <ul className="list-group mt-3">
-                {uploadedFiles.map((file) => (
-                  <li
-                    key={file.id}
-                    className="list-group-item d-flex justify-content-between align-items-center"
-                  >
-                    <div>
-                      <strong>{file.name}</strong>
-                      <br />
-                      <a
-                        href={`https://impulso-local-back.onrender.com${file.url}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        Ver archivo
-                      </a>
-                    </div>
-                    <button
-                      className="btn btn-danger btn-sm"
-                      onClick={() => handleFileDelete(file.id)}
+                  <div>
+                    <strong>{file.name}</strong>
+                    <br />
+                    <a
+                      href={`https://impulso-local-back.onrender.com${file.url}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
                     >
-                      Eliminar
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p>No hay archivos subidos aún.</p>
-            )}
-          </div>
+                      Ver archivo
+                    </a>
+                  </div>
+                  <button
+                    className="btn btn-danger btn-sm"
+                    onClick={() => handleFileDelete(file.id)}
+                  >
+                    Eliminar
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p>No hay archivos subidos aún.</p>
+          )}
         </div>
       )}
     </div>
