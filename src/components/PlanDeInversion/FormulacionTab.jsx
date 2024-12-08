@@ -59,13 +59,10 @@ export default function FormulacionTab({ id }) {
     }
   };
 
-  // Obtenemos todos los archivos de la empresa (caracterizacion_id)
-  // El backend no filtra por formulacion_id, obtendremos todos y filtraremos luego por nombre.
   const fetchAllRecordsFiles = async (fetchedRecords) => {
     const token = localStorage.getItem('token');
     if (!token) return;
 
-    // Obtenemos todos los archivos de la empresa (caracterizacion_id) desde record/:caracterizacion_id/files
     const filesResponse = await axios.get(
       `https://impulso-local-back.onrender.com/api/inscriptions/tables/pi_formulacion/record/${id}/files`,
       {
@@ -77,15 +74,12 @@ export default function FormulacionTab({ id }) {
 
     const allFiles = filesResponse.data.files || [];
 
-    // Ahora filtramos según el nombre del archivo.
-    // Cada archivo cuyo nombre contenga "_formulacion_{formulacion_id}" le pertenece a ese registro.
     const updatedMap = {};
     fetchedRecords.forEach((rec) => {
       const formulacion_id = rec.id;
-      // Extraemos solo aquellos archivos cuyo nombre contenga "_formulacion_{formulacion_id}"
       const formulacionFiles = allFiles.filter(f => {
         const match = f.name.match(/_formulacion_(\d+)/);
-        if (!match) return false; // Si no hay match, este archivo no pertenece a ninguno en particular
+        if (!match) return false;
         const fileFormulacionId = parseInt(match[1], 10);
         return fileFormulacionId === formulacion_id;
       });
@@ -170,22 +164,15 @@ export default function FormulacionTab({ id }) {
     }
     try {
       const token = localStorage.getItem('token');
-
-      // Incrustamos el formulacion_id en el nombre del archivo antes de enviarlo
-      // Si el user puso "factura" y uploadingRecordId = 2, queda "factura_formulacion_2"
+      // Añadimos _formulacion_{formulacion_id} al nombre
       const fileNameWithFormulacion = `${fileName}_formulacion_${uploadingRecordId}`;
-
       const formData = new FormData();
       formData.append('file', file);
-      // Enviamos el nombre modificado
       formData.append('fileName', fileNameWithFormulacion);
-      // El backend para pi_ requiere caracterizacion_id
+      // El backend requiere caracterizacion_id si es pi_
       formData.append('caracterizacion_id', id);
 
       await axios.post(
-        // Según la lógica original, para subir archivos a pi_formulacion se usa:
-        // POST /api/inscriptions/tables/pi_formulacion/record/:record_id/upload
-        // record_id = caracterizacion_id en pi_ según el backend original
         `https://impulso-local-back.onrender.com/api/inscriptions/tables/pi_formulacion/record/${id}/upload`,
         formData,
         {
@@ -196,7 +183,6 @@ export default function FormulacionTab({ id }) {
         }
       );
 
-      // Después de subir, recargamos todos los archivos y volvemos a filtrarlos por el nombre
       await fetchAllRecordsFiles(records);
       setFile(null);
       setFileName('');
@@ -208,14 +194,14 @@ export default function FormulacionTab({ id }) {
   };
 
   const handleFileDelete = async (formulacion_id, fileId) => {
+    // El backend espera /record/:record_id/file/:file_id
+    // record_id es el caracterizacion_id si la tabla es pi_
+    // Por lo tanto, usar 'id' en la URL en vez de formulacion_id
     if (window.confirm('¿Estás seguro de que deseas eliminar este archivo?')) {
       try {
         const token = localStorage.getItem('token');
-        // Para borrar archivo, el backend espera pi_formulacion/record/:record_id/file/:file_id
-        // Aquí record_id es el formulacion_id o caracterizacion_id?
-        // Originalmente se usaba formulacion_id, lo mantenemos igual.
         await axios.delete(
-          `https://impulso-local-back.onrender.com/api/inscriptions/tables/pi_formulacion/record/${formulacion_id}/file/${fileId}`,
+          `https://impulso-local-back.onrender.com/api/inscriptions/tables/pi_formulacion/record/${id}/file/${fileId}`,
           {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -227,6 +213,31 @@ export default function FormulacionTab({ id }) {
       } catch (error) {
         console.error('Error eliminando el archivo:', error);
         setError('Error eliminando el archivo');
+      }
+    }
+  };
+
+  const handleDeleteRecord = async (formulacion_id) => {
+    // Para eliminar el registro pi_formulacion en sí,
+    // según el patrón de pi_, usamos:
+    // DELETE /api/inscriptions/pi/tables/pi_formulacion/record/:record_id
+    // Aquí record_id = formulacion_id
+    if (window.confirm('¿Estás seguro de que deseas eliminar este registro?')) {
+      try {
+        const token = localStorage.getItem('token');
+        await axios.delete(
+          `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/pi_formulacion/record/${formulacion_id}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+
+        await fetchRecords();
+      } catch (error) {
+        console.error('Error eliminando el registro:', error);
+        setError('Error eliminando el registro');
       }
     }
   };
@@ -344,9 +355,10 @@ export default function FormulacionTab({ id }) {
                                 </div>
                                 <button
                                   className="btn btn-danger btn-sm"
+                                  // Aquí usamos 'id' en la URL y 'f.id' para eliminar el archivo
                                   onClick={() => handleFileDelete(formulacion_id, f.id)}
                                 >
-                                  Eliminar
+                                  Eliminar archivo
                                 </button>
                               </li>
                             ))}
@@ -355,6 +367,12 @@ export default function FormulacionTab({ id }) {
                           <p>No hay archivos subidos aún para este registro.</p>
                         )}
                       </div>
+                      <button
+                        className="btn btn-danger btn-sm mt-2 w-100"
+                        onClick={() => handleDeleteRecord(formulacion_id)}
+                      >
+                        Eliminar registro
+                      </button>
                     </div>
                   </div>
                 );
