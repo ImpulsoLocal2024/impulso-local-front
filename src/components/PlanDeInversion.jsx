@@ -10,6 +10,15 @@ import AnexosTab from './PlanDeInversion/AnexosTab';
 import EncuestaSalidaTab from './PlanDeInversion/EncuestaSalidaTab';
 import GenerarFichaTab from './PlanDeInversion/GenerarFichaTab';
 
+// Placeholders para las nuevas tabs
+function PropuestaMejoraTab({ id }) {
+  return <div><h4>Propuesta de Mejora</h4><p>Contenido de la propuesta de mejora para {id}.</p></div>;
+}
+
+function EjecucionTab({ id }) {
+  return <div><h4>Ejecución</h4><p>Contenido de la ejecución para {id}.</p></div>;
+}
+
 export default function PlanDeInversion() {
   const { id } = useParams(); // ID del registro de caracterización
   const [activeTab, setActiveTab] = useState('Datos');
@@ -32,6 +41,19 @@ export default function PlanDeInversion() {
               }}
             >
               Datos
+            </a>
+          </li>
+          {/* Nueva tab Propuesta de Mejora, justo después de Datos */}
+          <li className={`nav-item ${activeTab === 'PropuestaMejora' ? 'active' : ''}`}>
+            <a
+              href="#"
+              className="nav-link"
+              onClick={(e) => {
+                e.preventDefault();
+                setActiveTab('PropuestaMejora');
+              }}
+            >
+              Propuesta de Mejora
             </a>
           </li>
           <li className={`nav-item ${activeTab === 'Diagnostico' ? 'active' : ''}`}>
@@ -106,6 +128,19 @@ export default function PlanDeInversion() {
               Anexos
             </a>
           </li>
+          {/* Nueva tab Ejecucion, justo después de Anexos y antes de Encuesta de salida */}
+          <li className={`nav-item ${activeTab === 'Ejecucion' ? 'active' : ''}`}>
+            <a
+              href="#"
+              className="nav-link"
+              onClick={(e) => {
+                e.preventDefault();
+                setActiveTab('Ejecucion');
+              }}
+            >
+              Ejecución
+            </a>
+          </li>
           <li className={`nav-item ${activeTab === 'EncuestaSalida' ? 'active' : ''}`}>
             <a
               href="#"
@@ -135,12 +170,14 @@ export default function PlanDeInversion() {
         {/* Contenido de las pestañas */}
         <div className="tab-content">
           {activeTab === 'Datos' && <DatosTab id={id} />}
+          {activeTab === 'PropuestaMejora' && <PropuestaMejoraTab id={id} />}
           {activeTab === 'Diagnostico' && <DiagnosticoTab id={id} />}
           {activeTab === 'Capacitacion' && <CapacitacionTab id={id} />}
           {activeTab === 'Validaciones' && <ValidacionesTab id={id} />}
           {activeTab === 'Formulacion' && <FormulacionTab id={id} />}
           {activeTab === 'InfoBancaria' && <InfoBancariaTab id={id} />}
           {activeTab === 'Anexos' && <AnexosTab id={id} />}
+          {activeTab === 'Ejecucion' && <EjecucionTab id={id} />}
           {activeTab === 'EncuestaSalida' && <EncuestaSalidaTab id={id} />}
           {activeTab === 'GenerarFicha' && <GenerarFichaTab id={id} />}
         </div>
