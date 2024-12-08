@@ -2,14 +2,15 @@ import { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import DatosTab from './PlanDeInversion/DatosTab';
 import DiagnosticoTab from './PlanDeInversion/DiagnosticoTab';
+import PropuestaMejoraTab from './PlanDeInversion/PropuestaMejoraTab'; // Nuevo componente
 import CapacitacionTab from './PlanDeInversion/CapacitacionTab';
 import ValidacionesTab from './PlanDeInversion/ValidacionesTab';
 import FormulacionTab from './PlanDeInversion/FormulacionTab';
 import InfoBancariaTab from './PlanDeInversion/InfoBancariaTab';
 import AnexosTab from './PlanDeInversion/AnexosTab';
+import EjecucionTab from './PlanDeInversion/EjecucionTab'; // Nuevo componente
 import EncuestaSalidaTab from './PlanDeInversion/EncuestaSalidaTab';
 import GenerarFichaTab from './PlanDeInversion/GenerarFichaTab';
-
 
 export default function PlanDeInversion() {
   const { id } = useParams(); // ID del registro de caracterización
@@ -35,7 +36,6 @@ export default function PlanDeInversion() {
               Datos
             </a>
           </li>
-          {/* Nueva tab Propuesta de Mejora, justo después de Datos */}
           <li className={`nav-item ${activeTab === 'PropuestaMejora' ? 'active' : ''}`}>
             <a
               href="#"
@@ -120,7 +120,6 @@ export default function PlanDeInversion() {
               Anexos
             </a>
           </li>
-          {/* Nueva tab Ejecucion, justo después de Anexos y antes de Encuesta de salida */}
           <li className={`nav-item ${activeTab === 'Ejecucion' ? 'active' : ''}`}>
             <a
               href="#"
