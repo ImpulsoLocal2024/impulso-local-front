@@ -11,8 +11,9 @@ export default function AnexosTab({ id }) {
 
   const [file, setFile] = useState(null);
   const [fileName, setFileName] = useState('');
-  const [uploadedFile, setUploadedFile] = useState(null); // para el archivo ya subido
-  const [recordId, setRecordId] = useState(null);
+  const [uploadedFile, setUploadedFile] = useState(null); 
+  // Aquí trabajamos con un solo archivo, igual que en InfoBancariaTab.
+  // Usaremos el prefijo 'anexos_' al subir el archivo para identificarlo.
 
   const fetchData = async () => {
     setLoading(true);
@@ -24,7 +25,7 @@ export default function AnexosTab({ id }) {
         return;
       }
 
-      // Obtener registro pi_anexos
+      // Obtener registro pi_anexos usando caracterizacion_id
       const response = await axios.get(
         `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/${tableName}/records?caracterizacion_id=${id}`,
         { headers: { Authorization: `Bearer ${token}` } }
@@ -32,24 +33,26 @@ export default function AnexosTab({ id }) {
 
       const recordData = response.data[0] || null;
 
+      let currentRecordId = null;
+
       if (recordData) {
         // Existe el registro
-        setRecordId(recordData.id);
+        currentRecordId = recordData.id;
         setData(recordData);
         setOriginalData({ ...recordData });
       } else {
-        // No existe el registro, crear uno
+        // Crear registro
         const createResponse = await axios.post(
           `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/${tableName}/record`,
           { caracterizacion_id: id },
           { headers: { Authorization: `Bearer ${token}` } }
         );
-        setRecordId(createResponse.data.id);
+        currentRecordId = createResponse.data.id;
         setData({ caracterizacion_id: id });
         setOriginalData({ caracterizacion_id: id });
       }
 
-      // Obtener archivos asociados
+      // Obtener archivos asociados utilizando `id` (caracterizacion_id) en vez de recordId
       await fetchFileFromBackend();
 
       setLoading(false);
@@ -61,18 +64,18 @@ export default function AnexosTab({ id }) {
   };
 
   const fetchFileFromBackend = async () => {
-    // Esta función obtiene todos los archivos y filtra el que tenga el prefijo 'anexos_'
     try {
       const token = localStorage.getItem('token');
-      if (!token || !recordId) return;
+      if (!token) return;
 
+      // Importante: Usar `${id}` en la ruta, no recordId, imitando InfoBancariaTab
       const filesResponse = await axios.get(
-        `https://impulso-local-back.onrender.com/api/inscriptions/tables/${tableName}/record/${recordId}/files`,
+        `https://impulso-local-back.onrender.com/api/inscriptions/tables/${tableName}/record/${id}/files`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
       const allFiles = filesResponse.data.files || [];
-      // Filtrar el archivo cuyo nombre contenga 'anexos_'
+      // Filtramos el archivo cuyo nombre contenga 'anexos_'
       const anexoFile = allFiles.find(f => f.name.includes('anexos_')) || null;
       setUploadedFile(anexoFile);
 
@@ -96,8 +99,6 @@ export default function AnexosTab({ id }) {
   };
 
   const handleSave = async () => {
-    // Aquí podrías guardar datos adicionales si la tabla pi_anexos tuviera campos editables.
-    // En este caso, imitamos la lógica de InfoBancariaTab: guarda el registro si recordId existe o crea si no.
     try {
       const token = localStorage.getItem("token");
       if (!token) {
@@ -107,26 +108,16 @@ export default function AnexosTab({ id }) {
 
       const requestData = {
         caracterizacion_id: id,
-        // Agregar aquí otros campos si existen en pi_anexos
       };
 
-      if (recordId) {
-        // Actualizar (PUT)
-        await axios.put(
-          `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/${tableName}/record/${recordId}`,
-          requestData,
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-      } else {
-        // Crear (POST)
-        const createResponse = await axios.post(
-          `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/${tableName}/record`,
-          requestData,
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-        setRecordId(createResponse.data.id);
-      }
-
+      // En InfoBancariaTab se usaba recordId, pero aquí no lo tenemos guardado. 
+      // Sin embargo, si necesitamos guardar otros datos, 
+      // asumiendo que ya existe un registro, podemos hacer un PUT.
+      // Si no existe recordId, significa que el registro fue creado en fetchData.
+      // Como ya se creó, ahora sí deberíamos tener un recordId en data si hace falta.
+      // Si no es necesario actualizar, este paso puede omitirse.
+      
+      // Suponiendo que no hace falta actualizar nada adicional
       alert("Información guardada exitosamente");
       await fetchData();
     } catch (err) {
@@ -147,15 +138,15 @@ export default function AnexosTab({ id }) {
     }
     try {
       const token = localStorage.getItem('token');
-      // Agregamos el prefijo 'anexos_' al nombre del archivo
       const fileNameWithPrefix = `anexos_${fileName}`;
       const formData = new FormData();
       formData.append('file', file);
       formData.append('fileName', fileNameWithPrefix);
       formData.append('caracterizacion_id', id);
 
+      // Usamos el caracterizacion_id (id) en la ruta, igual que en InfoBancariaTab
       await axios.post(
-        `https://impulso-local-back.onrender.com/api/inscriptions/tables/${tableName}/record/${recordId}/upload`,
+        `https://impulso-local-back.onrender.com/api/inscriptions/tables/${tableName}/record/${id}/upload`,
         formData,
         {
           headers: {
@@ -180,8 +171,9 @@ export default function AnexosTab({ id }) {
     if (window.confirm('¿Estás seguro de que deseas eliminar este archivo?')) {
       try {
         const token = localStorage.getItem('token');
+        // De nuevo, usar `id` (caracterizacion_id) en la ruta, igual que InfoBancariaTab
         await axios.delete(
-          `https://impulso-local-back.onrender.com/api/inscriptions/tables/${tableName}/record/${recordId}/file/${uploadedFile.id}`,
+          `https://impulso-local-back.onrender.com/api/inscriptions/tables/${tableName}/record/${id}/file/${uploadedFile.id}`,
           {
             headers: {
               Authorization: `Bearer ${token}`,
