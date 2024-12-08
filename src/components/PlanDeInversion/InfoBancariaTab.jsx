@@ -1,69 +1,18 @@
-import React, { useState, useEffect } from "react";
-import PropTypes from "prop-types";
-import axios from "axios";
+import { useState, useEffect } from 'react';
+import PropTypes from 'prop-types';
+import axios from 'axios';
 
-export default function InfoBancariaTab({ id }) {
-  const [data, setData] = useState({
-    "Banco": "",
-    "Tipo de cuenta": "",
-    "Número de cuenta": "",
-    "Tipo de documento titular": "",
-    "Número de identificación": "",
-  });
-
-  const [recordId, setRecordId] = useState(null);
+export default function AnexosTab({ id }) {
+  const [data, setData] = useState({});
+  const [tableName] = useState('pi_anexos');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [originalData, setOriginalData] = useState(null);
 
   const [file, setFile] = useState(null);
-  const [fileName, setFileName] = useState("");
+  const [fileName, setFileName] = useState('');
   const [uploadedFile, setUploadedFile] = useState(null); // para el archivo ya subido
-
-  const bancos = [
-    "BANCAMIA",
-    "BANCO AGRARIO",
-    "BANCO AV VILLAS",
-    "BANCO BBVA COLOMBIA S.A.",
-    "BANCO CAJA SOCIAL",
-    "BANCO COLPATRIA",
-    "BANCO COOPERATIVO COOPCENTRAL",
-    "BANCO CREDIFINANCIERA",
-    "BANCO DAVIVIENDA",
-    "BANCO DE BOGOTA",
-    "BANCO DE OCCIDENTE",
-    "BANCO FALABELLA",
-    "BANCO FINANDINA",
-    "BANCO GNB SUDAMERIS",
-    "BANCO MIBANCO",
-    "BANCO MUNDO MUJER",
-    "BANCO PICHINCHA",
-    "BANCO POPULAR",
-    "BANCO SERFINANZA",
-    "BANCO W",
-    "BANCOLOMBIA",
-    "BANCOOMEVA S.A.",
-    "CONFIAR COOPERATIVA FINANCIERA",
-    "DAVIPLATA",
-    "LULO BANK",
-    "MOVII S.A.",
-    "BANCO SANTANDER COLOMBIA",
-    "UALA",
-  ];
-
-  const tiposCuenta = [
-    "Cuenta de ahorros",
-    "Cuenta corriente",
-  ];
-
-  const tiposDocumento = [
-    "Cedula de Ciudadania",
-    "Cedula de Extranjeria",
-    "Contrasena de cedula",
-    "Permiso especial de permanencia",
-    "Permiso por proteccion temporal",
-    "Permiso temporal de permanencia"
-  ];
+  const [recordId, setRecordId] = useState(null);
 
   const fetchData = async () => {
     setLoading(true);
@@ -75,76 +24,67 @@ export default function InfoBancariaTab({ id }) {
         return;
       }
 
-      // Obtener registro pi_informacion_bancaria
+      // Obtener registro pi_anexos
       const response = await axios.get(
-        `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/pi_informacion_bancaria/records?caracterizacion_id=${id}`,
+        `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/${tableName}/records?caracterizacion_id=${id}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
       const recordData = response.data[0] || null;
 
       if (recordData) {
+        // Existe el registro
         setRecordId(recordData.id);
-        setData({
-          "Banco": recordData["Banco"] || "",
-          "Tipo de cuenta": recordData["Tipo de cuenta"] || "",
-          "Número de cuenta": recordData["Número de cuenta"] || "",
-          "Tipo de documento titular": recordData["Tipo de documento titular"] || "",
-          "Número de identificación": recordData["Número de identificación"] || "",
-        });
-        setOriginalData({
-          "Banco": recordData["Banco"] || "",
-          "Tipo de cuenta": recordData["Tipo de cuenta"] || "",
-          "Número de cuenta": recordData["Número de cuenta"] || "",
-          "Tipo de documento titular": recordData["Tipo de documento titular"] || "",
-          "Número de identificación": recordData["Número de identificación"] || "",
-        });
+        setData(recordData);
+        setOriginalData({ ...recordData });
       } else {
-        // No existe registro, inicializar vacío
-        setRecordId(null);
-        setData({
-          "Banco": "",
-          "Tipo de cuenta": "",
-          "Número de cuenta": "",
-          "Tipo de documento titular": "",
-          "Número de identificación": "",
-        });
-        setOriginalData({
-          "Banco": "",
-          "Tipo de cuenta": "",
-          "Número de cuenta": "",
-          "Tipo de documento titular": "",
-          "Número de identificación": "",
-        });
+        // No existe el registro, crear uno
+        const createResponse = await axios.post(
+          `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/${tableName}/record`,
+          { caracterizacion_id: id },
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        setRecordId(createResponse.data.id);
+        setData({ caracterizacion_id: id });
+        setOriginalData({ caracterizacion_id: id });
       }
 
       // Obtener archivos asociados
+      await fetchFileFromBackend();
+
+      setLoading(false);
+    } catch (err) {
+      console.error("Error obteniendo datos de Anexos:", err);
+      setError("Error obteniendo datos");
+      setLoading(false);
+    }
+  };
+
+  const fetchFileFromBackend = async () => {
+    // Esta función obtiene todos los archivos y filtra el que tenga el prefijo 'anexos_'
+    try {
+      const token = localStorage.getItem('token');
+      if (!token || !recordId) return;
+
       const filesResponse = await axios.get(
-        `https://impulso-local-back.onrender.com/api/inscriptions/tables/pi_informacion_bancaria/record/${id}/files`,
+        `https://impulso-local-back.onrender.com/api/inscriptions/tables/${tableName}/record/${recordId}/files`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
       const allFiles = filesResponse.data.files || [];
-      // Filtrar el archivo cuyo nombre contenga 'info_bancaria_'
-      const infoFile = allFiles.find(f => f.name.includes('info_bancaria_')) || null;
-      setUploadedFile(infoFile);
+      // Filtrar el archivo cuyo nombre contenga 'anexos_'
+      const anexoFile = allFiles.find(f => f.name.includes('anexos_')) || null;
+      setUploadedFile(anexoFile);
 
-      setLoading(false);
-    } catch (err) {
-      console.error("Error obteniendo datos de información bancaria:", err);
-      setError("Error obteniendo datos");
-      setLoading(false);
+    } catch (error) {
+      console.error('Error obteniendo el archivo:', error);
+      setError('Error obteniendo el archivo');
     }
   };
 
   useEffect(() => {
     fetchData();
   }, [id]);
-
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setData(prev => ({ ...prev, [name]: value }));
-  };
 
   const handleCancel = () => {
     if (originalData) {
@@ -156,6 +96,8 @@ export default function InfoBancariaTab({ id }) {
   };
 
   const handleSave = async () => {
+    // Aquí podrías guardar datos adicionales si la tabla pi_anexos tuviera campos editables.
+    // En este caso, imitamos la lógica de InfoBancariaTab: guarda el registro si recordId existe o crea si no.
     try {
       const token = localStorage.getItem("token");
       if (!token) {
@@ -165,24 +107,20 @@ export default function InfoBancariaTab({ id }) {
 
       const requestData = {
         caracterizacion_id: id,
-        "Banco": data["Banco"],
-        "Tipo de cuenta": data["Tipo de cuenta"],
-        "Número de cuenta": data["Número de cuenta"],
-        "Tipo de documento titular": data["Tipo de documento titular"],
-        "Número de identificación": data["Número de identificación"],
+        // Agregar aquí otros campos si existen en pi_anexos
       };
 
       if (recordId) {
         // Actualizar (PUT)
         await axios.put(
-          `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/pi_informacion_bancaria/record/${recordId}`,
+          `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/${tableName}/record/${recordId}`,
           requestData,
           { headers: { Authorization: `Bearer ${token}` } }
         );
       } else {
         // Crear (POST)
         const createResponse = await axios.post(
-          `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/pi_informacion_bancaria/record`,
+          `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/${tableName}/record`,
           requestData,
           { headers: { Authorization: `Bearer ${token}` } }
         );
@@ -192,7 +130,7 @@ export default function InfoBancariaTab({ id }) {
       alert("Información guardada exitosamente");
       await fetchData();
     } catch (err) {
-      console.error("Error guardando la información bancaria:", err);
+      console.error("Error guardando la información:", err);
       setError("Error guardando la información");
     }
   };
@@ -209,15 +147,15 @@ export default function InfoBancariaTab({ id }) {
     }
     try {
       const token = localStorage.getItem('token');
-      // Agregamos el prefijo 'info_bancaria_' al nombre
-      const fileNameWithPrefix = `info_bancaria_${fileName}`;
+      // Agregamos el prefijo 'anexos_' al nombre del archivo
+      const fileNameWithPrefix = `anexos_${fileName}`;
       const formData = new FormData();
       formData.append('file', file);
       formData.append('fileName', fileNameWithPrefix);
       formData.append('caracterizacion_id', id);
 
       await axios.post(
-        `https://impulso-local-back.onrender.com/api/inscriptions/tables/pi_informacion_bancaria/record/${id}/upload`,
+        `https://impulso-local-back.onrender.com/api/inscriptions/tables/${tableName}/record/${recordId}/upload`,
         formData,
         {
           headers: {
@@ -228,7 +166,7 @@ export default function InfoBancariaTab({ id }) {
       );
 
       alert("Archivo subido exitosamente");
-      await fetchData();
+      await fetchFileFromBackend();
       setFile(null);
       setFileName("");
     } catch (error) {
@@ -237,9 +175,31 @@ export default function InfoBancariaTab({ id }) {
     }
   };
 
+  const handleFileDelete = async () => {
+    if (!uploadedFile) return;
+    if (window.confirm('¿Estás seguro de que deseas eliminar este archivo?')) {
+      try {
+        const token = localStorage.getItem('token');
+        await axios.delete(
+          `https://impulso-local-back.onrender.com/api/inscriptions/tables/${tableName}/record/${recordId}/file/${uploadedFile.id}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+
+        await fetchFileFromBackend();
+      } catch (error) {
+        console.error('Error eliminando el archivo:', error);
+        setError('Error eliminando el archivo');
+      }
+    }
+  };
+
   return (
     <div>
-      <h3>Información bancaria</h3>
+      <h3>Anexos</h3>
       {loading ? (
         <p>Cargando...</p>
       ) : error ? (
@@ -247,76 +207,7 @@ export default function InfoBancariaTab({ id }) {
       ) : (
         <div style={{ maxWidth: '600px' }}>
           <div className="card p-3 mb-3">
-            <h5>Información para el pago</h5>
-            
-            <div className="mb-2">
-              <label><strong>Banco</strong></label><br/>
-              <select
-                className="form-select"
-                name="Banco"
-                value={data["Banco"]}
-                onChange={handleChange}
-              >
-                <option value="">Seleccionar...</option>
-                {bancos.map((b) => (
-                  <option key={b} value={b}>{b}</option>
-                ))}
-              </select>
-            </div>
-
-            <div className="mb-2">
-              <label><strong>Tipo de cuenta</strong></label><br/>
-              <select
-                className="form-select"
-                name="Tipo de cuenta"
-                value={data["Tipo de cuenta"]}
-                onChange={handleChange}
-              >
-                <option value="">Seleccionar...</option>
-                {tiposCuenta.map((t) => (
-                  <option key={t} value={t}>{t}</option>
-                ))}
-              </select>
-            </div>
-
-            <div className="mb-2">
-              <label><strong>Número de cuenta</strong></label><br/>
-              <input
-                type="number"
-                className="form-control"
-                name="Número de cuenta"
-                value={data["Número de cuenta"]}
-                onChange={handleChange}
-                placeholder="Ej: 3582004071"
-              />
-            </div>
-
-            <div className="mb-2">
-              <label><strong>Tipo de documento titular</strong></label><br/>
-              <select
-                className="form-select"
-                name="Tipo de documento titular"
-                value={data["Tipo de documento titular"]}
-                onChange={handleChange}
-              >
-                <option value="">Seleccionar...</option>
-                {tiposDocumento.map((d) => (
-                  <option key={d} value={d}>{d}</option>
-                ))}
-              </select>
-            </div>
-
-            <div className="mb-2">
-              <label><strong>Número de identificación</strong></label><br/>
-              <input
-                type="number"
-                className="form-control"
-                name="Número de identificación"
-                value={data["Número de identificación"]}
-                onChange={handleChange}
-                placeholder="Ej: 1010239532"
-              />
-            </div>
+            <h5>Archivos adicionales</h5>
 
             <div className="mb-2">
               <label><strong>Adjuntar archivo</strong></label><br/>
@@ -330,6 +221,12 @@ export default function InfoBancariaTab({ id }) {
                   >
                     Ver archivo
                   </a>
+                  <button
+                    className="btn btn-danger btn-sm"
+                    onClick={handleFileDelete}
+                  >
+                    Eliminar archivo
+                  </button>
                 </div>
               ) : (
                 <p className="mb-2">No hay archivo adjunto</p>
@@ -384,7 +281,7 @@ export default function InfoBancariaTab({ id }) {
   );
 }
 
-InfoBancariaTab.propTypes = {
+AnexosTab.propTypes = {
   id: PropTypes.string.isRequired,
 };
 
