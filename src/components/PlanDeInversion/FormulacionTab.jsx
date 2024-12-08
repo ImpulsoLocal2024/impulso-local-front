@@ -164,12 +164,10 @@ export default function FormulacionTab({ id }) {
     }
     try {
       const token = localStorage.getItem('token');
-      // Añadimos _formulacion_{formulacion_id} al nombre
       const fileNameWithFormulacion = `${fileName}_formulacion_${uploadingRecordId}`;
       const formData = new FormData();
       formData.append('file', file);
       formData.append('fileName', fileNameWithFormulacion);
-      // El backend requiere caracterizacion_id si es pi_
       formData.append('caracterizacion_id', id);
 
       await axios.post(
@@ -194,9 +192,7 @@ export default function FormulacionTab({ id }) {
   };
 
   const handleFileDelete = async (formulacion_id, fileId) => {
-    // El backend espera /record/:record_id/file/:file_id
-    // record_id es el caracterizacion_id si la tabla es pi_
-    // Por lo tanto, usar 'id' en la URL en vez de formulacion_id
+    // Usar caracterizacion_id (id) en la URL para coincidir con file.record_id
     if (window.confirm('¿Estás seguro de que deseas eliminar este archivo?')) {
       try {
         const token = localStorage.getItem('token');
@@ -218,10 +214,7 @@ export default function FormulacionTab({ id }) {
   };
 
   const handleDeleteRecord = async (formulacion_id) => {
-    // Para eliminar el registro pi_formulacion en sí,
-    // según el patrón de pi_, usamos:
-    // DELETE /api/inscriptions/pi/tables/pi_formulacion/record/:record_id
-    // Aquí record_id = formulacion_id
+    // Para eliminar el registro pi_formulacion, usamos su id (formulacion_id)
     if (window.confirm('¿Estás seguro de que deseas eliminar este registro?')) {
       try {
         const token = localStorage.getItem('token');
@@ -315,12 +308,12 @@ export default function FormulacionTab({ id }) {
                                 onChange={handleFileChange}
                               />
                             </div>
-                            <button type="submit" className="btn btn-success btn-sm mb-2 w-100">
+                            <button type="submit" className="btn btn-success btn-sm mb-2">
                               Cargar archivo
                             </button>
                             <button
                               type="button"
-                              className="btn btn-secondary btn-sm w-100"
+                              className="btn btn-secondary btn-sm"
                               onClick={() => {setUploadingRecordId(null); setFile(null); setFileName('');}}
                             >
                               Cancelar
@@ -328,7 +321,7 @@ export default function FormulacionTab({ id }) {
                           </form>
                         ) : (
                           <button
-                            className="btn btn-primary btn-sm mb-2 w-100"
+                            className="btn btn-primary btn-sm mb-2"
                             onClick={() => {setUploadingRecordId(formulacion_id); setFile(null); setFileName('');}}
                           >
                             Subir documento
@@ -355,7 +348,6 @@ export default function FormulacionTab({ id }) {
                                 </div>
                                 <button
                                   className="btn btn-danger btn-sm"
-                                  // Aquí usamos 'id' en la URL y 'f.id' para eliminar el archivo
                                   onClick={() => handleFileDelete(formulacion_id, f.id)}
                                 >
                                   Eliminar archivo
@@ -367,8 +359,9 @@ export default function FormulacionTab({ id }) {
                           <p>No hay archivos subidos aún para este registro.</p>
                         )}
                       </div>
+                      
                       <button
-                        className="btn btn-danger btn-sm mt-2 w-100"
+                        className="btn btn-danger btn-sm mt-2"
                         onClick={() => handleDeleteRecord(formulacion_id)}
                       >
                         Eliminar registro
