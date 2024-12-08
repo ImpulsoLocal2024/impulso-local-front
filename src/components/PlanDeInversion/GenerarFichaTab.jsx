@@ -18,6 +18,7 @@ export default function GenerarFichaTab({ id }) {
   const [totalInversion, setTotalInversion] = useState(0);
   const [relatedData, setRelatedData] = useState({});
   const [loading, setLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState('');
 
   // Estados para almacenar los nombres del asesor y del emprendedor
   const [asesorNombre, setAsesorNombre] = useState('');
@@ -50,6 +51,8 @@ export default function GenerarFichaTab({ id }) {
     const fetchData = async () => {
       if (!id) {
         console.error("El ID del registro de caracterización no está definido.");
+        setErrorMsg("El ID del registro de caracterización no está definido.");
+        setLoading(false);
         return;
       }
 
@@ -58,6 +61,7 @@ export default function GenerarFichaTab({ id }) {
         const token = localStorage.getItem('token');
         if (!token) {
           console.error("Token de autenticación no encontrado.");
+          setErrorMsg("Token de autenticación no encontrado. Por favor, inicia sesión nuevamente.");
           setLoading(false);
           return;
         }
@@ -68,6 +72,7 @@ export default function GenerarFichaTab({ id }) {
           `${baseURL}/tables/inscription_caracterizacion/record/${id}`,
           { headers: { Authorization: `Bearer ${token}` } }
         );
+        console.log("Datos de caracterización:", caracterizacionResponse.data.record);
         setCaracterizacionData(caracterizacionResponse.data.record);
 
         // 2. Obtener datos relacionados para claves foráneas (si aplica)
@@ -87,13 +92,16 @@ export default function GenerarFichaTab({ id }) {
           const asesorData = asesorResponse.data.record;
           const nombreAsesor = asesorData.username || 'No asignado';
           setAsesorNombre(nombreAsesor);
+          console.log("Nombre del asesor:", nombreAsesor);
 
           // Obtener el documento del asesor
           const documentoAsesor = asesorData.documento || 'No disponible';
           setAsesorDocumento(documentoAsesor);
+          console.log("Documento del asesor:", documentoAsesor);
         } else {
           setAsesorNombre('No asignado');
           setAsesorDocumento('No disponible');
+          console.log("Asesor no asignado.");
         }
 
         // 4. Obtener nombre del beneficiario
@@ -104,6 +112,7 @@ export default function GenerarFichaTab({ id }) {
           caracterizacionResponse.data.record["Segundo apellido"] || ''
         ].filter(Boolean).join(' ');
         setEmprendedorNombre(nombreEmprendedor || 'No disponible');
+        console.log("Nombre del emprendedor:", nombreEmprendedor);
 
         // 5. Obtener datos de `pi_datos` para el caracterizacion_id
         const datosResponse = await axios.get(
@@ -112,6 +121,9 @@ export default function GenerarFichaTab({ id }) {
         );
         if (datosResponse.data.length > 0) {
           setDatosTab(datosResponse.data[0]);
+          console.log("Datos de pi_datos:", datosResponse.data[0]);
+        } else {
+          console.log("No se encontraron datos en pi_datos para este caracterizacion_id.");
         }
 
         // 6. Obtener datos de `pi_propuesta_mejora`
@@ -120,6 +132,7 @@ export default function GenerarFichaTab({ id }) {
           { headers: { Authorization: `Bearer ${token}` } }
         );
         setPropuestaMejoraData(propuestaMejoraResponse.data);
+        console.log("Datos de pi_propuesta_mejora:", propuestaMejoraResponse.data);
 
         // 7. Obtener datos de `pi_formulacion` sin referencias a `provider_proveedores`
         const formulacionResponse = await axios.get(
@@ -127,6 +140,7 @@ export default function GenerarFichaTab({ id }) {
           { headers: { Authorization: `Bearer ${token}` } }
         );
         setFormulacionData(formulacionResponse.data);
+        console.log("Datos de pi_formulacion:", formulacionResponse.data);
 
         // 8. Agrupar Rubros y calcular total inversión
         const rubrosOptions = [
@@ -153,10 +167,14 @@ export default function GenerarFichaTab({ id }) {
 
         setGroupedRubros(resumenPorRubro);
         setTotalInversion(totalInv.toFixed(2));
+        console.log("Resumen por rubro:", resumenPorRubro);
+        console.log("Total inversión:", totalInv);
+        console.log("Contrapartida:", contrapartida);
 
         setLoading(false);
       } catch (error) {
         console.error("Error al obtener los datos:", error);
+        setErrorMsg("Error al obtener los datos. Por favor, inténtalo nuevamente más tarde.");
         setLoading(false);
       }
     };
@@ -284,24 +302,29 @@ export default function GenerarFichaTab({ id }) {
 
       // Filtrar los campos de pi_datos excluyendo `datosKeys` y `caracterizacion_id`
       const piDatosFields = Object.keys(datosTab).filter(key => !datosKeys.includes(key) && key !== 'caracterizacion_id');
-      piDatosFields.forEach(key => {
-        const label = `${key}:`;
-        const value = datosTab[key] || 'No disponible';
+      if (piDatosFields.length > 0) {
+        piDatosFields.forEach(key => {
+          const label = `${key}:`;
+          const value = datosTab[key] || 'No disponible';
 
-        // Texto en negrita para el label
-        doc.setFont(undefined, 'bold');
-        const labelLines = doc.splitTextToSize(label, maxLineWidth);
-        yPosition = checkPageEnd(doc, yPosition, labelLines.length * 14);
-        doc.text(labelLines, margin, yPosition);
-        yPosition += labelLines.length * 14;
+          // Texto en negrita para el label
+          doc.setFont(undefined, 'bold');
+          const labelLines = doc.splitTextToSize(label, maxLineWidth);
+          yPosition = checkPageEnd(doc, yPosition, labelLines.length * 14);
+          doc.text(labelLines, margin, yPosition);
+          yPosition += labelLines.length * 14;
 
-        // Texto normal para el valor
-        doc.setFont(undefined, 'normal');
-        const valueLines = doc.splitTextToSize(value, maxLineWidth);
-        yPosition = checkPageEnd(doc, yPosition, valueLines.length * 14);
-        doc.text(valueLines, margin, yPosition);
-        yPosition += valueLines.length * 14 + 5; // Espacio adicional entre entradas
-      });
+          // Texto normal para el valor
+          doc.setFont(undefined, 'normal');
+          const valueLines = doc.splitTextToSize(value, maxLineWidth);
+          yPosition = checkPageEnd(doc, yPosition, valueLines.length * 14);
+          doc.text(valueLines, margin, yPosition);
+          yPosition += valueLines.length * 14 + 5; // Espacio adicional entre entradas
+        });
+      } else {
+        doc.text("No hay datos generales del negocio disponibles.", margin, yPosition);
+        yPosition += 14;
+      }
 
       // 4. Propuesta de Mejora (`pi_propuesta_mejora`)
       doc.setFontSize(fontSizes.subtitle);
@@ -389,7 +412,6 @@ export default function GenerarFichaTab({ id }) {
         doc.setFontSize(fontSizes.subtitle);
         doc.setFont(undefined, 'normal');
         doc.text(`Total Inversión: $${totalInversion}`, pageWidth - margin, yPosition, { align: 'right' });
-
       } else {
         doc.text("No hay registros de formulación de inversión.", margin, yPosition);
         yPosition += 14;
@@ -492,6 +514,7 @@ export default function GenerarFichaTab({ id }) {
     return (
       <div>
         <h3>Generar Ficha</h3>
+        {errorMsg && <div className="alert alert-danger">{errorMsg}</div>}
         <button onClick={generateFichaPDF} className="btn btn-primary" disabled={loading}>
           Descargar Ficha PDF
         </button>
