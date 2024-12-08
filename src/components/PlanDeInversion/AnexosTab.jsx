@@ -14,28 +14,28 @@ export default function AnexosTab({ id }) {
   const [uploadedFiles, setUploadedFiles] = useState([]);
 
   const fetchFiles = useCallback(async () => {
-    if (!recordId) return; // Si recordId es null o undefined, no llamar a la API
+    if (!recordId) return; // No llamar si no tenemos recordId
     try {
       const token = localStorage.getItem('token');
       if (!token) return;
 
+      // Obtener todos los archivos asociados a este recordId
       const filesResponse = await axios.get(
-        `https://impulso-local-back.onrender.com/api/inscriptions/tables/pi_anexos/record/${recordId}/files`,
+        `https://impulso-local-back.onrender.com/api/inscriptions/tables/${tableName}/record/${recordId}/files`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
           },
-          params: {
-            source: 'anexos',
-          },
+          // Sin params para no filtrar por source
         }
       );
+      console.log("Archivos obtenidos:", filesResponse.data); // Log para verificar la respuesta
       setUploadedFiles(filesResponse.data.files);
     } catch (error) {
       console.error('Error obteniendo los archivos:', error);
       setError('Error obteniendo los archivos');
     }
-  }, [recordId]);
+  }, [recordId, tableName]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -63,7 +63,7 @@ export default function AnexosTab({ id }) {
           setData(existingRecord);
           setRecordId(existingRecord.id);
         } else {
-          // Crear registro
+          // Crear registro si no existe
           const createResponse = await axios.post(
             `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/${tableName}/record`,
             { caracterizacion_id: id },
@@ -87,7 +87,6 @@ export default function AnexosTab({ id }) {
     fetchData();
   }, [tableName, id]);
 
-  // Nuevo useEffect para obtener archivos una vez que se tenga recordId
   useEffect(() => {
     if (recordId) {
       fetchFiles();
@@ -114,7 +113,8 @@ export default function AnexosTab({ id }) {
       formData.append('file', file);
       formData.append('fileName', fileName);
       formData.append('caracterizacion_id', id);
-      formData.append('source', 'anexos');
+      // Opcionalmente, podrías agregar formData.append('source', 'anexos') si el backend lo soporta
+      // formData.append('source', 'anexos');
 
       await axios.post(
         `https://impulso-local-back.onrender.com/api/inscriptions/tables/${tableName}/record/${recordId}/upload`,
