@@ -510,7 +510,7 @@ export default function GenerarFichaTab({ id }) {
       // Descargar PDF
       doc.save(`Ficha_Negocio_Local_${id}.pdf`); // Cambiar nombre del archivo si lo deseas
   };
-
+  }
   return (
     <div>
       <h3>Generar Ficha</h3>
@@ -521,5 +521,4 @@ export default function GenerarFichaTab({ id }) {
       {loading && <p>Cargando datos, por favor espera...</p>}
     </div>
   );
-}
 }
