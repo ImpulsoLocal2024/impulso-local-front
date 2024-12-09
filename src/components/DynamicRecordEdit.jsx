@@ -54,6 +54,7 @@ export default function DynamicRecordEdit() {
   const [history, setHistory] = useState([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyError, setHistoryError] = useState(null);
+  const [showHistoryModal, setShowHistoryModal] = useState(false);
 
   // Obtener el role_id del usuario logueado desde el localStorage
   const getLoggedUserRoleId = () => {
@@ -472,7 +473,7 @@ export default function DynamicRecordEdit() {
         `https://impulso-local-back.onrender.com/api/inscriptions/tables/${tableName}/record/${recordId}/file/${selectedFileForCompliance.id}/compliance`,
         {
           cumple: complianceCumple,
-          descripcion_cumplimiento: complianceDescripcion, // Asegúrate de usar el nombre correcto
+          descripcion_cumplimiento: complianceDescripcion,
         },
         {
           headers: {
@@ -481,7 +482,6 @@ export default function DynamicRecordEdit() {
         }
       );
 
-      // Actualizar el archivo en la lista de archivos subidos
       setUploadedFiles((prevFiles) =>
         prevFiles.map((file) =>
           file.id === selectedFileForCompliance.id
@@ -524,7 +524,6 @@ export default function DynamicRecordEdit() {
         }
       );
 
-      // Agregar el nuevo comentario a la lista
       setComments((prevComments) => [response.data.comment, ...prevComments]);
       setNewComment('');
     } catch (error) {
@@ -533,7 +532,6 @@ export default function DynamicRecordEdit() {
     }
   };
 
-  // Estilos para el campo Estado
   const estadoStyle = {
     padding: '10px',
     borderRadius: '5px',
@@ -555,7 +553,6 @@ export default function DynamicRecordEdit() {
           role="dialog"
         >
           <div className="modal-dialog" role="document">
-            {/* Contenido del modal de estado */}
             <div className="modal-content">
               <div className="modal-header">
                 <h5 className="modal-title">Cambiar Estado</h5>
@@ -618,7 +615,6 @@ export default function DynamicRecordEdit() {
           role="dialog"
         >
           <div className="modal-dialog" role="document">
-            {/* Contenido del modal de cumplimiento */}
             <div className="modal-content">
               <div className="modal-header">
                 <h5 className="modal-title">Actualizar Cumplimiento</h5>
@@ -665,7 +661,6 @@ export default function DynamicRecordEdit() {
                   ></textarea>
                 </div>
               </div>
-              {/* Ajuste en la modal-footer para alinear los botones */}
               <div className="modal-footer d-flex justify-content-end">
                 <button
                   type="button"
@@ -687,8 +682,82 @@ export default function DynamicRecordEdit() {
         </div>
       )}
 
-      {/* Overlay para los modals */}
-      {(showStatusModal || selectedFileForCompliance) && (
+      {/* Modal para Historial de Cambios */}
+      {showHistoryModal && (
+        <div
+          className="modal fade show"
+          style={{ display: 'block' }}
+          tabIndex="-1"
+          role="dialog"
+        >
+          <div className="modal-dialog modal-lg" role="document">
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5 className="modal-title">Historial de Cambios</h5>
+                <button
+                  type="button"
+                  className="close"
+                  onClick={() => setShowHistoryModal(false)}
+                >
+                  <span>&times;</span>
+                </button>
+              </div>
+              <div className="modal-body">
+                {historyError && (
+                  <div className="alert alert-danger">{historyError}</div>
+                )}
+                {historyLoading ? (
+                  <div>Cargando historial...</div>
+                ) : history.length > 0 ? (
+                  <div className="table-responsive">
+                    <table className="table table-striped">
+                      <thead>
+                        <tr>
+                          <th>ID Usuario</th>
+                          <th>Usuario</th>
+                          <th>Fecha del Cambio</th>
+                          <th>Tipo de cambio</th>
+                          <th>Campo</th>
+                          <th>Valor Antiguo</th>
+                          <th>Valor Nuevo</th>
+                          <th>Descripción</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {history.map((item) => (
+                          <tr key={item.id}>
+                            <td>{item.user_id}</td>
+                            <td>{item.username}</td>
+                            <td>{new Date(item.created_at).toLocaleString()}</td>
+                            <td>{item.change_type}</td>
+                            <td>{item.field_name || '-'}</td>
+                            <td>{item.old_value || '-'}</td>
+                            <td>{item.new_value || '-'}</td>
+                            <td>{item.description || '-'}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <p className="mt-3">No hay historial de cambios.</p>
+                )}
+              </div>
+              <div className="modal-footer">
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => setShowHistoryModal(false)}
+                >
+                  Cerrar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {(showStatusModal || selectedFileForCompliance || showHistoryModal) && (
         <div className="modal-backdrop fade show"></div>
       )}
 
@@ -1016,34 +1085,16 @@ export default function DynamicRecordEdit() {
                     )}
                   </div>
 
-                  {/* Nueva Sección: Historial de Cambios */}
+                  {/* Botón para ver Historial de Cambios */}
                   <div className="mt-4" style={{ width: '100%' }}>
-                    <h5>Historial de Cambios</h5>
-                    {historyError && (
-                      <div className="alert alert-danger">{historyError}</div>
-                    )}
-                    {historyLoading ? (
-                      <div>Cargando historial...</div>
-                    ) : history.length > 0 ? (
-                      <ul className="list-group mt-3">
-                        {history.map((item) => (
-                          <li key={item.id} className="list-group-item">
-                            <div className="d-flex justify-content-between">
-                              <strong>{item.username}</strong>
-                              <small>
-                                {new Date(item.created_at).toLocaleString()}
-                              </small>
-                            </div>
-                            <p>Tipo de cambio: {item.change_type}</p>
-                            {item.field_name && <p>Campo: {item.field_name}</p>}
-                            {item.old_value && <p>Valor antiguo: {item.old_value}</p>}
-                            {item.new_value && <p>Valor nuevo: {item.new_value}</p>}
-                            {item.description && <p>Descripción: {item.description}</p>}
-                          </li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <p className="mt-3">No hay historial de cambios.</p>
+                    {role !== '3' && (
+                      <button
+                        type="button"
+                        className="btn btn-info btn-sm btn-block"
+                        onClick={() => setShowHistoryModal(true)}
+                      >
+                        Ver Historial de Cambios
+                      </button>
                     )}
                   </div>
                 </div>
