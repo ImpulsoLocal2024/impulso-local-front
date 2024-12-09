@@ -17,53 +17,43 @@ export default function DynamicRecordEdit() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Estado para 'Calificacion'
   const [calificacion, setCalificacion] = useState(0);
 
-  // Estados para manejo de archivos
   const [file, setFile] = useState(null);
   const [fileName, setFileName] = useState('');
   const [showUploadForm, setShowUploadForm] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState([]);
 
-  // Estado para porcentaje de completado
   const [completionPercentage, setCompletionPercentage] = useState(0);
 
-  // Estado y funciones para el modal de cambiar estado
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [newStatus, setNewStatus] = useState('');
   const [estadoOptions, setEstadoOptions] = useState([]);
   const [currentEstado, setCurrentEstado] = useState(null);
   const [estadoFieldExists, setEstadoFieldExists] = useState(false);
 
-  // Estado para almacenar asesores
   const [asesors, setAsesors] = useState([]);
 
-  // Estados para el manejo del cumplimiento por archivo
   const [selectedFileForCompliance, setSelectedFileForCompliance] = useState(null);
-  const [complianceCumple, setComplianceCumple] = useState(null); // true, false, or null
+  const [complianceCumple, setComplianceCumple] = useState(null);
   const [complianceDescripcion, setComplianceDescripcion] = useState('');
 
-  // Estados para comentarios
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState('');
   const [commentsLoading, setCommentsLoading] = useState(false);
   const [commentsError, setCommentsError] = useState(null);
 
-  // Estados para historial de cambios
   const [history, setHistory] = useState([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyError, setHistoryError] = useState(null);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
 
-  // Obtener el role_id del usuario logueado desde el localStorage
   const getLoggedUserRoleId = () => {
     return localStorage.getItem('role_id') || null;
   };
 
   const role = getLoggedUserRoleId();
 
-  // Funciones para manejar el modal de estado
   const handleOpenStatusModal = () => {
     setNewStatus(record.Estado || '');
     setShowStatusModal(true);
@@ -93,7 +83,6 @@ export default function DynamicRecordEdit() {
     }
   };
 
-  // Función para obtener comentarios
   const fetchComments = async () => {
     setCommentsLoading(true);
     try {
@@ -106,7 +95,6 @@ export default function DynamicRecordEdit() {
           },
         }
       );
-      console.log('Comentarios obtenidos:', commentsResponse.data);
       setComments(commentsResponse.data.comments || []);
       setCommentsLoading(false);
     } catch (error) {
@@ -119,7 +107,6 @@ export default function DynamicRecordEdit() {
     }
   };
 
-  // Función para obtener el historial de cambios
   const fetchHistory = async () => {
     setHistoryLoading(true);
     try {
@@ -141,14 +128,11 @@ export default function DynamicRecordEdit() {
     }
   };
 
-  // Obtener el registro a editar, los campos de la tabla, las opciones de estado y asesores
   useEffect(() => {
     const fetchRecordData = async () => {
       try {
         const token = localStorage.getItem('token');
-        console.log('Token usado para la solicitud:', token);
 
-        // Obtener los campos de la tabla
         const fieldsResponse = await axios.get(
           `https://impulso-local-back.onrender.com/api/inscriptions/tables/${tableName}/fields`,
           {
@@ -158,23 +142,18 @@ export default function DynamicRecordEdit() {
           }
         );
 
-        console.log('Campos obtenidos de la tabla:', fieldsResponse.data);
-
-        // Verificar si el campo 'Estado' existe
         const estadoField = fieldsResponse.data.find(
           (field) => field.column_name === 'Estado'
         );
         const estadoExists = !!estadoField;
         setEstadoFieldExists(estadoExists);
 
-        // Excluir campos no deseados
         const fieldsToExclude = ['Estado', 'acepta terminos'];
         const filteredFields = fieldsResponse.data.filter(
           (field) => !fieldsToExclude.includes(field.column_name)
         );
         setFields(filteredFields);
 
-        // Obtener el registro específico
         const recordResponse = await axios.get(
           `https://impulso-local-back.onrender.com/api/inscriptions/tables/${tableName}/record/${recordId}`,
           {
@@ -183,12 +162,10 @@ export default function DynamicRecordEdit() {
             },
           }
         );
-        console.log('Registro obtenido:', recordResponse.data);
 
         setRecord(recordResponse.data.record);
         setRelatedData(recordResponse.data.relatedData);
 
-        // Manejar el campo 'Estado' si existe
         if (estadoExists) {
           const estadoOptionsResponse = await axios.get(
             `https://impulso-local-back.onrender.com/api/inscriptions/tables/${tableName}/field-options/Estado`,
@@ -210,9 +187,7 @@ export default function DynamicRecordEdit() {
           setCurrentEstado(null);
         }
 
-        // Verificar si el campo 'Asesor' existe y obtener asesores si es necesario
         if (filteredFields.some((field) => field.column_name === 'Asesor')) {
-          console.log('El campo Asesor existe, solicitando asesores...');
           const asesorsResponse = await axios.get(
             'https://impulso-local-back.onrender.com/api/users/asesors',
             {
@@ -221,11 +196,9 @@ export default function DynamicRecordEdit() {
               },
             }
           );
-          console.log('Asesores obtenidos:', asesorsResponse.data);
           setAsesors(asesorsResponse.data);
         }
 
-        // Obtener otras tablas (inscripciones y proveedores)
         const inscriptionsResponse = await axios.get(
           'https://impulso-local-back.onrender.com/api/inscriptions/tables?tableType=inscription',
           {
@@ -251,7 +224,6 @@ export default function DynamicRecordEdit() {
         );
         setIsPrimaryTable(selectedTableObj?.is_primary || false);
 
-        // Obtener archivos subidos
         const filesResponse = await axios.get(
           `https://impulso-local-back.onrender.com/api/inscriptions/tables/${tableName}/record/${recordId}/files`,
           {
@@ -260,10 +232,8 @@ export default function DynamicRecordEdit() {
             },
           }
         );
-        console.log('Archivos subidos:', filesResponse.data);
-        setUploadedFiles(filesResponse.data.files); // Asegúrate de acceder a 'files'
+        setUploadedFiles(filesResponse.data.files);
 
-        // Manejar 'Calificacion' si existe
         const calificacionValue = recordResponse.data.record.Calificacion;
         if (calificacionValue !== undefined && calificacionValue !== null) {
           setCalificacion(Number(calificacionValue));
@@ -271,10 +241,7 @@ export default function DynamicRecordEdit() {
           setCalificacion(0);
         }
 
-        // Obtener comentarios
         await fetchComments();
-
-        // Obtener historial
         await fetchHistory();
 
         setLoading(false);
@@ -291,7 +258,6 @@ export default function DynamicRecordEdit() {
     fetchRecordData();
   }, [tableName, recordId]);
 
-  // Actualizar currentEstado cuando record.Estado o estadoOptions cambien
   useEffect(() => {
     if (estadoFieldExists && estadoOptions.length > 0) {
       const current = estadoOptions.find(
@@ -303,7 +269,6 @@ export default function DynamicRecordEdit() {
     }
   }, [record.Estado, estadoOptions, estadoFieldExists]);
 
-  // Calcular el porcentaje de campos completados
   useEffect(() => {
     if (fields.length > 0) {
       let totalFields = fields.length;
@@ -321,7 +286,6 @@ export default function DynamicRecordEdit() {
     }
   }, [fields, record]);
 
-  // Manejar cambios en los campos del formulario
   const handleChange = (e) => {
     setRecord({ ...record, [e.target.name]: e.target.value });
 
@@ -330,27 +294,18 @@ export default function DynamicRecordEdit() {
     }
   };
 
-  // Manejar cambios en el archivo
   const handleFileChange = (e) => {
     setFile(e.target.files[0]);
   };
 
-  // Manejar cambios en el nombre del archivo
   const handleFileNameChange = (e) => {
     setFileName(e.target.value);
   };
 
-  // Manejar envío del formulario
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
       const token = localStorage.getItem('token');
-
-      console.log('Datos enviados:', record);
-      console.log(
-        'URL:',
-        `https://impulso-local-back.onrender.com/api/inscriptions/tables/${tableName}/record/${recordId}`
-      );
 
       await axios.put(
         `https://impulso-local-back.onrender.com/api/inscriptions/tables/${tableName}/record/${recordId}`,
@@ -371,7 +326,6 @@ export default function DynamicRecordEdit() {
     }
   };
 
-  // Manejar subida de archivos
   const handleFileUpload = async (e) => {
     e.preventDefault();
     if (!file || !fileName) {
@@ -403,7 +357,7 @@ export default function DynamicRecordEdit() {
           },
         }
       );
-      setUploadedFiles(filesResponse.data.files); // Asegúrate de acceder a 'files'
+      setUploadedFiles(filesResponse.data.files);
       setFile(null);
       setFileName('');
       setShowUploadForm(false);
@@ -413,7 +367,6 @@ export default function DynamicRecordEdit() {
     }
   };
 
-  // Manejar eliminación de archivos
   const handleFileDelete = async (fileId) => {
     if (
       window.confirm('¿Estás seguro de que deseas eliminar este archivo?')
@@ -437,7 +390,7 @@ export default function DynamicRecordEdit() {
             },
           }
         );
-        setUploadedFiles(filesResponse.data.files); // Asegúrate de acceder a 'files'
+        setUploadedFiles(filesResponse.data.files);
       } catch (error) {
         console.error('Error eliminando el archivo:', error);
         setError('Error eliminando el archivo');
@@ -445,7 +398,6 @@ export default function DynamicRecordEdit() {
     }
   };
 
-  // Manejar apertura del modal de cumplimiento
   const handleOpenComplianceModal = (file) => {
     setSelectedFileForCompliance(file);
     setComplianceCumple(
@@ -458,14 +410,12 @@ export default function DynamicRecordEdit() {
     setComplianceDescripcion(file['descripcion cumplimiento'] || '');
   };
 
-  // Manejar cierre del modal de cumplimiento
   const handleCloseComplianceModal = () => {
     setSelectedFileForCompliance(null);
     setComplianceCumple(null);
     setComplianceDescripcion('');
   };
 
-  // Manejar guardado del cumplimiento
   const handleSaveCompliance = async () => {
     try {
       const token = localStorage.getItem('token');
@@ -501,7 +451,6 @@ export default function DynamicRecordEdit() {
     }
   };
 
-  // Función para manejar el envío de un nuevo comentario
   const handleAddComment = async (e) => {
     e.preventDefault();
     const token = localStorage.getItem('token');
@@ -544,7 +493,6 @@ export default function DynamicRecordEdit() {
 
   return (
     <div className="content-wrapper">
-      {/* Modal para Cambiar Estado */}
       {showStatusModal && (
         <div
           className="modal fade show"
@@ -606,7 +554,6 @@ export default function DynamicRecordEdit() {
         </div>
       )}
 
-      {/* Modal para actualizar cumplimiento */}
       {selectedFileForCompliance && (
         <div
           className="modal fade show"
@@ -682,7 +629,6 @@ export default function DynamicRecordEdit() {
         </div>
       )}
 
-      {/* Modal para Historial de Cambios */}
       {showHistoryModal && (
         <div
           className="modal fade show"
@@ -690,8 +636,8 @@ export default function DynamicRecordEdit() {
           tabIndex="-1"
           role="dialog"
         >
-          <div className="modal-dialog modal-lg" role="document">
-            <div className="modal-content">
+          <div className="modal-dialog modal-lg" role="document" style={{ maxWidth: '90%' }}>
+            <div className="modal-content" style={{ maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
               <div className="modal-header">
                 <h5 className="modal-title">Historial de Cambios</h5>
                 <button
@@ -702,25 +648,25 @@ export default function DynamicRecordEdit() {
                   <span>&times;</span>
                 </button>
               </div>
-              <div className="modal-body">
+              <div className="modal-body" style={{ overflowY: 'auto' }}>
                 {historyError && (
                   <div className="alert alert-danger">{historyError}</div>
                 )}
                 {historyLoading ? (
                   <div>Cargando historial...</div>
                 ) : history.length > 0 ? (
-                  <div className="table-responsive">
-                    <table className="table table-striped">
-                      <thead>
+                  <div className="table-responsive" style={{ maxHeight: '400px', overflowY: 'auto' }}>
+                    <table className="table table-striped table-bordered table-sm">
+                      <thead className="thead-light">
                         <tr>
-                          <th>ID Usuario</th>
-                          <th>Usuario</th>
-                          <th>Fecha del Cambio</th>
-                          <th>Tipo de cambio</th>
-                          <th>Campo</th>
-                          <th>Valor Antiguo</th>
-                          <th>Valor Nuevo</th>
-                          <th>Descripción</th>
+                          <th style={{ whiteSpace: 'nowrap' }}>ID Usuario</th>
+                          <th style={{ whiteSpace: 'nowrap' }}>Usuario</th>
+                          <th style={{ whiteSpace: 'nowrap' }}>Fecha del Cambio</th>
+                          <th style={{ whiteSpace: 'nowrap' }}>Tipo de Cambio</th>
+                          <th style={{ whiteSpace: 'nowrap' }}>Campo</th>
+                          <th style={{ whiteSpace: 'nowrap' }}>Valor Antiguo</th>
+                          <th style={{ whiteSpace: 'nowrap' }}>Valor Nuevo</th>
+                          <th style={{ whiteSpace: 'nowrap' }}>Descripción</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -778,13 +724,11 @@ export default function DynamicRecordEdit() {
             <div>Cargando...</div>
           ) : (
             <div className="row">
-              {/* Columna izquierda */}
               <div className={isPrimaryTable ? 'col-md-8' : 'col-md-12'}>
                 <form onSubmit={handleSubmit}>
                   {fields.map((field) => (
                     <div className="form-group" key={field.column_name}>
                       <label>{field.column_name}</label>
-
                       {field.column_name === 'id' ? (
                         <input
                           type="text"
@@ -849,17 +793,11 @@ export default function DynamicRecordEdit() {
                 </form>
               </div>
 
-              {/* Columna derecha si la tabla es principal */}
               {isPrimaryTable && (
                 <div className="col-md-4 d-flex flex-column align-items-center">
                   {tableName.startsWith('provider_') ? (
                     <>
-                      <div
-                        style={{
-                          width: 150,
-                          marginBottom: '20px',
-                        }}
-                      >
+                      <div style={{ width: 150, marginBottom: '20px' }}>
                         <CircularProgressbar
                           value={calificacion}
                           text={`${calificacion}%`}
@@ -876,12 +814,7 @@ export default function DynamicRecordEdit() {
                     </>
                   ) : (
                     <>
-                      <div
-                        style={{
-                          width: 150,
-                          marginBottom: '20px',
-                        }}
-                      >
+                      <div style={{ width: 150, marginBottom: '20px' }}>
                         <CircularProgressbar
                           value={completionPercentage}
                           text={`${completionPercentage}%`}
@@ -898,10 +831,7 @@ export default function DynamicRecordEdit() {
                   )}
 
                   {estadoFieldExists && (
-                    <div
-                      className="mt-4 text-center"
-                      style={{ width: '100%' }}
-                    >
+                    <div className="mt-4 text-center" style={{ width: '100%' }}>
                       <div style={estadoStyle}>
                         {currentEstado?.label || 'Sin estado'}
                       </div>
@@ -1085,7 +1015,6 @@ export default function DynamicRecordEdit() {
                     )}
                   </div>
 
-                  {/* Botón para ver Historial de Cambios */}
                   <div className="mt-4" style={{ width: '100%' }}>
                     {role !== '3' && (
                       <button
@@ -1106,6 +1035,7 @@ export default function DynamicRecordEdit() {
     </div>
   );
 }
+
 
 
 
