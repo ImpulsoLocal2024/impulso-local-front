@@ -86,6 +86,7 @@ export default function DatosTab({ id }) {
       const recordData = { ...data, caracterizacion_id: id };
 
       if (recordId) {
+        // Actualizar registro existente
         await axios.put(
           `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/${tableName}/record/${recordId}`,
           recordData,
@@ -97,6 +98,11 @@ export default function DatosTab({ id }) {
         );
         alert('Datos actualizados exitosamente');
       } else {
+        // Crear nuevo registro
+        // Agregar el id del usuario desde localStorage antes de crear el nuevo registro
+        const userId = localStorage.getItem('id');
+        recordData.id = userId;
+
         await axios.post(
           `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/${tableName}/record`,
           recordData,
@@ -267,3 +273,4 @@ export default function DatosTab({ id }) {
 DatosTab.propTypes = {
   id: PropTypes.string.isRequired,
 };
+
