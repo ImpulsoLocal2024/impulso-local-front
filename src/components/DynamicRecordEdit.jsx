@@ -334,9 +334,11 @@ export default function DynamicRecordEdit() {
     }
     try {
       const token = localStorage.getItem('token');
+      const userId = localStorage.getItem('id'); // Obtenemos el id del usuario desde localStorage
       const formData = new FormData();
       formData.append('file', file);
       formData.append('fileName', fileName);
+      formData.append('user_id', userId); // Enviar el user_id al backend
 
       await axios.post(
         `https://impulso-local-back.onrender.com/api/inscriptions/tables/${tableName}/record/${recordId}/upload`,
