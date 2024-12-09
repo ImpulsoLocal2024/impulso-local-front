@@ -242,8 +242,23 @@ export default function GenerarFichaTab({ id }) {
 
       yPosition = 130; // Ajustar la posición vertical después del encabezado
 
-      // Definir nombreComercial aquí, ya que se usará en "Concepto de Viabilidad"
-      const nombreComercial = caracterizacionData["Nombre comercial"] || 'No disponible';
+      // Obtener el nombre del emprendimiento y caracterizacion_id
+      const nombreEmprendimiento = caracterizacionData["Nombre del emprendimiento"] || 'No disponible';
+      const caracterizacionId = id || 'No disponible';
+
+      // Agregar Nombre del Emprendimiento
+      doc.setFontSize(fontSizes.subtitle);
+      doc.setFont(undefined, 'bold');
+      doc.text(nombreEmprendimiento, pageWidth / 2, yPosition, { align: 'center' });
+
+      yPosition += 20; // Espacio después del nombre del emprendimiento
+
+      // Agregar Caracterizacion ID
+      doc.setFontSize(fontSizes.normal);
+      doc.setFont(undefined, 'normal');
+      doc.text(`Caracterizacion ID: ${caracterizacionId}`, pageWidth / 2, yPosition, { align: 'center' });
+
+      yPosition += 30; // Espacio después del caracterizacion_id
 
       // 1. Título Principal
       doc.setFontSize(fontSizes.title);
@@ -253,40 +268,8 @@ export default function GenerarFichaTab({ id }) {
 
       yPosition += 30; // Espacio después del título principal
 
-      // 2. Datos Generales del Negocio (`pi_datos`) excluyendo `datosKeys`
-      doc.setFontSize(fontSizes.subtitle);
-      doc.setFont(undefined, 'bold');
-      doc.text("Datos Generales del Negocio", pageWidth / 2, yPosition, { align: 'center' });
-
-      doc.setFontSize(fontSizes.normal);
-      doc.setFont(undefined, 'normal');
-      yPosition += 20;
-
-      // Filtrar los campos de pi_datos excluyendo `datosKeys` y `caracterizacion_id`
-      const piDatosFields = Object.keys(datosTab).filter(key => !datosKeys.includes(key) && key !== 'caracterizacion_id');
-      if (piDatosFields.length > 0) {
-        piDatosFields.forEach(key => {
-          const label = `${key}:`;
-          const value = datosTab[key] || 'No disponible';
-
-          // Texto en negrita para el label
-          doc.setFont(undefined, 'bold');
-          const labelLines = doc.splitTextToSize(label, maxLineWidth);
-          yPosition = checkPageEnd(doc, yPosition, labelLines.length * 14);
-          doc.text(labelLines, margin, yPosition);
-          yPosition += labelLines.length * 14;
-
-          // Texto normal para el valor
-          doc.setFont(undefined, 'normal');
-          const valueLines = doc.splitTextToSize(value, maxLineWidth);
-          yPosition = checkPageEnd(doc, yPosition, valueLines.length * 14);
-          doc.text(valueLines, margin, yPosition);
-          yPosition += valueLines.length * 14 + 5; // Espacio adicional entre entradas
-        });
-      } else {
-        doc.text("No hay datos generales del negocio disponibles.", margin, yPosition);
-        yPosition += 14;
-      }
+      // [REMOVED] 2. Datos Generales del Negocio (`pi_datos`) excluyendo `datosKeys`
+      // Esta sección ha sido removida según la solicitud.
 
       // 3. PROPUESTA DE MEJORA SOBRE EL DIAGNÓSTICO REALIZADO
       doc.setFontSize(fontSizes.subtitle);
@@ -425,7 +408,7 @@ export default function GenerarFichaTab({ id }) {
       yPosition += 20; // Incrementar espacio después del título
 
       const textoViabilidad = [
-        `Yo, ${asesorNombre}, identificado con documento de identidad ${asesorDocumento}, en mi calidad de asesor empresarial del micronegocio denominado ${nombreComercial} y haciendo parte del equipo ejecutor del programa “Impulso Local” suscrito entre la Corporación para el Desarrollo de las Microempresas - Propaís y la Secretaría de Desarrollo Económico - SDDE, emito concepto de VIABILIDAD para que el beneficiario pueda acceder a los recursos de capitalización proporcionados por el citado programa.`,
+        `Yo, ${asesorNombre}, identificado con documento de identidad ${asesorDocumento}, en mi calidad de asesor empresarial del micronegocio denominado ${nombreEmprendimiento} y haciendo parte del equipo ejecutor del programa “Impulso Local” suscrito entre la Corporación para el Desarrollo de las Microempresas - Propaís y la Secretaría de Desarrollo Económico - SDDE, emito concepto de VIABILIDAD para que el beneficiario pueda acceder a los recursos de capitalización proporcionados por el citado programa.`,
         "",
         "Nota: El valor detallado en el presente documento corresponde a la planeación de las inversiones que requiere cada negocio local, sin embargo, es preciso aclarar que el programa Impulso Local no capitalizará este valor en su totalidad, sino que fortalecerá cada unidad productiva con algunos de estos bienes hasta por $3.000.000 de pesos en total, de acuerdo con la disponibilidad de los mismos y la mayor eficiencia en el uso de los recursos públicos.",
         "",
@@ -496,18 +479,18 @@ export default function GenerarFichaTab({ id }) {
 
       // Descargar PDF
       doc.save(`Ficha_Negocio_Local_${id}.pdf`); // Cambiar nombre del archivo si lo deseas
-    };
+  };
   }
-    // Nota: Asegúrate de que el `return` esté fuera de la función `generateFichaPDF`
-    return (
-      <div>
-        <h3>Generar Ficha</h3>
-        {errorMsg && <div className="alert alert-danger">{errorMsg}</div>}
-        <button onClick={generateFichaPDF} className="btn btn-primary" disabled={loading}>
-          Descargar Ficha PDF
-        </button>
-        {loading && <p>Cargando datos, por favor espera...</p>}
-      </div>
-    );
+  return (
+    <div>
+      <h3>Generar Ficha</h3>
+      {errorMsg && <div className="alert alert-danger">{errorMsg}</div>}
+      <button onClick={generateFichaPDF} className="btn btn-primary" disabled={loading}>
+        Descargar Ficha PDF
+      </button>
+      {loading && <p>Cargando datos, por favor espera...</p>}
+    </div>
+  );
 }
+
 
