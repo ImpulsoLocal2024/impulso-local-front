@@ -213,7 +213,7 @@ export default function GenerarFichaTab({ id }) {
 
     // Estilos de fuente y color
     const fontSizes = {
-      title: 18,      // Aumenté el tamaño del título principal
+      title: 18,      // Aumentado para el título principal
       subtitle: 14,
       normal: 12,
     };
@@ -241,6 +241,9 @@ export default function GenerarFichaTab({ id }) {
       doc.addImage(imgData, 'JPEG', margin, 40, maxLineWidth, 60);
 
       yPosition = 130; // Ajustar la posición vertical después del encabezado
+
+      // Definir nombreComercial aquí, ya que se usará en "Concepto de Viabilidad"
+      const nombreComercial = caracterizacionData["Nombre comercial"] || 'No disponible';
 
       // 1. Título Principal
       doc.setFontSize(fontSizes.title);
@@ -490,16 +493,17 @@ export default function GenerarFichaTab({ id }) {
 
       // Descargar PDF
       doc.save(`Ficha_Negocio_Local_${id}.pdf`); // Cambiar nombre del archivo si lo deseas
-    };
   };
-    return (
-      <div>
-        <h3>Generar Ficha</h3>
-        {errorMsg && <div className="alert alert-danger">{errorMsg}</div>}
-        <button onClick={generateFichaPDF} className="btn btn-primary" disabled={loading}>
-          Descargar Ficha PDF
-        </button>
-        {loading && <p>Cargando datos, por favor espera...</p>}
-      </div>
-    );
+  }
+  return (
+    <div>
+      <h3>Generar Ficha</h3>
+      {errorMsg && <div className="alert alert-danger">{errorMsg}</div>}
+      <button onClick={generateFichaPDF} className="btn btn-primary" disabled={loading}>
+        Descargar Ficha PDF
+      </button>
+      {loading && <p>Cargando datos, por favor espera...</p>}
+    </div>
+  );
 }
+
