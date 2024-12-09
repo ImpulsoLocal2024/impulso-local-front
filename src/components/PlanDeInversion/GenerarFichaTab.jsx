@@ -291,11 +291,12 @@ export default function GenerarFichaTab({ id }) {
       // 3. PROPUESTA DE MEJORA SOBRE EL DIAGNÓSTICO REALIZADO
       doc.setFontSize(fontSizes.subtitle);
       doc.setFont(undefined, 'bold');
+      yPosition += 20; // Agregar margen superior adicional
       doc.text("PROPUESTA DE MEJORA SOBRE EL DIAGNÓSTICO REALIZADO", pageWidth / 2, yPosition, { align: 'center' });
 
       doc.setFontSize(fontSizes.normal);
       doc.setFont(undefined, 'normal');
-      yPosition += 20;
+      yPosition += 20; // Incrementar espacio después del título
 
       if (propuestaMejoraData.length > 0) {
         const propuestaHeaders = [
@@ -333,11 +334,12 @@ export default function GenerarFichaTab({ id }) {
       // 4. FORMULACIÓN DE INVERSIÓN
       doc.setFontSize(fontSizes.subtitle);
       doc.setFont(undefined, 'bold');
+      yPosition += 20; // Agregar margen superior adicional
       doc.text("FORMULACIÓN DE INVERSIÓN", pageWidth / 2, yPosition, { align: 'center' });
 
       doc.setFontSize(fontSizes.normal);
       doc.setFont(undefined, 'normal');
-      yPosition += 20;
+      yPosition += 20; // Incrementar espacio después del título
 
       if (formulacionData.length > 0) {
         const formulacionHeaders = [
@@ -383,9 +385,10 @@ export default function GenerarFichaTab({ id }) {
       // 5. RESUMEN DE LA INVERSIÓN
       doc.setFontSize(fontSizes.subtitle);
       doc.setFont(undefined, 'bold');
+      yPosition += 20; // Agregar margen superior adicional
       doc.text("RESUMEN DE LA INVERSIÓN", pageWidth / 2, yPosition, { align: 'center' });
 
-      yPosition += 20;
+      yPosition += 20; // Incrementar espacio después del título
 
       const resumenColumns = [
         { header: 'Rubro', dataKey: 'rubro' },
@@ -414,12 +417,12 @@ export default function GenerarFichaTab({ id }) {
       // 6. CONCEPTO DE VIABILIDAD DE PLAN DE INVERSIÓN
       doc.setFontSize(fontSizes.subtitle);
       doc.setFont(undefined, 'bold');
-      yPosition += 30;
+      yPosition += 30; // Agregar margen superior adicional
       doc.text("CONCEPTO DE VIABILIDAD DE PLAN DE INVERSIÓN", pageWidth / 2, yPosition, { align: 'center' });
 
       doc.setFontSize(fontSizes.normal);
       doc.setFont(undefined, 'normal');
-      yPosition += 20;
+      yPosition += 20; // Incrementar espacio después del título
 
       const textoViabilidad = [
         `Yo, ${asesorNombre}, identificado con documento de identidad ${asesorDocumento}, en mi calidad de asesor empresarial del micronegocio denominado ${nombreComercial} y haciendo parte del equipo ejecutor del programa “Impulso Local” suscrito entre la Corporación para el Desarrollo de las Microempresas - Propaís y la Secretaría de Desarrollo Económico - SDDE, emito concepto de VIABILIDAD para que el beneficiario pueda acceder a los recursos de capitalización proporcionados por el citado programa.`,
@@ -493,17 +496,18 @@ export default function GenerarFichaTab({ id }) {
 
       // Descargar PDF
       doc.save(`Ficha_Negocio_Local_${id}.pdf`); // Cambiar nombre del archivo si lo deseas
-  };
+    };
   }
-  return (
-    <div>
-      <h3>Generar Ficha</h3>
-      {errorMsg && <div className="alert alert-danger">{errorMsg}</div>}
-      <button onClick={generateFichaPDF} className="btn btn-primary" disabled={loading}>
-        Descargar Ficha PDF
-      </button>
-      {loading && <p>Cargando datos, por favor espera...</p>}
-    </div>
-  );
+    // Nota: Asegúrate de que el `return` esté fuera de la función `generateFichaPDF`
+    return (
+      <div>
+        <h3>Generar Ficha</h3>
+        {errorMsg && <div className="alert alert-danger">{errorMsg}</div>}
+        <button onClick={generateFichaPDF} className="btn btn-primary" disabled={loading}>
+          Descargar Ficha PDF
+        </button>
+        {loading && <p>Cargando datos, por favor espera...</p>}
+      </div>
+    );
 }
 
