@@ -256,7 +256,7 @@ export default function GenerarFichaTab({ id }) {
       // Agregar Caracterizacion ID
       doc.setFontSize(fontSizes.normal);
       doc.setFont(undefined, 'normal');
-      doc.text(`Caracterizacion ID: ${caracterizacionId}`, pageWidth / 2, yPosition, { align: 'center' });
+      doc.text(`ID: ${caracterizacionId}`, pageWidth / 2, yPosition, { align: 'center' });
 
       yPosition += 30; // Espacio después del caracterizacion_id
 
@@ -277,8 +277,13 @@ export default function GenerarFichaTab({ id }) {
       const piDatosFields = Object.keys(datosTab).filter(key => !datosKeys.includes(key) && key !== 'caracterizacion_id');
       if (piDatosFields.length > 0) {
         piDatosFields.forEach(key => {
-          const label = `${key}:`;
-          const value = datosTab[key] || 'No disponible';
+          let label = `${key}:`;
+          let value = datosTab[key] || 'No disponible';
+
+          // Eliminar el prefijo "id:" si está presente
+          if (value.toLowerCase().startsWith('id:')) {
+            value = value.substring(3).trim();
+          }
 
           // Texto en negrita para el label
           doc.setFont(undefined, 'bold');
@@ -293,6 +298,11 @@ export default function GenerarFichaTab({ id }) {
           yPosition = checkPageEnd(doc, yPosition, valueLines.length * 14);
           doc.text(valueLines, margin, yPosition);
           yPosition += valueLines.length * 14 + 5; // Espacio adicional entre entradas
+
+          // Agregar margen extra después de ciertas secciones
+          if (key === 'Descripcion del negocio' || key === 'Objetivo del plan de inversion') {
+            yPosition += 10; // Añade más espacio
+          }
         });
       } else {
         doc.text("No hay datos generales del negocio disponibles.", margin, yPosition);
