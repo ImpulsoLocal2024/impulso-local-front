@@ -244,7 +244,7 @@ export default function GenerarFichaTab({ id }) {
 
       // Obtener el nombre del emprendimiento y caracterizacion_id
       const nombreEmprendimiento = caracterizacionData["Nombre del emprendimiento"] || 'No disponible';
-      const caracterizacionId = id || 'No disponible';
+      // const caracterizacionId = id || 'No disponible'; // Eliminado ya que no se usará
 
       // Agregar Nombre del Emprendimiento
       doc.setFontSize(fontSizes.subtitle);
@@ -253,12 +253,14 @@ export default function GenerarFichaTab({ id }) {
 
       yPosition += 20; // Espacio después del nombre del emprendimiento
 
-      // Agregar Caracterizacion ID
+      // Eliminado: Agregar Caracterizacion ID
+      /*
       doc.setFontSize(fontSizes.normal);
       doc.setFont(undefined, 'normal');
       doc.text(`ID: ${caracterizacionId}`, pageWidth / 2, yPosition, { align: 'center' });
 
       yPosition += 30; // Espacio después del caracterizacion_id
+      */
 
       // 1. Título Principal
       doc.setFontSize(fontSizes.title);
@@ -520,8 +522,9 @@ export default function GenerarFichaTab({ id }) {
 
       // Descargar PDF
       doc.save(`Ficha_Negocio_Local_${id}.pdf`); // Cambiar nombre del archivo si lo deseas
+    };
   };
-  }
+
   return (
     <div>
       <h3>Generar Ficha</h3>
