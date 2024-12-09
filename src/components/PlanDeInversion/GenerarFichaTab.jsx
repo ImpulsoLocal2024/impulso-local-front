@@ -213,7 +213,7 @@ export default function GenerarFichaTab({ id }) {
 
     // Estilos de fuente y color
     const fontSizes = {
-      title: 16,
+      title: 18,      // Aumenté el tamaño del título principal
       subtitle: 14,
       normal: 12,
     };
@@ -242,13 +242,18 @@ export default function GenerarFichaTab({ id }) {
 
       yPosition = 130; // Ajustar la posición vertical después del encabezado
 
-      // Definir nombreComercial aquí, ya que se usará en "Concepto de Viabilidad"
-      const nombreComercial = caracterizacionData["Nombre comercial"] || 'No disponible';
+      // 1. Título Principal
+      doc.setFontSize(fontSizes.title);
+      doc.setFont(undefined, 'bold');
+      doc.setTextColor(0, 0, 0);
+      doc.text("PLAN DE INVERSIÓN DE LA MICROEMPRESA", pageWidth / 2, yPosition, { align: 'center' });
 
-      // 3. Datos Generales del Negocio (`pi_datos`) excluyendo `datosKeys`
+      yPosition += 30; // Espacio después del título principal
+
+      // 2. Datos Generales del Negocio (`pi_datos`) excluyendo `datosKeys`
       doc.setFontSize(fontSizes.subtitle);
       doc.setFont(undefined, 'bold');
-      doc.text("Datos Generales del Negocio", margin, yPosition);
+      doc.text("Datos Generales del Negocio", pageWidth / 2, yPosition, { align: 'center' });
 
       doc.setFontSize(fontSizes.normal);
       doc.setFont(undefined, 'normal');
@@ -280,15 +285,14 @@ export default function GenerarFichaTab({ id }) {
         yPosition += 14;
       }
 
-      // 4. Propuesta de Mejora (`pi_propuesta_mejora`) - Tabla
+      // 3. PROPUESTA DE MEJORA SOBRE EL DIAGNÓSTICO REALIZADO
       doc.setFontSize(fontSizes.subtitle);
       doc.setFont(undefined, 'bold');
-      yPosition += 20;
-      doc.text("Propuesta de Mejora", margin, yPosition);
+      doc.text("PROPUESTA DE MEJORA SOBRE EL DIAGNÓSTICO REALIZADO", pageWidth / 2, yPosition, { align: 'center' });
 
       doc.setFontSize(fontSizes.normal);
       doc.setFont(undefined, 'normal');
-      yPosition += 10;
+      yPosition += 20;
 
       if (propuestaMejoraData.length > 0) {
         const propuestaHeaders = [
@@ -323,15 +327,14 @@ export default function GenerarFichaTab({ id }) {
         yPosition += 14;
       }
 
-      // 5. Formulación del Plan de Inversión (`pi_formulacion`) - Tabla
+      // 4. FORMULACIÓN DE INVERSIÓN
       doc.setFontSize(fontSizes.subtitle);
       doc.setFont(undefined, 'bold');
-      yPosition += 20;
-      doc.text("Formulación del Plan de Inversión", margin, yPosition);
+      doc.text("FORMULACIÓN DE INVERSIÓN", pageWidth / 2, yPosition, { align: 'center' });
 
       doc.setFontSize(fontSizes.normal);
       doc.setFont(undefined, 'normal');
-      yPosition += 10;
+      yPosition += 20;
 
       if (formulacionData.length > 0) {
         const formulacionHeaders = [
@@ -374,13 +377,12 @@ export default function GenerarFichaTab({ id }) {
         yPosition += 14;
       }
 
-      // 6. Resumen de la Inversión
+      // 5. RESUMEN DE LA INVERSIÓN
       doc.setFontSize(fontSizes.subtitle);
       doc.setFont(undefined, 'bold');
-      yPosition += 20;
-      doc.text("Resumen de la Inversión", margin, yPosition);
+      doc.text("RESUMEN DE LA INVERSIÓN", pageWidth / 2, yPosition, { align: 'center' });
 
-      yPosition += 10;
+      yPosition += 20;
 
       const resumenColumns = [
         { header: 'Rubro', dataKey: 'rubro' },
@@ -406,11 +408,11 @@ export default function GenerarFichaTab({ id }) {
       doc.setFont(undefined, 'normal');
       doc.text(`Total Inversión: $${totalInversion}`, pageWidth - margin, yPosition, { align: 'right' });
 
-      // 7. Concepto de Viabilidad
+      // 6. CONCEPTO DE VIABILIDAD DE PLAN DE INVERSIÓN
       doc.setFontSize(fontSizes.subtitle);
       doc.setFont(undefined, 'bold');
       yPosition += 30;
-      doc.text("Concepto de Viabilidad", pageWidth / 2, yPosition, { align: 'center' });
+      doc.text("CONCEPTO DE VIABILIDAD DE PLAN DE INVERSIÓN", pageWidth / 2, yPosition, { align: 'center' });
 
       doc.setFontSize(fontSizes.normal);
       doc.setFont(undefined, 'normal');
@@ -435,7 +437,7 @@ export default function GenerarFichaTab({ id }) {
         yPosition += lines.length * 14 + 10; // Espacio adicional entre párrafos
       });
 
-      // 8. Sección de Firmas
+      // 7. Sección de Firmas
       const firmasSectionHeight = 120; // Altura total estimada de la sección de firmas
       yPosition += 10;
       yPosition = checkPageEnd(doc, yPosition, firmasSectionHeight);
@@ -476,7 +478,7 @@ export default function GenerarFichaTab({ id }) {
       doc.text(`C.C. ${emprendedorCC}`, beneficiarioBoxX + boxWidth / 2, yPosition, { align: 'center' });
       doc.text(`C.C. ${asesorDocumento}`, asesorBoxX + boxWidth / 2, yPosition, { align: 'center' });
 
-      // 9. Sección de Fecha y Hora
+      // 8. Sección de Fecha y Hora
       const dateSectionHeight = 30; // Altura total estimada de la sección de fecha y hora
       yPosition += 30;
       yPosition = checkPageEnd(doc, yPosition, dateSectionHeight);
@@ -490,16 +492,14 @@ export default function GenerarFichaTab({ id }) {
       doc.save(`Ficha_Negocio_Local_${id}.pdf`); // Cambiar nombre del archivo si lo deseas
     };
   };
-
-  return (
-    <div>
-      <h3>Generar Ficha</h3>
-      {errorMsg && <div className="alert alert-danger">{errorMsg}</div>}
-      <button onClick={generateFichaPDF} className="btn btn-primary" disabled={loading}>
-        Descargar Ficha PDF
-      </button>
-      {loading && <p>Cargando datos, por favor espera...</p>}
-    </div>
-  );
+    return (
+      <div>
+        <h3>Generar Ficha</h3>
+        {errorMsg && <div className="alert alert-danger">{errorMsg}</div>}
+        <button onClick={generateFichaPDF} className="btn btn-primary" disabled={loading}>
+          Descargar Ficha PDF
+        </button>
+        {loading && <p>Cargando datos, por favor espera...</p>}
+      </div>
+    );
 }
-
