@@ -242,73 +242,17 @@ export default function GenerarFichaTab({ id }) {
 
       yPosition = 130; // Ajustar la posición vertical después del encabezado
 
-      // 1. Información del Negocio Local
-      doc.setFontSize(fontSizes.subtitle);
-      doc.setTextColor(0, 0, 0);
-      yPosition += 20;
-      doc.text("Información del Negocio Local", margin, yPosition);
-
-      doc.setFontSize(fontSizes.normal);
-      doc.setFont(undefined, 'normal');
-
-      const negocioId = id;
+      // Definir nombreComercial aquí, ya que se usará en "Concepto de Viabilidad"
       const nombreComercial = caracterizacionData["Nombre comercial"] || 'No disponible';
-      const localidadNombre = getColumnDisplayValue("Localidad unidad RIC", caracterizacionData["Localidad unidad RIC"]);
-      const barrioNombre = getColumnDisplayValue("Barrio de residencia", caracterizacionData["Barrio de residencia"]);
-      const direccion = caracterizacionData["Direccion unidad RIC"] || 'No disponible';
-      const numeroContacto = caracterizacionData["Numero movil 1 ciudadano"] || 'No disponible';
-
-      yPosition += 20;
-      const infoEmprendimiento = [
-        `ID de Negocio Local: ${negocioId}`,
-        `Nombre comercial: ${nombreComercial}`,
-        `Localidad: ${localidadNombre || 'No disponible'}`,
-        `Barrio: ${barrioNombre || 'No disponible'}`,
-        `Dirección: ${direccion}`,
-        `Número de contacto: ${numeroContacto}`,
-      ];
-
-      infoEmprendimiento.forEach(text => {
-        const lines = doc.splitTextToSize(text, maxLineWidth);
-        yPosition = checkPageEnd(doc, yPosition, lines.length * 14);
-        doc.text(lines, margin, yPosition);
-        yPosition += lines.length * 14;
-      });
-
-      // 2. Información del Beneficiario
-      doc.setFontSize(fontSizes.subtitle);
-      doc.setFont(undefined, 'bold');
-      yPosition += 10;
-      doc.text("Información del Beneficiario", margin, yPosition);
-
-      doc.setFontSize(fontSizes.normal);
-      doc.setFont(undefined, 'normal');
-      const tipoDocumento = getColumnDisplayValue("Tipo de documento", caracterizacionData["Tipo de documento"]);
-      const numeroDocumento = caracterizacionData["Numero de documento de identificacion ciudadano"] || 'No disponible';
-
-      yPosition += 20;
-      const infoEmprendedor = [
-        `Nombre beneficiario: ${emprendedorNombre}`,
-        `Tipo documento identidad: ${tipoDocumento || 'No disponible'}`,
-        `Número documento identidad: ${numeroDocumento}`,
-      ];
-
-      infoEmprendedor.forEach(text => {
-        const lines = doc.splitTextToSize(text, maxLineWidth);
-        yPosition = checkPageEnd(doc, yPosition, lines.length * 14);
-        doc.text(lines, margin, yPosition);
-        yPosition += lines.length * 14;
-      });
 
       // 3. Datos Generales del Negocio (`pi_datos`) excluyendo `datosKeys`
       doc.setFontSize(fontSizes.subtitle);
       doc.setFont(undefined, 'bold');
-      yPosition += 20;
       doc.text("Datos Generales del Negocio", margin, yPosition);
 
       doc.setFontSize(fontSizes.normal);
       doc.setFont(undefined, 'normal');
-      yPosition += 10;
+      yPosition += 20;
 
       // Filtrar los campos de pi_datos excluyendo `datosKeys` y `caracterizacion_id`
       const piDatosFields = Object.keys(datosTab).filter(key => !datosKeys.includes(key) && key !== 'caracterizacion_id');
@@ -544,9 +488,8 @@ export default function GenerarFichaTab({ id }) {
 
       // Descargar PDF
       doc.save(`Ficha_Negocio_Local_${id}.pdf`); // Cambiar nombre del archivo si lo deseas
+    };
   };
-
-}
 
   return (
     <div>
