@@ -336,7 +336,7 @@ export default function GenerarFichaTab({ id }) {
         yPosition += 14;
       }
 
-      // 4. Propuesta de Mejora (`pi_propuesta_mejora`)
+      // 4. Propuesta de Mejora (`pi_propuesta_mejora`) - Tabla
       doc.setFontSize(fontSizes.subtitle);
       doc.setFont(undefined, 'bold');
       yPosition += 20;
@@ -347,67 +347,22 @@ export default function GenerarFichaTab({ id }) {
       yPosition += 10;
 
       if (propuestaMejoraData.length > 0) {
-        propuestaMejoraData.forEach((item, index) => {
-          const area = item["Area de fortalecimiento"] || 'No disponible';
-          const descripcion = item["Descripcion del area critica por area de fortalecimiento"] || 'No disponible';
-          const propuesta = item["Propuesta de mejora"] || 'No disponible';
-
-          const propuestaText = `• Área de Fortalecimiento ${index + 1}: ${area}\n  Descripción: ${descripcion}\n  Propuesta: ${propuesta}`;
-
-          const lines = doc.splitTextToSize(propuestaText, maxLineWidth);
-          yPosition = checkPageEnd(doc, yPosition, lines.length * 14);
-          doc.text(lines, margin, yPosition);
-          yPosition += lines.length * 14 + 10;
-        });
-      } else {
-        doc.text("No hay propuestas de mejora registradas.", margin, yPosition);
-        yPosition += 14;
-      }
-
-      // 5. Formulación del Plan de Inversión (`pi_formulacion`)
-      doc.setFontSize(fontSizes.subtitle);
-      doc.setFont(undefined, 'bold');
-      yPosition += 20;
-      doc.text("Formulación del Plan de Inversión", margin, yPosition);
-
-      doc.setFontSize(fontSizes.normal);
-      doc.setFont(undefined, 'normal');
-      yPosition += 10;
-
-      if (formulacionData.length > 0) {
-        formulacionData.forEach((item, index) => {
-          const rubro = item["Rubro"] || 'No disponible';
-          const elemento = item["Elemento"] || 'No disponible';
-          const descripcion = item["Descripción"] || 'No disponible';
-          const cantidad = item["Cantidad"] || 0;
-          const valorUnitario = item["Valor Unitario"] || 0;
-          const valorTotal = cantidad * valorUnitario;
-
-          const formulacionText = `• Rubro ${index + 1}: ${rubro}\n  Elemento: ${elemento}\n  Descripción: ${descripcion}\n  Cantidad: ${cantidad.toLocaleString()}\n  Valor Unitario: $${valorUnitario.toLocaleString()}\n  Valor Total: $${valorTotal.toLocaleString()}`;
-
-          const lines = doc.splitTextToSize(formulacionText, maxLineWidth);
-          yPosition = checkPageEnd(doc, yPosition, lines.length * 14);
-          doc.text(lines, margin, yPosition);
-          yPosition += lines.length * 14 + 10;
-        });
-
-        // 6. Resumen de la Inversión
-        doc.setFontSize(fontSizes.subtitle);
-        doc.setFont(undefined, 'bold');
-        yPosition += 20;
-        doc.text("Resumen de la Inversión", margin, yPosition);
-
-        yPosition += 10;
-
-        const resumenColumns = [
-          { header: 'Rubro', dataKey: 'rubro' },
-          { header: 'Valor', dataKey: 'total' },
+        const propuestaHeaders = [
+          { header: 'Área de Fortalecimiento', dataKey: 'area' },
+          { header: 'Descripción', dataKey: 'descripcion' },
+          { header: 'Propuesta', dataKey: 'propuesta' },
         ];
+
+        const propuestaBody = propuestaMejoraData.map(item => ({
+          area: item["Area de fortalecimiento"] || 'No disponible',
+          descripcion: item["Descripcion del area critica por area de fortalecimiento"] || 'No disponible',
+          propuesta: item["Propuesta de mejora"] || 'No disponible',
+        }));
 
         doc.autoTable({
           startY: yPosition,
-          head: [resumenColumns.map(col => col.header)],
-          body: groupedRubros.map(row => resumenColumns.map(col => row[col.dataKey])),
+          head: [propuestaHeaders.map(col => col.header)],
+          body: propuestaBody.map(row => propuestaHeaders.map(col => row[col.dataKey])),
           theme: 'striped',
           styles: { fontSize: fontSizes.normal, cellPadding: 4 },
           tableWidth: 'auto',
@@ -419,13 +374,93 @@ export default function GenerarFichaTab({ id }) {
         });
 
         yPosition = doc.lastAutoTable.finalY + 10 || yPosition + 10;
-        doc.setFontSize(fontSizes.subtitle);
-        doc.setFont(undefined, 'normal');
-        doc.text(`Total Inversión: $${totalInversion}`, pageWidth - margin, yPosition, { align: 'right' });
+      } else {
+        doc.text("No hay propuestas de mejora registradas.", margin, yPosition);
+        yPosition += 14;
+      }
+
+      // 5. Formulación del Plan de Inversión (`pi_formulacion`) - Tabla
+      doc.setFontSize(fontSizes.subtitle);
+      doc.setFont(undefined, 'bold');
+      yPosition += 20;
+      doc.text("Formulación del Plan de Inversión", margin, yPosition);
+
+      doc.setFontSize(fontSizes.normal);
+      doc.setFont(undefined, 'normal');
+      yPosition += 10;
+
+      if (formulacionData.length > 0) {
+        const formulacionHeaders = [
+          { header: 'Rubro', dataKey: 'rubro' },
+          { header: 'Elemento', dataKey: 'elemento' },
+          { header: 'Descripción', dataKey: 'descripcion' },
+          { header: 'Cantidad', dataKey: 'cantidad' },
+          { header: 'Valor Unitario', dataKey: 'valorUnitario' },
+          { header: 'Valor Total', dataKey: 'valorTotal' },
+        ];
+
+        const formulacionBody = formulacionData.map(item => ({
+          rubro: item["Rubro"] || 'No disponible',
+          elemento: item["Elemento"] || 'No disponible',
+          descripcion: item["Descripción"] || 'No disponible',
+          cantidad: item["Cantidad"] ? item["Cantidad"].toLocaleString() : '0',
+          valorUnitario: item["Valor Unitario"] ? `$${item["Valor Unitario"].toLocaleString()}` : '$0',
+          valorTotal: item["Cantidad"] && item["Valor Unitario"]
+            ? `$${(item["Cantidad"] * item["Valor Unitario"]).toLocaleString()}`
+            : '$0',
+        }));
+
+        doc.autoTable({
+          startY: yPosition,
+          head: [formulacionHeaders.map(col => col.header)],
+          body: formulacionBody.map(row => formulacionHeaders.map(col => row[col.dataKey])),
+          theme: 'striped',
+          styles: { fontSize: fontSizes.normal, cellPadding: 4 },
+          tableWidth: 'auto',
+          headStyles: { fillColor: blueColor, textColor: [255, 255, 255], fontStyle: 'bold' },
+          margin: { left: margin, right: margin },
+          didDrawPage: (data) => {
+            yPosition = data.cursor.y;
+          },
+        });
+
+        yPosition = doc.lastAutoTable.finalY + 10 || yPosition + 10;
       } else {
         doc.text("No hay registros de formulación de inversión.", margin, yPosition);
         yPosition += 14;
       }
+
+      // 6. Resumen de la Inversión
+      doc.setFontSize(fontSizes.subtitle);
+      doc.setFont(undefined, 'bold');
+      yPosition += 20;
+      doc.text("Resumen de la Inversión", margin, yPosition);
+
+      yPosition += 10;
+
+      const resumenColumns = [
+        { header: 'Rubro', dataKey: 'rubro' },
+        { header: 'Valor', dataKey: 'total' },
+      ];
+
+      doc.autoTable({
+        startY: yPosition,
+        head: [resumenColumns.map(col => col.header)],
+        body: groupedRubros.map(row => resumenColumns.map(col => row[col.dataKey])),
+        theme: 'striped',
+        styles: { fontSize: fontSizes.normal, cellPadding: 4 },
+        tableWidth: 'auto',
+        headStyles: { fillColor: blueColor, textColor: [255, 255, 255], fontStyle: 'bold' },
+        margin: { left: margin, right: margin },
+        didDrawPage: (data) => {
+          yPosition = data.cursor.y;
+        },
+      });
+
+      yPosition = doc.lastAutoTable.finalY + 10 || yPosition + 10;
+      doc.setFontSize(fontSizes.subtitle);
+      doc.setFont(undefined, 'normal');
+      doc.text(`Total Inversión: $${totalInversion}`, pageWidth - margin, yPosition, { align: 'right' });
 
       // 7. Concepto de Viabilidad
       doc.setFontSize(fontSizes.subtitle);
@@ -510,7 +545,9 @@ export default function GenerarFichaTab({ id }) {
       // Descargar PDF
       doc.save(`Ficha_Negocio_Local_${id}.pdf`); // Cambiar nombre del archivo si lo deseas
   };
-  }
+
+}
+
   return (
     <div>
       <h3>Generar Ficha</h3>
@@ -522,3 +559,4 @@ export default function GenerarFichaTab({ id }) {
     </div>
   );
 }
+
