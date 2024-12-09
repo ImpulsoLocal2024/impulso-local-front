@@ -44,7 +44,8 @@ export default function GenerarFichaTab({ id }) {
     "Concepto y justificacion del valor de la capitalizacion",
     "Como contribuira la inversion a la mejora productiva del negocio",
     "El negocio es sujeto de participacion en espacios de conexion",
-    "Recomendaciones tecnica, administrativas y financieras"
+    "Recomendaciones tecnica, administrativas y financieras",
+    "id"
   ];
 
   useEffect(() => {
@@ -244,7 +245,7 @@ export default function GenerarFichaTab({ id }) {
 
       // Obtener el nombre del emprendimiento y caracterizacion_id
       const nombreEmprendimiento = caracterizacionData["Nombre del emprendimiento"] || 'No disponible';
-      // const caracterizacionId = id || 'No disponible'; // Eliminado ya que no se usará
+      const caracterizacionId = id || 'No disponible';
 
       // Agregar Nombre del Emprendimiento
       doc.setFontSize(fontSizes.subtitle);
@@ -253,14 +254,12 @@ export default function GenerarFichaTab({ id }) {
 
       yPosition += 20; // Espacio después del nombre del emprendimiento
 
-      // Eliminado: Agregar Caracterizacion ID
-      /*
+      // Agregar Caracterizacion ID
       doc.setFontSize(fontSizes.normal);
       doc.setFont(undefined, 'normal');
       doc.text(`ID: ${caracterizacionId}`, pageWidth / 2, yPosition, { align: 'center' });
 
       yPosition += 30; // Espacio después del caracterizacion_id
-      */
 
       // 1. Título Principal
       doc.setFontSize(fontSizes.title);
@@ -522,9 +521,8 @@ export default function GenerarFichaTab({ id }) {
 
       // Descargar PDF
       doc.save(`Ficha_Negocio_Local_${id}.pdf`); // Cambiar nombre del archivo si lo deseas
-    };
   };
-
+  }
   return (
     <div>
       <h3>Generar Ficha</h3>
