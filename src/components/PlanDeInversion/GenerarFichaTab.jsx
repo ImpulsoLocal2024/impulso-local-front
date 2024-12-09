@@ -280,9 +280,12 @@ export default function GenerarFichaTab({ id }) {
           let label = `${key}:`;
           let value = datosTab[key] || 'No disponible';
 
-          // Eliminar el prefijo "id:" si está presente
-          if (value.toLowerCase().startsWith('id:')) {
+          // Asegurarse de que 'value' sea una cadena antes de llamar a toLowerCase()
+          if (typeof value === 'string' && value.toLowerCase().startsWith('id:')) {
             value = value.substring(3).trim();
+          } else if (typeof value !== 'string') {
+            // Convertir a cadena si no es una
+            value = String(value);
           }
 
           // Texto en negrita para el label
@@ -300,7 +303,7 @@ export default function GenerarFichaTab({ id }) {
           yPosition += valueLines.length * 14 + 5; // Espacio adicional entre entradas
 
           // Agregar margen extra después de ciertas secciones
-          if (key === 'Descripcion del negocio' || key === 'Objetivo del plan de inversion') {
+          if (key.toLowerCase() === 'descripcion del negocio' || key.toLowerCase() === 'objetivo del plan de inversion') {
             yPosition += 10; // Añade más espacio
           }
         });
