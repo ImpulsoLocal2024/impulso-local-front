@@ -268,8 +268,36 @@ export default function GenerarFichaTab({ id }) {
 
       yPosition += 30; // Espacio después del título principal
 
-      // [REMOVED] 2. Datos Generales del Negocio (`pi_datos`) excluyendo `datosKeys`
-      // Esta sección ha sido removida según la solicitud.
+      // 2. Mostrar información de datosTab sin título
+      doc.setFontSize(fontSizes.normal);
+      doc.setFont(undefined, 'normal');
+      yPosition += 20; // Espacio antes de empezar a mostrar los datos
+
+      // Filtrar los campos de pi_datos excluyendo `datosKeys` y `caracterizacion_id`
+      const piDatosFields = Object.keys(datosTab).filter(key => !datosKeys.includes(key) && key !== 'caracterizacion_id');
+      if (piDatosFields.length > 0) {
+        piDatosFields.forEach(key => {
+          const label = `${key}:`;
+          const value = datosTab[key] || 'No disponible';
+
+          // Texto en negrita para el label
+          doc.setFont(undefined, 'bold');
+          const labelLines = doc.splitTextToSize(label, maxLineWidth);
+          yPosition = checkPageEnd(doc, yPosition, labelLines.length * 14);
+          doc.text(labelLines, margin, yPosition);
+          yPosition += labelLines.length * 14;
+
+          // Texto normal para el valor
+          doc.setFont(undefined, 'normal');
+          const valueLines = doc.splitTextToSize(value, maxLineWidth);
+          yPosition = checkPageEnd(doc, yPosition, valueLines.length * 14);
+          doc.text(valueLines, margin, yPosition);
+          yPosition += valueLines.length * 14 + 5; // Espacio adicional entre entradas
+        });
+      } else {
+        doc.text("No hay datos generales del negocio disponibles.", margin, yPosition);
+        yPosition += 14;
+      }
 
       // 3. PROPUESTA DE MEJORA SOBRE EL DIAGNÓSTICO REALIZADO
       doc.setFontSize(fontSizes.subtitle);
@@ -492,5 +520,4 @@ export default function GenerarFichaTab({ id }) {
     </div>
   );
 }
-
 
