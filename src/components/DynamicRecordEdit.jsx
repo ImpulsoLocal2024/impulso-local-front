@@ -50,6 +50,11 @@ export default function DynamicRecordEdit() {
   const [commentsLoading, setCommentsLoading] = useState(false);
   const [commentsError, setCommentsError] = useState(null);
 
+  // Estados para historial de cambios
+  const [history, setHistory] = useState([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyError, setHistoryError] = useState(null);
+
   // Obtener el role_id del usuario logueado desde el localStorage
   const getLoggedUserRoleId = () => {
     return localStorage.getItem('role_id') || null;
@@ -87,7 +92,7 @@ export default function DynamicRecordEdit() {
     }
   };
 
-  // Función para obtener los comentarios
+  // Función para obtener comentarios
   const fetchComments = async () => {
     setCommentsLoading(true);
     try {
@@ -110,6 +115,28 @@ export default function DynamicRecordEdit() {
       }
       setCommentsError('Error obteniendo los comentarios');
       setCommentsLoading(false);
+    }
+  };
+
+  // Función para obtener el historial de cambios
+  const fetchHistory = async () => {
+    setHistoryLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      const historyResponse = await axios.get(
+        `https://impulso-local-back.onrender.com/api/inscriptions/tables/${tableName}/record/${recordId}/history`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      setHistory(historyResponse.data.history || []);
+      setHistoryLoading(false);
+    } catch (error) {
+      console.error('Error obteniendo el historial:', error);
+      setHistoryError('Error obteniendo el historial');
+      setHistoryLoading(false);
     }
   };
 
@@ -245,6 +272,9 @@ export default function DynamicRecordEdit() {
 
         // Obtener comentarios
         await fetchComments();
+
+        // Obtener historial
+        await fetchHistory();
 
         setLoading(false);
       } catch (error) {
@@ -686,7 +716,6 @@ export default function DynamicRecordEdit() {
                     <div className="form-group" key={field.column_name}>
                       <label>{field.column_name}</label>
 
-                      {/* Campo 'id' como solo lectura */}
                       {field.column_name === 'id' ? (
                         <input
                           type="text"
@@ -696,7 +725,6 @@ export default function DynamicRecordEdit() {
                           readOnly
                         />
                       ) : field.column_name === 'Asesor' ? (
-                        // Renderizar Asesor como lista desplegable
                         <select
                           className="form-control"
                           name={field.column_name}
@@ -712,7 +740,6 @@ export default function DynamicRecordEdit() {
                           ))}
                         </select>
                       ) : relatedData[field.column_name] ? (
-                        /* Si el campo tiene datos relacionados, mostrar un select */
                         <select
                           className="form-control"
                           name={field.column_name}
@@ -733,7 +760,6 @@ export default function DynamicRecordEdit() {
                           )}
                         </select>
                       ) : (
-                        /* Campo de texto por defecto */
                         <input
                           type="text"
                           name={field.column_name}
@@ -757,10 +783,8 @@ export default function DynamicRecordEdit() {
               {/* Columna derecha si la tabla es principal */}
               {isPrimaryTable && (
                 <div className="col-md-4 d-flex flex-column align-items-center">
-                  {/* Mostrar barra de progreso según el tipo de tabla */}
                   {tableName.startsWith('provider_') ? (
                     <>
-                      {/* Barra de progreso para 'Calificacion' */}
                       <div
                         style={{
                           width: 150,
@@ -783,7 +807,6 @@ export default function DynamicRecordEdit() {
                     </>
                   ) : (
                     <>
-                      {/* Barra de progreso para 'Completado' */}
                       <div
                         style={{
                           width: 150,
@@ -805,7 +828,6 @@ export default function DynamicRecordEdit() {
                     </>
                   )}
 
-                  {/* Mostrar el estado actual solo si el campo 'Estado' existe */}
                   {estadoFieldExists && (
                     <div
                       className="mt-4 text-center"
@@ -825,7 +847,6 @@ export default function DynamicRecordEdit() {
                     </div>
                   )}
 
-                  {/* Sección de Archivos adicionales */}
                   <div className="mt-4" style={{ width: '100%' }}>
                     <h5>Archivos adicionales</h5>
                     {!showUploadForm && role !== '3' && (
@@ -873,7 +894,6 @@ export default function DynamicRecordEdit() {
                       </form>
                     )}
 
-                    {/* Lista de archivos subidos */}
                     {uploadedFiles.length > 0 && (
                       <ul className="list-group mt-3">
                         {uploadedFiles.map((file) => (
@@ -892,7 +912,6 @@ export default function DynamicRecordEdit() {
                                 Ver archivo
                               </a>
                               <br />
-                              {/* Etiqueta para Cumple/No Cumple */}
                               <span
                                 className="badge"
                                 style={{
@@ -927,7 +946,6 @@ export default function DynamicRecordEdit() {
                                   ? 'No Cumple'
                                   : 'Cumplimiento'}
                               </span>
-                              {/* Mostrar la descripción de cumplimiento si existe */}
                               {file['descripcion cumplimiento'] && (
                                 <p style={{ marginTop: '5px' }}>
                                   <strong>Descripción:</strong>{' '}
@@ -949,11 +967,9 @@ export default function DynamicRecordEdit() {
                     )}
                   </div>
 
-                  {/* Nueva Sección: Comentarios */}
                   <div className="mt-4" style={{ width: '100%' }}>
                     <h5>Comentarios</h5>
 
-                    {/* Formulario para agregar un nuevo comentario */}
                     {role !== '3' && (
                       <form onSubmit={handleAddComment}>
                         <div className="form-group">
@@ -975,12 +991,10 @@ export default function DynamicRecordEdit() {
                       </form>
                     )}
 
-                    {/* Mostrar errores relacionados con los comentarios */}
                     {commentsError && (
                       <div className="alert alert-danger">{commentsError}</div>
                     )}
 
-                    {/* Mostrar comentarios existentes */}
                     {commentsLoading ? (
                       <div>Cargando comentarios...</div>
                     ) : comments.length > 0 ? (
@@ -999,6 +1013,37 @@ export default function DynamicRecordEdit() {
                       </ul>
                     ) : (
                       <p className="mt-3">No hay comentarios aún.</p>
+                    )}
+                  </div>
+
+                  {/* Nueva Sección: Historial de Cambios */}
+                  <div className="mt-4" style={{ width: '100%' }}>
+                    <h5>Historial de Cambios</h5>
+                    {historyError && (
+                      <div className="alert alert-danger">{historyError}</div>
+                    )}
+                    {historyLoading ? (
+                      <div>Cargando historial...</div>
+                    ) : history.length > 0 ? (
+                      <ul className="list-group mt-3">
+                        {history.map((item) => (
+                          <li key={item.id} className="list-group-item">
+                            <div className="d-flex justify-content-between">
+                              <strong>{item.username}</strong>
+                              <small>
+                                {new Date(item.created_at).toLocaleString()}
+                              </small>
+                            </div>
+                            <p>Tipo de cambio: {item.change_type}</p>
+                            {item.field_name && <p>Campo: {item.field_name}</p>}
+                            {item.old_value && <p>Valor antiguo: {item.old_value}</p>}
+                            {item.new_value && <p>Valor nuevo: {item.new_value}</p>}
+                            {item.description && <p>Descripción: {item.description}</p>}
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="mt-3">No hay historial de cambios.</p>
                     )}
                   </div>
                 </div>
