@@ -15,7 +15,6 @@ export default function PropuestaMejoraTab({ id }) {
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyError, setHistoryError] = useState(null);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
-  const [selectedRecordId, setSelectedRecordId] = useState(null);
 
   useEffect(() => {
     const fetchFieldsAndRecords = async () => {
@@ -59,7 +58,6 @@ export default function PropuestaMejoraTab({ id }) {
       if (!token) return;
 
       const recordData = { ...data, caracterizacion_id: id };
-      // Agregar user_id desde el localStorage para el historial
       const userId = localStorage.getItem('id');
       recordData.user_id = userId;
 
@@ -71,7 +69,7 @@ export default function PropuestaMejoraTab({ id }) {
       );
 
       alert('Datos guardados exitosamente');
-      setData({ caracterizacion_id: id }); // Limpiar el formulario después de guardar
+      setData({ caracterizacion_id: id });
 
       // Actualizar los registros después de agregar un nuevo registro
       const updatedRecords = await axios.get(
@@ -102,22 +100,47 @@ export default function PropuestaMejoraTab({ id }) {
     }
   };
 
-  // Función para obtener el historial
-  const fetchHistory = async (recordId) => {
-    if (!recordId) return;
+  // Función para obtener el historial de todos los registros
+  const fetchAllRecordsHistory = async () => {
+    if (records.length === 0) {
+      // Si no hay registros, no hay historial
+      setHistory([]);
+      return;
+    }
+
     setHistoryLoading(true);
     setHistoryError(null);
+
     try {
       const token = localStorage.getItem('token');
-      const historyResponse = await axios.get(
-        `https://impulso-local-back.onrender.com/api/inscriptions/tables/${tableName}/record/${recordId}/history`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
+
+      // Realizar solicitudes de historial para cada registro y combinarlas
+      const historyPromises = records.map((record) =>
+        axios.get(
+          `https://impulso-local-back.onrender.com/api/inscriptions/tables/${tableName}/record/${record.id}/history`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        )
       );
-      setHistory(historyResponse.data.history || []);
+
+      const historyResponses = await Promise.all(historyPromises);
+      let combinedHistory = [];
+
+      historyResponses.forEach((response) => {
+        if (response.data.history && Array.isArray(response.data.history)) {
+          combinedHistory = combinedHistory.concat(response.data.history);
+        }
+      });
+
+      // Ordenar el historial por fecha de creación (opcional)
+      combinedHistory.sort(
+        (a, b) => new Date(b.created_at) - new Date(a.created_at)
+      );
+
+      setHistory(combinedHistory);
       setHistoryLoading(false);
     } catch (error) {
       console.error('Error obteniendo el historial:', error);
@@ -126,9 +149,8 @@ export default function PropuestaMejoraTab({ id }) {
     }
   };
 
-  const handleOpenHistoryModal = async (recordId) => {
-    setSelectedRecordId(recordId);
-    await fetchHistory(recordId);
+  const handleOpenHistoryModal = async () => {
+    await fetchAllRecordsHistory();
     setShowHistoryModal(true);
   };
 
@@ -185,17 +207,23 @@ export default function PropuestaMejoraTab({ id }) {
                     >
                       Eliminar
                     </button>
-                    <button
-                      className="btn btn-info btn-sm"
-                      onClick={() => handleOpenHistoryModal(record.id)}
-                    >
-                      Ver Historial
-                    </button>
+                    {/* Ya no mostramos boton historial por registro */}
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
+
+          {/* Un solo botón para ver el historial de todos los registros */}
+          {records.length > 0 && (
+            <button
+              type="button"
+              className="btn btn-info btn-sm mt-3"
+              onClick={handleOpenHistoryModal}
+            >
+              Ver Historial de Cambios
+            </button>
+          )}
         </>
       )}
 
