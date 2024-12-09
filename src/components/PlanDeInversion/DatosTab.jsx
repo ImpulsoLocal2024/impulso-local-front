@@ -99,9 +99,11 @@ export default function DatosTab({ id }) {
         alert('Datos actualizados exitosamente');
       } else {
         // Crear nuevo registro
-        // Agregar el id del usuario desde localStorage antes de crear el nuevo registro
+        // Si el controlador espera 'user_id', usar user_id:
         const userId = localStorage.getItem('id');
-        recordData.id = userId;
+        recordData.user_id = userId; // Si el backend espera user_id
+        // Si el backend espera 'id', entonces usa:
+        // recordData.id = userId;
 
         await axios.post(
           `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/${tableName}/record`,
@@ -178,7 +180,6 @@ export default function DatosTab({ id }) {
             </button>
           </form>
 
-          {/* Botón para ver Historial de Cambios, solo si hay recordId */}
           {recordId && role !== '3' && (
             <button
               type="button"
@@ -191,7 +192,6 @@ export default function DatosTab({ id }) {
         </div>
       )}
 
-      {/* Modal del Historial de Cambios */}
       {showHistoryModal && (
         <div
           className="modal fade show"
