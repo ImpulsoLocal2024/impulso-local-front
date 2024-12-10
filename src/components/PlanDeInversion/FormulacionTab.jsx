@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import axios from 'axios';
 
@@ -34,6 +34,12 @@ export default function FormulacionTab({ id }) {
   const [complianceCumple, setComplianceCumple] = useState(null);
   const [complianceDescripcion, setComplianceDescripcion] = useState('');
 
+  // Estados para historial
+  const [history, setHistory] = useState([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyError, setHistoryError] = useState(null);
+  const [showHistoryModal, setShowHistoryModal] = useState(false);
+
   const fetchAllRecordsFiles = async (fetchedRecords) => {
     const token = localStorage.getItem('token');
     if (!token) return;
@@ -53,7 +59,6 @@ export default function FormulacionTab({ id }) {
     fetchedRecords.forEach((rec) => {
       const formulacion_id = rec.id;
       const formulacionFiles = allFiles.filter(f => {
-        // Buscar en el nombre del archivo el patrón _formulacion_{id}
         const match = f.name.match(/_formulacion_(\d+)/);
         if (!match) return false;
         const fileFormulacionId = parseInt(match[1], 10);
@@ -255,7 +260,6 @@ export default function FormulacionTab({ id }) {
   const totalInversion = resumenPorRubro.reduce((sum, item) => sum + item.total, 0);
   const contrapartida = totalInversion > montoDisponible ? totalInversion - montoDisponible : 0;
 
-  // Funciones de Cumplimiento (compliance)
   const handleOpenComplianceModal = (f) => {
     setSelectedFileForCompliance(f);
     setComplianceCumple(
@@ -293,11 +297,8 @@ export default function FormulacionTab({ id }) {
         }
       );
 
-      // Actualizar el archivo en uploadedFilesMap
       const updatedMap = { ...uploadedFilesMap };
 
-      // Necesitamos encontrar el formulacion_id al que pertenece este archivo
-      // Suponemos que el nombre tiene el patrón _formulacion_{id}
       const match = selectedFileForCompliance.name.match(/_formulacion_(\d+)/);
       if (match) {
         const formulacion_id = parseInt(match[1], 10);
@@ -320,6 +321,58 @@ export default function FormulacionTab({ id }) {
       console.error('Error actualizando el cumplimiento:', error);
       setError('Error actualizando el cumplimiento');
     }
+  };
+
+  // Funciones para el historial de cambios
+  const fetchAllRecordsHistory = async () => {
+    if (records.length === 0) {
+      // Sin registros, sin historial
+      setHistory([]);
+      return;
+    }
+
+    setHistoryLoading(true);
+    setHistoryError(null);
+
+    try {
+      const token = localStorage.getItem('token');
+
+      // Obtener historial de todos los registros y combinarlos
+      const historyPromises = records.map((rec) =>
+        axios.get(
+          `https://impulso-local-back.onrender.com/api/inscriptions/tables/pi_formulacion/record/${rec.id}/history`,
+          {
+            headers: { Authorization: `Bearer ${token}` }
+          }
+        )
+      );
+
+      const historyResponses = await Promise.all(historyPromises);
+      let combinedHistory = [];
+
+      historyResponses.forEach((response) => {
+        if (response.data.history && Array.isArray(response.data.history)) {
+          combinedHistory = combinedHistory.concat(response.data.history);
+        }
+      });
+
+      // Ordenar el historial por fecha
+      combinedHistory.sort(
+        (a, b) => new Date(b.created_at) - new Date(a.created_at)
+      );
+
+      setHistory(combinedHistory);
+      setHistoryLoading(false);
+    } catch (error) {
+      console.error('Error obteniendo el historial:', error);
+      setHistoryError('Error obteniendo el historial');
+      setHistoryLoading(false);
+    }
+  };
+
+  const handleOpenHistoryModal = async () => {
+    await fetchAllRecordsHistory();
+    setShowHistoryModal(true);
   };
 
   return (
@@ -670,6 +723,101 @@ export default function FormulacionTab({ id }) {
       )}
 
       {selectedFileForCompliance && (
+        <div className="modal-backdrop fade show"></div>
+      )}
+
+      {/* Botón y Modal del Historial de Cambios */}
+      {records.length > 0 && (
+        <button
+          type="button"
+          className="btn btn-info btn-sm mt-3"
+          onClick={handleOpenHistoryModal}
+        >
+          Ver Historial de Cambios
+        </button>
+      )}
+
+      {showHistoryModal && (
+        <div
+          className="modal fade show"
+          style={{ display: 'block' }}
+          tabIndex="-1"
+          role="dialog"
+        >
+          <div className="modal-dialog modal-lg" role="document" style={{ maxWidth: '90%' }}>
+            <div
+              className="modal-content"
+              style={{ maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}
+            >
+              <div className="modal-header">
+                <h5 className="modal-title">Historial de Cambios</h5>
+                <button
+                  type="button"
+                  className="close"
+                  onClick={() => setShowHistoryModal(false)}
+                >
+                  <span>&times;</span>
+                </button>
+              </div>
+              <div className="modal-body" style={{ overflowY: 'auto' }}>
+                {historyError && (
+                  <div className="alert alert-danger">{historyError}</div>
+                )}
+                {historyLoading ? (
+                  <div>Cargando historial...</div>
+                ) : history.length > 0 ? (
+                  <div
+                    className="table-responsive"
+                    style={{ maxHeight: '400px', overflowY: 'auto' }}
+                  >
+                    <table className="table table-striped table-bordered table-sm">
+                      <thead className="thead-light">
+                        <tr>
+                          <th>ID Usuario</th>
+                          <th>Usuario</th>
+                          <th>Fecha del Cambio</th>
+                          <th>Tipo de Cambio</th>
+                          <th>Campo</th>
+                          <th>Valor Antiguo</th>
+                          <th>Valor Nuevo</th>
+                          <th>Descripción</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {history.map((item) => (
+                          <tr key={item.id}>
+                            <td>{item.user_id}</td>
+                            <td>{item.username}</td>
+                            <td>{new Date(item.created_at).toLocaleString()}</td>
+                            <td>{item.change_type}</td>
+                            <td>{item.field_name || '-'}</td>
+                            <td>{item.old_value || '-'}</td>
+                            <td>{item.new_value || '-'}</td>
+                            <td>{item.description || '-'}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <p className="mt-3">No hay historial de cambios.</p>
+                )}
+              </div>
+              <div className="modal-footer">
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => setShowHistoryModal(false)}
+                >
+                  Cerrar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {(showHistoryModal || selectedFileForCompliance) && (
         <div className="modal-backdrop fade show"></div>
       )}
     </div>
