@@ -14,7 +14,12 @@ export default function ValidacionesTab({ id }) {
   const [showUploadForm, setShowUploadForm] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState([]);
 
-  // Función para obtener archivos en el frontend
+  // Estados para historial
+  const [history, setHistory] = useState([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyError, setHistoryError] = useState(null);
+  const [showHistoryModal, setShowHistoryModal] = useState(false);
+
   const fetchFiles = useCallback(async (caracterizacionId) => {
     try {
       const token = localStorage.getItem('token');
@@ -68,9 +73,9 @@ export default function ValidacionesTab({ id }) {
           const existingRecord = recordsResponse.data[0];
           setData(existingRecord);
           setRecordId(existingRecord.id);
-          await fetchFiles(id); // Llamar a fetchFiles pasando el caracterizacionId
+          await fetchFiles(id);
         } else {
-          setUploadedFiles([]); // Si no hay registros, limpiar la lista de archivos
+          setUploadedFiles([]);
         }
 
         setLoading(false);
@@ -92,10 +97,14 @@ export default function ValidacionesTab({ id }) {
       const token = localStorage.getItem('token');
       if (!token) return;
 
+      // Agregar user_id para historial
+      const userId = localStorage.getItem('id');
+      const updatedDataWithUser = { ...updatedData, user_id: userId };
+
       if (recordId) {
         await axios.put(
           `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/${tableName}/record/${recordId}`,
-          updatedData,
+          updatedDataWithUser,
           {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -106,7 +115,7 @@ export default function ValidacionesTab({ id }) {
       } else {
         const createResponse = await axios.post(
           `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/${tableName}/record`,
-          updatedData,
+          updatedDataWithUser,
           {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -185,6 +194,33 @@ export default function ValidacionesTab({ id }) {
         setError('Error eliminando el archivo');
       }
     }
+  };
+
+  // Función para obtener el historial del registro actual
+  const fetchHistory = async () => {
+    if (!recordId) return;
+    setHistoryLoading(true);
+    setHistoryError(null);
+    try {
+      const token = localStorage.getItem('token');
+      const historyResponse = await axios.get(
+        `https://impulso-local-back.onrender.com/api/inscriptions/tables/${tableName}/record/${recordId}/history`,
+        {
+          headers: { Authorization: `Bearer ${token}` }
+        }
+      );
+      setHistory(historyResponse.data.history || []);
+      setHistoryLoading(false);
+    } catch (error) {
+      console.error('Error obteniendo el historial:', error);
+      setHistoryError('Error obteniendo el historial');
+      setHistoryLoading(false);
+    }
+  };
+
+  const handleOpenHistoryModal = async () => {
+    await fetchHistory();
+    setShowHistoryModal(true);
   };
 
   return (
@@ -293,7 +329,6 @@ export default function ValidacionesTab({ id }) {
               </form>
             )}
 
-            {/* Lista de archivos subidos */}
             {uploadedFiles.length > 0 ? (
               <ul className="list-group mt-3">
                 {uploadedFiles.map((file) => (
@@ -325,8 +360,100 @@ export default function ValidacionesTab({ id }) {
               <p>No hay archivos subidos aún.</p>
             )}
           </div>
+
+          {/* Mostrar botón de historial solo si existe recordId */}
+          {recordId && (
+            <button
+              type="button"
+              className="btn btn-info btn-sm mt-3"
+              onClick={handleOpenHistoryModal}
+            >
+              Ver Historial de Cambios
+            </button>
+          )}
         </div>
       )}
+
+      {showHistoryModal && (
+        <div
+          className="modal fade show"
+          style={{ display: 'block' }}
+          tabIndex="-1"
+          role="dialog"
+        >
+          <div className="modal-dialog modal-lg" role="document" style={{ maxWidth: '90%' }}>
+            <div
+              className="modal-content"
+              style={{ maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}
+            >
+              <div className="modal-header">
+                <h5 className="modal-title">Historial de Cambios</h5>
+                <button
+                  type="button"
+                  className="close"
+                  onClick={() => setShowHistoryModal(false)}
+                >
+                  <span>&times;</span>
+                </button>
+              </div>
+              <div className="modal-body" style={{ overflowY: 'auto' }}>
+                {historyError && (
+                  <div className="alert alert-danger">{historyError}</div>
+                )}
+                {historyLoading ? (
+                  <div>Cargando historial...</div>
+                ) : history.length > 0 ? (
+                  <div
+                    className="table-responsive"
+                    style={{ maxHeight: '400px', overflowY: 'auto' }}
+                  >
+                    <table className="table table-striped table-bordered table-sm">
+                      <thead className="thead-light">
+                        <tr>
+                          <th>ID Usuario</th>
+                          <th>Usuario</th>
+                          <th>Fecha del Cambio</th>
+                          <th>Tipo de Cambio</th>
+                          <th>Campo</th>
+                          <th>Valor Antiguo</th>
+                          <th>Valor Nuevo</th>
+                          <th>Descripción</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {history.map((item) => (
+                          <tr key={item.id}>
+                            <td>{item.user_id}</td>
+                            <td>{item.username}</td>
+                            <td>{new Date(item.created_at).toLocaleString()}</td>
+                            <td>{item.change_type}</td>
+                            <td>{item.field_name || '-'}</td>
+                            <td>{item.old_value || '-'}</td>
+                            <td>{item.new_value || '-'}</td>
+                            <td>{item.description || '-'}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <p className="mt-3">No hay historial de cambios.</p>
+                )}
+              </div>
+              <div className="modal-footer">
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => setShowHistoryModal(false)}
+                >
+                  Cerrar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {showHistoryModal && <div className="modal-backdrop fade show"></div>}
     </div>
   );
 }
