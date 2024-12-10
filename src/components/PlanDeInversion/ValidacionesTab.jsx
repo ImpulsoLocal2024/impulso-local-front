@@ -233,7 +233,7 @@ export default function ValidacionesTab({ id }) {
           </div>
 
           <div className="form-group">
-            <label>Aprobación Comité de Compras</label>
+            <label>Aprobación Alcaldía</label>
             <div>
               <button
                 className={`btn ${data['Aprobación comité de compras'] ? 'btn-success' : 'btn-outline-success'}`}
