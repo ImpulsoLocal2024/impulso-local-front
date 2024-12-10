@@ -105,9 +105,9 @@ export default function PiTableList() {
 
       console.log('Registros con Estado == 7:', filteredRecords);
 
-      // Filtrar los registros según el rol y el usuario (si aplica)
-      if (loggedUserRoleId !== '1' && loggedUserId) {
-        // Usuario NO es SuperAdmin y está logueado
+      // === MODIFICACIÓN PRINCIPAL ===
+      // Filtrar los registros según el role_id y el asesor (solo si role_id === '4')
+      if (loggedUserRoleId === '4' && loggedUserId) {
         filteredRecords = filteredRecords.filter(
           (record) => String(record.Asesor) === String(loggedUserId)
         );
@@ -147,6 +147,7 @@ export default function PiTableList() {
   // Cargar los datos al montar el componente
   useEffect(() => {
     fetchTableData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [navigate]);
 
   // Manejar Select2 con persistencia
