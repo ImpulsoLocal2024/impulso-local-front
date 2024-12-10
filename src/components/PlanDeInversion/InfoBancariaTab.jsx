@@ -65,7 +65,32 @@ export default function InfoBancariaTab({ id }) {
     "Permiso temporal de permanencia"
   ];
 
-  const fetchData = async () => {
+  // Estados para historial de cambios
+  const [history, setHistory] = useState([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyError, setHistoryError] = useState(null);
+  const [showHistoryModal, setShowHistoryModal] = useState(false);
+
+  const fetchAllRecordsFiles = async (fetchedRecords) => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    const filesResponse = await axios.get(
+      `https://impulso-local-back.onrender.com/api/inscriptions/tables/pi_informacion_bancaria/record/${id}/files`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        }
+      }
+    );
+
+    const allFiles = filesResponse.data.files || [];
+
+    const infoFile = allFiles.find(f => f.name.includes('info_bancaria_')) || null;
+    setUploadedFile(infoFile);
+  };
+
+  const fetchRecords = async () => {
     setLoading(true);
     try {
       const token = localStorage.getItem("token");
@@ -119,26 +144,18 @@ export default function InfoBancariaTab({ id }) {
       }
 
       // Obtener archivos asociados
-      const filesResponse = await axios.get(
-        `https://impulso-local-back.onrender.com/api/inscriptions/tables/pi_informacion_bancaria/record/${id}/files`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-
-      const allFiles = filesResponse.data.files || [];
-      // Filtrar el archivo cuyo nombre contenga 'info_bancaria_'
-      const infoFile = allFiles.find(f => f.name.includes('info_bancaria_')) || null;
-      setUploadedFile(infoFile);
+      await fetchAllRecordsFiles(response.data || []);
 
       setLoading(false);
     } catch (err) {
-      console.error("Error obteniendo datos de información bancaria:", err);
+      console.error("Error obteniendo registros de información bancaria:", err);
       setError("Error obteniendo datos");
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchData();
+    fetchRecords();
   }, [id]);
 
   const handleChange = (e) => {
@@ -151,7 +168,7 @@ export default function InfoBancariaTab({ id }) {
       setData({ ...originalData });
       setFile(null);
       setFileName("");
-      fetchData();
+      fetchRecords();
     }
   };
 
@@ -190,7 +207,7 @@ export default function InfoBancariaTab({ id }) {
       }
 
       alert("Información guardada exitosamente");
-      await fetchData();
+      await fetchRecords();
     } catch (err) {
       console.error("Error guardando la información bancaria:", err);
       setError("Error guardando la información");
@@ -209,12 +226,14 @@ export default function InfoBancariaTab({ id }) {
     }
     try {
       const token = localStorage.getItem('token');
+      const userId = localStorage.getItem('id'); // Obtener el user_id del localStorage
       // Agregamos el prefijo 'info_bancaria_' al nombre
       const fileNameWithPrefix = `info_bancaria_${fileName}`;
       const formData = new FormData();
       formData.append('file', file);
       formData.append('fileName', fileNameWithPrefix);
       formData.append('caracterizacion_id', id);
+      formData.append('user_id', userId); // Enviar user_id al backend
 
       await axios.post(
         `https://impulso-local-back.onrender.com/api/inscriptions/tables/pi_informacion_bancaria/record/${id}/upload`,
@@ -228,13 +247,64 @@ export default function InfoBancariaTab({ id }) {
       );
 
       alert("Archivo subido exitosamente");
-      await fetchData();
+      await fetchRecords();
       setFile(null);
       setFileName("");
     } catch (error) {
       console.error('Error subiendo el archivo:', error);
       setError('Error subiendo el archivo');
     }
+  };
+
+  // Funciones para el historial de cambios
+  const fetchHistory = async () => {
+    if (!recordId) {
+      setHistoryError("No hay historial disponible para este registro.");
+      setHistory([]);
+      return;
+    }
+
+    setHistoryLoading(true);
+    setHistoryError(null);
+
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        alert("No se encontró el token de autenticación");
+        setHistoryLoading(false);
+        return;
+      }
+
+      const response = await axios.get(
+        `https://impulso-local-back.onrender.com/api/inscriptions/tables/pi_informacion_bancaria/record/${recordId}/history`,
+        {
+          headers: { Authorization: `Bearer ${token}` }
+        }
+      );
+
+      const fetchedHistory = response.data.history || [];
+
+      // Ordenar el historial por fecha descendente
+      fetchedHistory.sort(
+        (a, b) => new Date(b.created_at) - new Date(a.created_at)
+      );
+
+      setHistory(fetchedHistory);
+      setHistoryLoading(false);
+    } catch (err) {
+      console.error("Error obteniendo el historial:", err);
+      setHistoryError("Error obteniendo el historial");
+      setHistoryLoading(false);
+    }
+  };
+
+  const handleOpenHistoryModal = async () => {
+    await fetchHistory();
+    setShowHistoryModal(true);
+  };
+
+  const handleCloseHistoryModal = () => {
+    setShowHistoryModal(false);
   };
 
   return (
@@ -373,12 +443,110 @@ export default function InfoBancariaTab({ id }) {
               <button className="btn btn-secondary btn-sm" onClick={handleCancel}>
                 Cancelar
               </button>
-              <button className="btn btn-primary btn-sm" onClick={handleSave}>
-                Guardar
-              </button>
+              <div>
+                {/* Botón para ver historial de cambios */}
+                {recordId && (
+                  <button
+                    type="button"
+                    className="btn btn-info btn-sm me-2"
+                    onClick={handleOpenHistoryModal}
+                  >
+                    Ver Historial de Cambios
+                  </button>
+                )}
+                <button className="btn btn-primary btn-sm" onClick={handleSave}>
+                  Guardar
+                </button>
+              </div>
             </div>
           </div>
         </div>
+      )}
+
+      {/* Modal de Historial de Cambios */}
+      {showHistoryModal && (
+        <div
+          className="modal fade show"
+          style={{ display: 'block' }}
+          tabIndex="-1"
+          role="dialog"
+        >
+          <div className="modal-dialog modal-lg" role="document" style={{ maxWidth: '90%' }}>
+            <div
+              className="modal-content"
+              style={{ maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}
+            >
+              <div className="modal-header">
+                <h5 className="modal-title">Historial de Cambios</h5>
+                <button
+                  type="button"
+                  className="close"
+                  onClick={handleCloseHistoryModal}
+                >
+                  <span>&times;</span>
+                </button>
+              </div>
+              <div className="modal-body" style={{ overflowY: 'auto' }}>
+                {historyError && (
+                  <div className="alert alert-danger">{historyError}</div>
+                )}
+                {historyLoading ? (
+                  <div>Cargando historial...</div>
+                ) : history.length > 0 ? (
+                  <div
+                    className="table-responsive"
+                    style={{ maxHeight: '400px', overflowY: 'auto' }}
+                  >
+                    <table className="table table-striped table-bordered table-sm">
+                      <thead className="thead-light">
+                        <tr>
+                          <th>ID Usuario</th>
+                          <th>Usuario</th>
+                          <th>Fecha del Cambio</th>
+                          <th>Tipo de Cambio</th>
+                          <th>Campo</th>
+                          <th>Valor Antiguo</th>
+                          <th>Valor Nuevo</th>
+                          <th>Descripción</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {history.map((item) => (
+                          <tr key={item.id}>
+                            <td>{item.user_id}</td>
+                            <td>{item.username || 'Usuario'}</td>
+                            <td>{new Date(item.created_at).toLocaleString()}</td>
+                            <td>{item.change_type}</td>
+                            <td>{item.field_name || '-'}</td>
+                            <td>{item.old_value || '-'}</td>
+                            <td>{item.new_value || '-'}</td>
+                            <td>{item.description || '-'}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <p className="mt-3">No hay historial de cambios.</p>
+                )}
+              </div>
+              <div className="modal-footer">
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={handleCloseHistoryModal}
+                >
+                  Cerrar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Backdrop del Modal */}
+      {(showHistoryModal) && (
+        <div className="modal-backdrop fade show"></div>
       )}
     </div>
   );
@@ -387,4 +555,5 @@ export default function InfoBancariaTab({ id }) {
 InfoBancariaTab.propTypes = {
   id: PropTypes.string.isRequired,
 };
+
 
