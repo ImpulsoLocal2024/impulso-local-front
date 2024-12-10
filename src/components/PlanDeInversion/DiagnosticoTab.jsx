@@ -54,6 +54,12 @@ export default function DiagnosticoTab({ id }) {
   const [answers, setAnswers] = useState({});
   const [recordIds, setRecordIds] = useState({});
   const [loading, setLoading] = useState(true);
+  
+  // Estados para historial
+  const [history, setHistory] = useState([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyError, setHistoryError] = useState(null);
+  const [showHistoryModal, setShowHistoryModal] = useState(false);
 
   useEffect(() => {
     const fetchExistingRecords = async () => {
@@ -72,7 +78,6 @@ export default function DiagnosticoTab({ id }) {
 
         const records = response.data.reduce(
           (acc, record) => {
-            // Suponemos que record.Respuesta es booleano (true/false)
             acc.answers[record.Pregunta.trim()] = record.Respuesta;
             acc.recordIds[record.Pregunta.trim()] = record.id;
             return acc;
@@ -93,7 +98,6 @@ export default function DiagnosticoTab({ id }) {
   }, [id]);
 
   const handleAnswerChange = (questionText, value) => {
-    // value será true o false
     setAnswers((prev) => ({ ...prev, [questionText]: value }));
   };
 
@@ -110,9 +114,9 @@ export default function DiagnosticoTab({ id }) {
         return;
       }
 
-      // Obtenemos todas las peticiones, creando o actualizando registros
+      const userId = localStorage.getItem('id');
       const requestPromises = [];
-      const newRecordIds = { ...recordIds }; // Copia actual de recordIds
+      const newRecordIds = { ...recordIds };
 
       for (const section of initialQuestions) {
         for (const question of section.questions) {
@@ -121,12 +125,13 @@ export default function DiagnosticoTab({ id }) {
             caracterizacion_id: id,
             Componente: section.component,
             Pregunta: question.text,
-            Respuesta: currentAnswer, // booleano (true o false)
+            Respuesta: currentAnswer,
             Puntaje: currentAnswer ? 1 : 0,
+            user_id: userId // Para historial
           };
 
           if (newRecordIds[question.text]) {
-            // Existe el registro, actualizar
+            // Actualizar
             const updatePromise = axios.put(
               `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/pi_diagnostico_cap/record/${newRecordIds[question.text]}`,
               requestData,
@@ -134,13 +139,12 @@ export default function DiagnosticoTab({ id }) {
             );
             requestPromises.push(updatePromise);
           } else {
-            // No existe el registro, crearlo
+            // Crear
             const createPromise = axios.post(
               `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/pi_diagnostico_cap/record`,
               requestData,
               { headers: { Authorization: `Bearer ${token}` } }
             ).then((response) => {
-              // Guardamos el id recién creado en newRecordIds
               newRecordIds[question.text] = response.data.id;
             });
             requestPromises.push(createPromise);
@@ -148,10 +152,7 @@ export default function DiagnosticoTab({ id }) {
         }
       }
 
-      // Esperamos a que todas las peticiones finalicen
       await Promise.all(requestPromises);
-
-      // Actualizamos los recordIds una sola vez, ya con todos los IDs nuevos
       setRecordIds(newRecordIds);
 
       alert("Diagnóstico guardado exitosamente");
@@ -161,66 +162,211 @@ export default function DiagnosticoTab({ id }) {
     }
   };
 
+  // Función para obtener el historial de todos los registros
+  const fetchAllRecordsHistory = async () => {
+    if (Object.keys(recordIds).length === 0) {
+      // Si no hay registros guardados, no hay historial
+      setHistory([]);
+      return;
+    }
+
+    setHistoryLoading(true);
+    setHistoryError(null);
+    try {
+      const token = localStorage.getItem('token');
+      const recordIdValues = Object.values(recordIds);
+
+      const historyPromises = recordIdValues.map((rid) =>
+        axios.get(
+          `https://impulso-local-back.onrender.com/api/inscriptions/tables/pi_diagnostico_cap/record/${rid}/history`,
+          {
+            headers: { Authorization: `Bearer ${token}` }
+          }
+        )
+      );
+
+      const historyResponses = await Promise.all(historyPromises);
+      let combinedHistory = [];
+
+      historyResponses.forEach((response) => {
+        if (response.data.history && Array.isArray(response.data.history)) {
+          combinedHistory = combinedHistory.concat(response.data.history);
+        }
+      });
+
+      // Ordenar el historial por fecha
+      combinedHistory.sort(
+        (a, b) => new Date(b.created_at) - new Date(a.created_at)
+      );
+
+      setHistory(combinedHistory);
+      setHistoryLoading(false);
+    } catch (error) {
+      console.error('Error obteniendo el historial:', error);
+      setHistoryError('Error obteniendo el historial');
+      setHistoryLoading(false);
+    }
+  };
+
+  const handleOpenHistoryModal = async () => {
+    await fetchAllRecordsHistory();
+    setShowHistoryModal(true);
+  };
+
   return (
     <div>
       <h3>Diagnóstico</h3>
       {loading ? (
         <p>Cargando...</p>
       ) : (
-        <table className="table table-bordered">
-          <thead>
-            <tr>
-              <th>Componente</th>
-              <th>Pregunta</th>
-              <th>Sí</th>
-              <th>No</th>
-              <th>Puntaje</th>
-            </tr>
-          </thead>
-          <tbody>
-            {initialQuestions.map((section) => (
-              <React.Fragment key={section.component}>
-                {section.questions.map((question, index) => (
-                  <tr key={question.text}>
-                    {index === 0 && (
-                      <td rowSpan={section.questions.length}>
-                        {section.component}
+        <>
+          <table className="table table-bordered">
+            <thead>
+              <tr>
+                <th>Componente</th>
+                <th>Pregunta</th>
+                <th>Sí</th>
+                <th>No</th>
+                <th>Puntaje</th>
+              </tr>
+            </thead>
+            <tbody>
+              {initialQuestions.map((section) => (
+                <React.Fragment key={section.component}>
+                  {section.questions.map((question, index) => (
+                    <tr key={question.text}>
+                      {index === 0 && (
+                        <td rowSpan={section.questions.length}>
+                          {section.component}
+                        </td>
+                      )}
+                      <td>{question.text}</td>
+                      <td>
+                        <input
+                          type="radio"
+                          name={question.text}
+                          checked={answers[question.text] === true}
+                          onChange={() => handleAnswerChange(question.text, true)}
+                        />
                       </td>
-                    )}
-                    <td>{question.text}</td>
-                    <td>
-                      <input
-                        type="radio"
-                        name={question.text}
-                        checked={answers[question.text] === true}
-                        onChange={() => handleAnswerChange(question.text, true)}
-                      />
+                      <td>
+                        <input
+                          type="radio"
+                          name={question.text}
+                          checked={answers[question.text] === false}
+                          onChange={() => handleAnswerChange(question.text, false)}
+                        />
+                      </td>
+                      <td>{answers[question.text] ? 1 : 0}</td>
+                    </tr>
+                  ))}
+                  <tr>
+                    <td colSpan="4" className="text-end">
+                      Promedio del componente:
                     </td>
-                    <td>
-                      <input
-                        type="radio"
-                        name={question.text}
-                        checked={answers[question.text] === false}
-                        onChange={() => handleAnswerChange(question.text, false)}
-                      />
-                    </td>
-                    <td>{answers[question.text] ? 1 : 0}</td>
+                    <td>{calculateAverage(section.questions)}</td>
                   </tr>
-                ))}
-                <tr>
-                  <td colSpan="4" className="text-end">
-                    Promedio del componente:
-                  </td>
-                  <td>{calculateAverage(section.questions)}</td>
-                </tr>
-              </React.Fragment>
-            ))}
-          </tbody>
-        </table>
+                </React.Fragment>
+              ))}
+            </tbody>
+          </table>
+          <button className="btn btn-primary" onClick={handleSubmit}>
+            Guardar
+          </button>
+
+          {/* Mostrar el botón de historial solo si hay registros guardados */}
+          {Object.keys(recordIds).length > 0 && (
+            <button
+              type="button"
+              className="btn btn-info btn-sm mt-3 ml-2"
+              onClick={handleOpenHistoryModal}
+            >
+              Ver Historial de Cambios
+            </button>
+          )}
+        </>
       )}
-      <button className="btn btn-primary" onClick={handleSubmit}>
-        Guardar
-      </button>
+
+      {showHistoryModal && (
+        <div
+          className="modal fade show"
+          style={{ display: 'block' }}
+          tabIndex="-1"
+          role="dialog"
+        >
+          <div className="modal-dialog modal-lg" role="document" style={{ maxWidth: '90%' }}>
+            <div
+              className="modal-content"
+              style={{ maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}
+            >
+              <div className="modal-header">
+                <h5 className="modal-title">Historial de Cambios</h5>
+                <button
+                  type="button"
+                  className="close"
+                  onClick={() => setShowHistoryModal(false)}
+                >
+                  <span>&times;</span>
+                </button>
+              </div>
+              <div className="modal-body" style={{ overflowY: 'auto' }}>
+                {historyError && (
+                  <div className="alert alert-danger">{historyError}</div>
+                )}
+                {historyLoading ? (
+                  <div>Cargando historial...</div>
+                ) : history.length > 0 ? (
+                  <div
+                    className="table-responsive"
+                    style={{ maxHeight: '400px', overflowY: 'auto' }}
+                  >
+                    <table className="table table-striped table-bordered table-sm">
+                      <thead className="thead-light">
+                        <tr>
+                          <th>ID Usuario</th>
+                          <th>Usuario</th>
+                          <th>Fecha del Cambio</th>
+                          <th>Tipo de Cambio</th>
+                          <th>Campo</th>
+                          <th>Valor Antiguo</th>
+                          <th>Valor Nuevo</th>
+                          <th>Descripción</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {history.map((item) => (
+                          <tr key={item.id}>
+                            <td>{item.user_id}</td>
+                            <td>{item.username}</td>
+                            <td>{new Date(item.created_at).toLocaleString()}</td>
+                            <td>{item.change_type}</td>
+                            <td>{item.field_name || '-'}</td>
+                            <td>{item.old_value || '-'}</td>
+                            <td>{item.new_value || '-'}</td>
+                            <td>{item.description || '-'}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <p className="mt-3">No hay historial de cambios.</p>
+                )}
+              </div>
+              <div className="modal-footer">
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => setShowHistoryModal(false)}
+                >
+                  Cerrar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {showHistoryModal && <div className="modal-backdrop fade show"></div>}
     </div>
   );
 }
