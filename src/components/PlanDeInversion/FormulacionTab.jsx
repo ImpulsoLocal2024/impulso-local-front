@@ -1,9 +1,8 @@
-import React, { useState, useEffect } from "react";
-import PropTypes from "prop-types";
-import axios from "axios";
+import { useState, useEffect, useCallback } from 'react';
+import PropTypes from 'prop-types';
+import axios from 'axios';
 
 export default function FormulacionTab({ id }) {
-  // id = caracterizacion_id (empresa)
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -26,10 +25,45 @@ export default function FormulacionTab({ id }) {
 
   const [uploadedFilesMap, setUploadedFilesMap] = useState({});
   const [uploadingRecordId, setUploadingRecordId] = useState(null); 
-  // uploadingRecordId = formulacion_id (id del registro en pi_formulacion)
   const [file, setFile] = useState(null);
   const [fileName, setFileName] = useState('');
   const [error, setError] = useState(null);
+
+  // Estados para cumplimiento
+  const [selectedFileForCompliance, setSelectedFileForCompliance] = useState(null);
+  const [complianceCumple, setComplianceCumple] = useState(null);
+  const [complianceDescripcion, setComplianceDescripcion] = useState('');
+
+  const fetchAllRecordsFiles = async (fetchedRecords) => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    const filesResponse = await axios.get(
+      `https://impulso-local-back.onrender.com/api/inscriptions/tables/pi_formulacion/record/${id}/files`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        }
+      }
+    );
+
+    const allFiles = filesResponse.data.files || [];
+
+    const updatedMap = {};
+    fetchedRecords.forEach((rec) => {
+      const formulacion_id = rec.id;
+      const formulacionFiles = allFiles.filter(f => {
+        // Buscar en el nombre del archivo el patrón _formulacion_{id}
+        const match = f.name.match(/_formulacion_(\d+)/);
+        if (!match) return false;
+        const fileFormulacionId = parseInt(match[1], 10);
+        return fileFormulacionId === formulacion_id;
+      });
+      updatedMap[formulacion_id] = formulacionFiles;
+    });
+
+    setUploadedFilesMap(updatedMap);
+  };
 
   const fetchRecords = async () => {
     setLoading(true);
@@ -59,36 +93,6 @@ export default function FormulacionTab({ id }) {
     }
   };
 
-  const fetchAllRecordsFiles = async (fetchedRecords) => {
-    const token = localStorage.getItem('token');
-    if (!token) return;
-
-    const filesResponse = await axios.get(
-      `https://impulso-local-back.onrender.com/api/inscriptions/tables/pi_formulacion/record/${id}/files`,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        }
-      }
-    );
-
-    const allFiles = filesResponse.data.files || [];
-
-    const updatedMap = {};
-    fetchedRecords.forEach((rec) => {
-      const formulacion_id = rec.id;
-      const formulacionFiles = allFiles.filter(f => {
-        const match = f.name.match(/_formulacion_(\d+)/);
-        if (!match) return false;
-        const fileFormulacionId = parseInt(match[1], 10);
-        return fileFormulacionId === formulacion_id;
-      });
-      updatedMap[formulacion_id] = formulacionFiles;
-    });
-
-    setUploadedFilesMap(updatedMap);
-  };
-
   useEffect(() => {
     fetchRecords();
   }, [id]);
@@ -116,6 +120,7 @@ export default function FormulacionTab({ id }) {
         return;
       }
 
+      const userId = localStorage.getItem('id'); // Para historial
       const requestData = {
         caracterizacion_id: id,
         "Rubro": Rubro,
@@ -123,6 +128,7 @@ export default function FormulacionTab({ id }) {
         "Descripción": Descripción || "",
         "Cantidad": parseInt(Cantidad, 10) || 0,
         "Valor Unitario": parseFloat(ValorUnitario) || 0,
+        user_id: userId
       };
 
       await axios.post(
@@ -164,11 +170,13 @@ export default function FormulacionTab({ id }) {
     }
     try {
       const token = localStorage.getItem('token');
+      const userId = localStorage.getItem('id');
       const fileNameWithFormulacion = `${fileName}_formulacion_${uploadingRecordId}`;
       const formData = new FormData();
       formData.append('file', file);
       formData.append('fileName', fileNameWithFormulacion);
       formData.append('caracterizacion_id', id);
+      formData.append('user_id', userId);
 
       await axios.post(
         `https://impulso-local-back.onrender.com/api/inscriptions/tables/pi_formulacion/record/${id}/upload`,
@@ -192,7 +200,6 @@ export default function FormulacionTab({ id }) {
   };
 
   const handleFileDelete = async (formulacion_id, fileId) => {
-    // Usar caracterizacion_id (id) en la URL para coincidir con file.record_id
     if (window.confirm('¿Estás seguro de que deseas eliminar este archivo?')) {
       try {
         const token = localStorage.getItem('token');
@@ -214,7 +221,6 @@ export default function FormulacionTab({ id }) {
   };
 
   const handleDeleteRecord = async (formulacion_id) => {
-    // Para eliminar el registro pi_formulacion, usamos su id (formulacion_id)
     if (window.confirm('¿Estás seguro de que deseas eliminar este registro?')) {
       try {
         const token = localStorage.getItem('token');
@@ -248,6 +254,73 @@ export default function FormulacionTab({ id }) {
 
   const totalInversion = resumenPorRubro.reduce((sum, item) => sum + item.total, 0);
   const contrapartida = totalInversion > montoDisponible ? totalInversion - montoDisponible : 0;
+
+  // Funciones de Cumplimiento (compliance)
+  const handleOpenComplianceModal = (f) => {
+    setSelectedFileForCompliance(f);
+    setComplianceCumple(
+      f.cumple === 'true' || f.cumple === true || f.cumple === 1
+        ? true
+        : f.cumple === 'false' || f.cumple === false || f.cumple === 0
+        ? false
+        : null
+    );
+    setComplianceDescripcion(f['descripcion cumplimiento'] || '');
+  };
+
+  const handleCloseComplianceModal = () => {
+    setSelectedFileForCompliance(null);
+    setComplianceCumple(null);
+    setComplianceDescripcion('');
+  };
+
+  const handleSaveCompliance = async () => {
+    if (!selectedFileForCompliance) return;
+    try {
+      const token = localStorage.getItem('token');
+      const userId = localStorage.getItem('id');
+      await axios.put(
+        `https://impulso-local-back.onrender.com/api/inscriptions/tables/pi_formulacion/record/${id}/file/${selectedFileForCompliance.id}/compliance`,
+        {
+          cumple: complianceCumple,
+          descripcion_cumplimiento: complianceDescripcion,
+          user_id: userId
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      // Actualizar el archivo en uploadedFilesMap
+      const updatedMap = { ...uploadedFilesMap };
+
+      // Necesitamos encontrar el formulacion_id al que pertenece este archivo
+      // Suponemos que el nombre tiene el patrón _formulacion_{id}
+      const match = selectedFileForCompliance.name.match(/_formulacion_(\d+)/);
+      if (match) {
+        const formulacion_id = parseInt(match[1], 10);
+        const files = updatedMap[formulacion_id] || [];
+        const updatedFiles = files.map((file) =>
+          file.id === selectedFileForCompliance.id
+            ? {
+                ...file,
+                cumple: complianceCumple,
+                'descripcion cumplimiento': complianceDescripcion,
+              }
+            : file
+        );
+        updatedMap[formulacion_id] = updatedFiles;
+        setUploadedFilesMap(updatedMap);
+      }
+
+      handleCloseComplianceModal();
+    } catch (error) {
+      console.error('Error actualizando el cumplimiento:', error);
+      setError('Error actualizando el cumplimiento');
+    }
+  };
 
   return (
     <div>
@@ -345,6 +418,46 @@ export default function FormulacionTab({ id }) {
                                   >
                                     Ver archivo
                                   </a>
+                                  <br />
+                                  {/* Etiqueta de Cumplimiento */}
+                                  <span
+                                    className="badge"
+                                    style={{
+                                      backgroundColor:
+                                        f.cumple === true ||
+                                        f.cumple === 'true' ||
+                                        f.cumple === 1
+                                          ? 'green'
+                                          : f.cumple === false ||
+                                            f.cumple === 'false' ||
+                                            f.cumple === 0
+                                          ? 'red'
+                                          : 'gray',
+                                      color: '#fff',
+                                      padding: '5px',
+                                      borderRadius: '5px',
+                                      cursor: 'pointer',
+                                      marginTop: '5px',
+                                      display: 'inline-block',
+                                    }}
+                                    onClick={() => handleOpenComplianceModal(f)}
+                                  >
+                                    {f.cumple === true ||
+                                    f.cumple === 'true' ||
+                                    f.cumple === 1
+                                      ? 'Cumple'
+                                      : f.cumple === false ||
+                                        f.cumple === 'false' ||
+                                        f.cumple === 0
+                                      ? 'No Cumple'
+                                      : 'Cumplimiento'}
+                                  </span>
+                                  {f['descripcion cumplimiento'] && (
+                                    <p style={{ marginTop: '5px' }}>
+                                      <strong>Descripción:</strong>{' '}
+                                      {f['descripcion cumplimiento']}
+                                    </p>
+                                  )}
                                 </div>
                                 <button
                                   className="btn btn-danger btn-sm"
@@ -479,6 +592,86 @@ export default function FormulacionTab({ id }) {
           </table>
         </div>
       )}
+
+      {/* Modal de cumplimiento */}
+      {selectedFileForCompliance && (
+        <div
+          className="modal fade show"
+          style={{ display: 'block' }}
+          tabIndex="-1"
+          role="dialog"
+        >
+          <div className="modal-dialog" role="document">
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5 className="modal-title">Actualizar Cumplimiento</h5>
+                <button
+                  type="button"
+                  className="close"
+                  onClick={handleCloseComplianceModal}
+                >
+                  <span>&times;</span>
+                </button>
+              </div>
+              <div className="modal-body">
+                <div className="form-group">
+                  <label>Cumple</label>
+                  <div>
+                    <input
+                      type="radio"
+                      id="cumple-true"
+                      name="cumple"
+                      value="true"
+                      checked={complianceCumple === true}
+                      onChange={() => setComplianceCumple(true)}
+                    />
+                    <label htmlFor="cumple-true">Cumple</label>
+                  </div>
+                  <div>
+                    <input
+                      type="radio"
+                      id="cumple-false"
+                      name="cumple"
+                      value="false"
+                      checked={complianceCumple === false}
+                      onChange={() => setComplianceCumple(false)}
+                    />
+                    <label htmlFor="cumple-false">No Cumple</label>
+                  </div>
+                </div>
+                <div className="form-group">
+                  <label>Descripción cumplimiento</label>
+                  <textarea
+                    className="form-control"
+                    value={complianceDescripcion}
+                    onChange={(e) => setComplianceDescripcion(e.target.value)}
+                  ></textarea>
+                </div>
+              </div>
+              <div className="modal-footer d-flex justify-content-end">
+                <button
+                  type="button"
+                  className="btn btn-secondary mr-2"
+                  onClick={handleCloseComplianceModal}
+                >
+                  Cerrar
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  onClick={handleSaveCompliance}
+                >
+                  Guardar cambios
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {selectedFileForCompliance && (
+        <div className="modal-backdrop fade show"></div>
+      )}
     </div>
   );
 }
@@ -486,3 +679,4 @@ export default function FormulacionTab({ id }) {
 FormulacionTab.propTypes = {
   id: PropTypes.string.isRequired,
 };
+
