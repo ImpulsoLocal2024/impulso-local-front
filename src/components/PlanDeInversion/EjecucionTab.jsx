@@ -29,34 +29,13 @@ export default function EjecucionTab({ id }) {
   const [fileName, setFileName] = useState('');
   const [error, setError] = useState(null);
 
-  const fetchRecords = async () => {
-    setLoading(true);
-    try {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        alert("No se encontró el token de autenticación");
-        setLoading(false);
-        return;
-      }
+  // Estados para historial de cambios
+  const [history, setHistory] = useState([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyError, setHistoryError] = useState(null);
+  const [showHistoryModal, setShowHistoryModal] = useState(false);
 
-      const response = await axios.get(
-        `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/pi_ejecucion/records?caracterizacion_id=${id}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-
-      const fetchedRecords = response.data || [];
-      setRecords(fetchedRecords);
-
-      await fetchAllRecordsFiles(fetchedRecords);
-
-    } catch (error) {
-      console.error("Error obteniendo registros de ejecución:", error);
-      setError('Error obteniendo los registros de ejecución');
-    } finally {
-      setLoading(false);
-    }
-  };
-
+  // Función para obtener archivos asociados
   const fetchAllRecordsFiles = async (fetchedRecords) => {
     const token = localStorage.getItem('token');
     if (!token) return;
@@ -87,10 +66,40 @@ export default function EjecucionTab({ id }) {
     setUploadedFilesMap(updatedMap);
   };
 
+  // Función para obtener registros
+  const fetchRecords = async () => {
+    setLoading(true);
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        alert("No se encontró el token de autenticación");
+        setLoading(false);
+        return;
+      }
+
+      const response = await axios.get(
+        `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/pi_ejecucion/records?caracterizacion_id=${id}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      const fetchedRecords = response.data || [];
+      setRecords(fetchedRecords);
+
+      await fetchAllRecordsFiles(fetchedRecords);
+
+    } catch (error) {
+      console.error("Error obteniendo registros de ejecución:", error);
+      setError('Error obteniendo los registros de ejecución');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchRecords();
   }, [id]);
 
+  // Función para manejar cambios en los inputs
   const handleChange = (e) => {
     const { name, value } = e.target;
     setNewRubro((prev) => ({
@@ -99,6 +108,17 @@ export default function EjecucionTab({ id }) {
     }));
   };
 
+  // Función para cancelar cambios
+  const handleCancel = () => {
+    if (originalData) {
+      setNewRubro({ ...originalData });
+      setFile(null);
+      setFileName("");
+      fetchRecords();
+    }
+  };
+
+  // Función para guardar un nuevo rubro
   const handleSubmit = async () => {
     try {
       const token = localStorage.getItem("token");
@@ -114,6 +134,7 @@ export default function EjecucionTab({ id }) {
         return;
       }
 
+      const userId = localStorage.getItem('id'); 
       const requestData = {
         caracterizacion_id: id,
         "Rubro": Rubro,
@@ -121,6 +142,7 @@ export default function EjecucionTab({ id }) {
         "Descripción": Descripción || "",
         "Cantidad": parseInt(Cantidad, 10) || 0,
         "Valor Unitario": parseFloat(ValorUnitario) || 0,
+        user_id: userId
       };
 
       await axios.post(
@@ -146,6 +168,7 @@ export default function EjecucionTab({ id }) {
     }
   };
 
+  // Funciones para manejar archivos
   const handleFileChange = (e) => {
     setFile(e.target.files[0]);
   };
@@ -162,11 +185,13 @@ export default function EjecucionTab({ id }) {
     }
     try {
       const token = localStorage.getItem('token');
+      const userId = localStorage.getItem('id');
       const fileNameWithEjecucion = `${fileName}_ejecucion_${uploadingRecordId}`;
       const formData = new FormData();
       formData.append('file', file);
       formData.append('fileName', fileNameWithEjecucion);
       formData.append('caracterizacion_id', id);
+      formData.append('user_id', userId);
 
       await axios.post(
         `https://impulso-local-back.onrender.com/api/inscriptions/tables/pi_ejecucion/record/${id}/upload`,
@@ -193,12 +218,14 @@ export default function EjecucionTab({ id }) {
     if (window.confirm('¿Estás seguro de que deseas eliminar este archivo?')) {
       try {
         const token = localStorage.getItem('token');
+        const userId = localStorage.getItem('id');
         await axios.delete(
           `https://impulso-local-back.onrender.com/api/inscriptions/tables/pi_ejecucion/record/${id}/file/${fileId}`,
           {
             headers: {
               Authorization: `Bearer ${token}`,
             },
+            data: { user_id: userId } // Enviamos user_id en DELETE
           }
         );
 
@@ -214,10 +241,14 @@ export default function EjecucionTab({ id }) {
     if (window.confirm('¿Estás seguro de que deseas eliminar este registro?')) {
       try {
         const token = localStorage.getItem('token');
+        const userId = localStorage.getItem('id');
+        // Enviar user_id como query param
         await axios.delete(
-          `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/pi_ejecucion/record/${ejecucion_id}`,
+          `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/pi_ejecucion/record/${ejecucion_id}?user_id=${userId}`,
           {
-            headers: { Authorization: `Bearer ${token}` },
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
           }
         );
 
@@ -229,6 +260,7 @@ export default function EjecucionTab({ id }) {
     }
   };
 
+  // Resumen de inversión
   const resumenPorRubro = rubrosOptions.map((r) => {
     const total = records
       .filter((rec) => rec["Rubro"] === r)
@@ -242,6 +274,61 @@ export default function EjecucionTab({ id }) {
 
   const totalInversion = resumenPorRubro.reduce((sum, item) => sum + item.total, 0);
   const contrapartida = totalInversion > montoDisponible ? totalInversion - montoDisponible : 0;
+
+  // Funciones para el historial de cambios
+  const fetchAllRecordsHistory = async () => {
+    if (records.length === 0) {
+      // Sin registros, sin historial
+      setHistory([]);
+      return;
+    }
+
+    setHistoryLoading(true);
+    setHistoryError(null);
+
+    try {
+      const token = localStorage.getItem('token');
+
+      // Obtener historial de todos los registros y combinarlo
+      const historyPromises = records.map((rec) =>
+        axios.get(
+          `https://impulso-local-back.onrender.com/api/inscriptions/tables/pi_ejecucion/record/${rec.id}/history`,
+          {
+            headers: { Authorization: `Bearer ${token}` }
+          }
+        )
+      );
+
+      const historyResponses = await Promise.all(historyPromises);
+      let combinedHistory = [];
+
+      historyResponses.forEach((response) => {
+        if (response.data.history && Array.isArray(response.data.history)) {
+          combinedHistory = combinedHistory.concat(response.data.history);
+        }
+      });
+
+      combinedHistory.sort(
+        (a, b) => new Date(b.created_at) - new Date(a.created_at)
+      );
+
+      setHistory(combinedHistory);
+      setHistoryLoading(false);
+    } catch (error) {
+      console.error('Error obteniendo el historial:', error);
+      setHistoryError('Error obteniendo el historial');
+      setHistoryLoading(false);
+    }
+  };
+
+  const handleOpenHistoryModal = async () => {
+    await fetchAllRecordsHistory();
+    setShowHistoryModal(true);
+  };
+
+  const handleCloseHistoryModal = () => {
+    setShowHistoryModal(false);
+  };
 
   return (
     <div>
@@ -472,6 +559,92 @@ export default function EjecucionTab({ id }) {
             </tbody>
           </table>
         </div>
+      )}
+
+      {/* Modal de Historial de Cambios */}
+      {showHistoryModal && (
+        <div
+          className="modal fade show"
+          style={{ display: 'block' }}
+          tabIndex="-1"
+          role="dialog"
+        >
+          <div className="modal-dialog modal-lg" role="document" style={{ maxWidth: '90%' }}>
+            <div
+              className="modal-content"
+              style={{ maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}
+            >
+              <div className="modal-header">
+                <h5 className="modal-title">Historial de Cambios</h5>
+                <button
+                  type="button"
+                  className="close"
+                  onClick={handleCloseHistoryModal}
+                >
+                  <span>&times;</span>
+                </button>
+              </div>
+              <div className="modal-body" style={{ overflowY: 'auto' }}>
+                {historyError && (
+                  <div className="alert alert-danger">{historyError}</div>
+                )}
+                {historyLoading ? (
+                  <div>Cargando historial...</div>
+                ) : history.length > 0 ? (
+                  <div
+                    className="table-responsive"
+                    style={{ maxHeight: '400px', overflowY: 'auto' }}
+                  >
+                    <table className="table table-striped table-bordered table-sm">
+                      <thead className="thead-light">
+                        <tr>
+                          <th>ID Usuario</th>
+                          <th>Usuario</th>
+                          <th>Fecha del Cambio</th>
+                          <th>Tipo de Cambio</th>
+                          <th>Campo</th>
+                          <th>Valor Antiguo</th>
+                          <th>Valor Nuevo</th>
+                          <th>Descripción</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {history.map((item) => (
+                          <tr key={item.id}>
+                            <td>{item.user_id}</td>
+                            <td>{item.username || 'Usuario'}</td>
+                            <td>{new Date(item.created_at).toLocaleString()}</td>
+                            <td>{item.change_type}</td>
+                            <td>{item.field_name || '-'}</td>
+                            <td>{item.old_value || '-'}</td>
+                            <td>{item.new_value || '-'}</td>
+                            <td>{item.description || '-'}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <p className="mt-3">No hay historial de cambios.</p>
+                )}
+              </div>
+              <div className="modal-footer">
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={handleCloseHistoryModal}
+                >
+                  Cerrar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Backdrop del Modal */}
+      {showHistoryModal && (
+        <div className="modal-backdrop fade show"></div>
       )}
     </div>
   );
