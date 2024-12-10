@@ -125,7 +125,7 @@ export default function FormulacionTab({ id }) {
         return;
       }
 
-      const userId = localStorage.getItem('id'); // Para historial
+      const userId = localStorage.getItem('id'); 
       const requestData = {
         caracterizacion_id: id,
         "Rubro": Rubro,
@@ -208,12 +208,14 @@ export default function FormulacionTab({ id }) {
     if (window.confirm('¿Estás seguro de que deseas eliminar este archivo?')) {
       try {
         const token = localStorage.getItem('token');
+        const userId = localStorage.getItem('id');
         await axios.delete(
           `https://impulso-local-back.onrender.com/api/inscriptions/tables/pi_formulacion/record/${id}/file/${fileId}`,
           {
             headers: {
               Authorization: `Bearer ${token}`,
             },
+            data: { user_id: userId } // Enviamos user_id en DELETE
           }
         );
 
@@ -229,8 +231,12 @@ export default function FormulacionTab({ id }) {
     if (window.confirm('¿Estás seguro de que deseas eliminar este registro?')) {
       try {
         const token = localStorage.getItem('token');
+        const userId = localStorage.getItem('id');
+        // Para eliminar un registro, podemos enviar user_id en la query o en data si el backend lo soporta.
+        // Suponemos que el backend ya hace insertHistory al eliminar el registro.
+        // Si hace falta user_id, se puede enviar por query param: `?user_id=${userId}`
         await axios.delete(
-          `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/pi_formulacion/record/${formulacion_id}`,
+          `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/pi_formulacion/record/${formulacion_id}?user_id=${userId}`,
           {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -337,7 +343,7 @@ export default function FormulacionTab({ id }) {
     try {
       const token = localStorage.getItem('token');
 
-      // Obtener historial de todos los registros y combinarlos
+      // Obtener historial de todos los registros y combinarlo
       const historyPromises = records.map((rec) =>
         axios.get(
           `https://impulso-local-back.onrender.com/api/inscriptions/tables/pi_formulacion/record/${rec.id}/history`,
@@ -356,7 +362,6 @@ export default function FormulacionTab({ id }) {
         }
       });
 
-      // Ordenar el historial por fecha
       combinedHistory.sort(
         (a, b) => new Date(b.created_at) - new Date(a.created_at)
       );
