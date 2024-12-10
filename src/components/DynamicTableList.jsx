@@ -107,15 +107,13 @@ export default function DynamicTableList() {
 
       let filteredRecords = recordsResponse.data;
 
-      // Filtrar los registros según el rol y el usuario
+      // Filtrar los registros si el rol es 4, mostrando solo aquellos donde el campo 'Asesor' coincida con el userId
       if (tableName === 'inscription_caracterizacion') {
-        if (!['1', '3', '4', '5'].includes(loggedUserRoleId) && loggedUserId) {
-          // Usuario NO es SuperAdmin (1), ni rol 3, ni rol 4, ni rol 5, y está logueado
+        if (loggedUserRoleId === '4' && loggedUserId) {
           filteredRecords = filteredRecords.filter(
             (record) => String(record.Asesor) === String(loggedUserId)
           );
         }
-        // Si el usuario es SuperAdmin (1), rol 3, rol 4 o rol 5, no se aplica el filtro y se muestran todos los registros
       }
 
       // Ordenar los registros por 'id' en orden ascendente
@@ -720,6 +718,7 @@ export default function DynamicTableList() {
     </div>
   );
 }
+
 
 
 
