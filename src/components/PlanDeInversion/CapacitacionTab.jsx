@@ -24,6 +24,12 @@ export default function CapacitacionTab({ id }) {
   const [loading, setLoading] = useState(true);
   const totalQuestions = questions.length;
 
+  // Estados para historial
+  const [history, setHistory] = useState([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyError, setHistoryError] = useState(null);
+  const [showHistoryModal, setShowHistoryModal] = useState(false);
+
   useEffect(() => {
     const fetchRecord = async () => {
       setLoading(true);
@@ -41,7 +47,6 @@ export default function CapacitacionTab({ id }) {
         );
 
         if (!response.data || response.data.length === 0) {
-          // No existe el registro en BD, inicializamos uno en memoria con todos false
           let newRecord = { caracterizacion_id: id };
           questions.forEach((q) => {
             newRecord[q] = false;
@@ -49,22 +54,17 @@ export default function CapacitacionTab({ id }) {
           setRecord(newRecord);
           setRecordId(null);
         } else {
-          // Existe al menos un registro, tomamos el primero
           const existingRecord = response.data[0];
-
-          // Asegurar que todas las preguntas existan, si no, ponerlas en false
           questions.forEach((q) => {
             if (existingRecord[q] === undefined || existingRecord[q] === null) {
               existingRecord[q] = false;
             }
           });
-
           setRecord(existingRecord);
           setRecordId(existingRecord.id);
         }
       } catch (error) {
         console.error("Error obteniendo el registro de capacitación:", error);
-        // Si hay error (ej: 404), creamos uno en memoria sin guardarlo aún
         let newRecord = { caracterizacion_id: id };
         questions.forEach((q) => {
           newRecord[q] = false;
@@ -95,23 +95,25 @@ export default function CapacitacionTab({ id }) {
         return;
       }
 
+      // Agregar user_id para el historial
+      const userId = localStorage.getItem('id');
+      const recordData = { ...record, user_id: userId };
+
       if (recordId) {
         // Actualizar registro existente
         await axios.put(
           `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/pi_capacitacion/record/${recordId}`,
-          record,
+          recordData,
           { headers: { Authorization: `Bearer ${token}` } }
         );
-        // No sobrescribimos el estado con la respuesta, confiamos en el estado local
         alert("Capacitación guardada exitosamente");
       } else {
         // Crear nuevo registro
         const createResponse = await axios.post(
           `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/pi_capacitacion/record`,
-          record,
+          recordData,
           { headers: { Authorization: `Bearer ${token}` } }
         );
-        // Ajustar recordId con el devuelto por el backend
         if (createResponse.data && createResponse.data.id) {
           setRecordId(createResponse.data.id);
         }
@@ -123,13 +125,41 @@ export default function CapacitacionTab({ id }) {
     }
   };
 
+  // Calcular progreso
   if (loading) {
     return <p>Cargando...</p>;
   }
 
-  // Calcular progreso
   const completedCount = questions.reduce((count, q) => count + (record[q] ? 1 : 0), 0);
   const progress = ((completedCount / totalQuestions) * 100).toFixed(2);
+
+  // Función para obtener el historial del registro actual
+  const fetchHistory = async () => {
+    if (!recordId) return;
+    setHistoryLoading(true);
+    setHistoryError(null);
+    try {
+      const token = localStorage.getItem('token');
+      const historyResponse = await axios.get(
+        `https://impulso-local-back.onrender.com/api/inscriptions/tables/pi_capacitacion/record/${recordId}/history`,
+        {
+          headers: { Authorization: `Bearer ${token}` }
+        }
+      );
+
+      setHistory(historyResponse.data.history || []);
+      setHistoryLoading(false);
+    } catch (error) {
+      console.error('Error obteniendo el historial:', error);
+      setHistoryError('Error obteniendo el historial');
+      setHistoryLoading(false);
+    }
+  };
+
+  const handleOpenHistoryModal = async () => {
+    await fetchHistory();
+    setShowHistoryModal(true);
+  };
 
   return (
     <div>
@@ -171,6 +201,98 @@ export default function CapacitacionTab({ id }) {
       <button className="btn btn-primary" onClick={handleSubmit}>
         Guardar
       </button>
+
+      {/* Mostrar botón de historial solo si existe recordId */}
+      {recordId && (
+        <button
+          type="button"
+          className="btn btn-info btn-sm ml-2"
+          onClick={handleOpenHistoryModal}
+        >
+          Ver Historial de Cambios
+        </button>
+      )}
+
+      {showHistoryModal && (
+        <div
+          className="modal fade show"
+          style={{ display: 'block' }}
+          tabIndex="-1"
+          role="dialog"
+        >
+          <div className="modal-dialog modal-lg" role="document" style={{ maxWidth: '90%' }}>
+            <div
+              className="modal-content"
+              style={{ maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}
+            >
+              <div className="modal-header">
+                <h5 className="modal-title">Historial de Cambios</h5>
+                <button
+                  type="button"
+                  className="close"
+                  onClick={() => setShowHistoryModal(false)}
+                >
+                  <span>&times;</span>
+                </button>
+              </div>
+              <div className="modal-body" style={{ overflowY: 'auto' }}>
+                {historyError && (
+                  <div className="alert alert-danger">{historyError}</div>
+                )}
+                {historyLoading ? (
+                  <div>Cargando historial...</div>
+                ) : history.length > 0 ? (
+                  <div
+                    className="table-responsive"
+                    style={{ maxHeight: '400px', overflowY: 'auto' }}
+                  >
+                    <table className="table table-striped table-bordered table-sm">
+                      <thead className="thead-light">
+                        <tr>
+                          <th>ID Usuario</th>
+                          <th>Usuario</th>
+                          <th>Fecha del Cambio</th>
+                          <th>Tipo de Cambio</th>
+                          <th>Campo</th>
+                          <th>Valor Antiguo</th>
+                          <th>Valor Nuevo</th>
+                          <th>Descripción</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {history.map((item) => (
+                          <tr key={item.id}>
+                            <td>{item.user_id}</td>
+                            <td>{item.username}</td>
+                            <td>{new Date(item.created_at).toLocaleString()}</td>
+                            <td>{item.change_type}</td>
+                            <td>{item.field_name || '-'}</td>
+                            <td>{item.old_value || '-'}</td>
+                            <td>{item.new_value || '-'}</td>
+                            <td>{item.description || '-'}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <p className="mt-3">No hay historial de cambios.</p>
+                )}
+              </div>
+              <div className="modal-footer">
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => setShowHistoryModal(false)}
+                >
+                  Cerrar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {showHistoryModal && <div className="modal-backdrop fade show"></div>}
     </div>
   );
 }
@@ -178,4 +300,5 @@ export default function CapacitacionTab({ id }) {
 CapacitacionTab.propTypes = {
   id: PropTypes.string.isRequired,
 };
+
 
