@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
 import PropTypes from "prop-types";
 import axios from "axios";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 export default function EncuestaSalidaTab({ id }) {
   const initialQuestions = [
@@ -230,6 +232,8 @@ export default function EncuestaSalidaTab({ id }) {
   const [historyError, setHistoryError] = useState(null);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
 
+  const [caracterizacionData, setCaracterizacionData] = useState({});
+
   useEffect(() => {
     const fetchExistingRecords = async () => {
       setLoadingState(true);
@@ -241,6 +245,7 @@ export default function EncuestaSalidaTab({ id }) {
           return;
         }
 
+        // Obtener registros existentes de la encuesta
         const response = await axios.get(
           `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/pi_encuesta_salida/records?caracterizacion_id=${id}`,
           { headers: { Authorization: `Bearer ${token}` } }
@@ -251,9 +256,7 @@ export default function EncuestaSalidaTab({ id }) {
           const comp = rec.componente ? rec.componente.trim() : "";
           const preg = rec.pregunta ? rec.pregunta.trim() : "";
           const resp = rec.respuesta ? rec.respuesta.trim() : "";
-          const key = resp
-            ? comp + "|" + preg + "|" + resp
-            : comp + "|" + preg;
+          const key = resp ? comp + "|" + preg + "|" + resp : comp + "|" + preg;
           newMap[key] = {
             respuesta: resp,
             seleccion: rec.seleccion,
@@ -262,6 +265,15 @@ export default function EncuestaSalidaTab({ id }) {
         });
 
         setRecordsMap(newMap);
+
+        // Obtener datos de la caracterización
+        const carResponse = await axios.get(
+          `https://impulso-local-back.onrender.com/api/inscriptions/caracterizacion/${id}`, 
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+
+        setCaracterizacionData(carResponse.data);
+
       } catch (error) {
         console.error("Error obteniendo registros existentes:", error);
       } finally {
@@ -312,7 +324,6 @@ export default function EncuestaSalidaTab({ id }) {
       for (const section of initialQuestions) {
         for (const q of section.questions) {
           if (q.options && q.options.length > 0) {
-            // Para cada opción, crear/actualizar registro
             for (const opt of q.options) {
               const key = section.component + "|" + q.text + "|" + opt.label;
               const rec = recordsMap[key] || { respuesta: opt.label, seleccion: false };
@@ -347,7 +358,6 @@ export default function EncuestaSalidaTab({ id }) {
               }
             }
 
-            // Manejo del campo abierto si la respuesta es "No"
             if (q.openEndedIfNo) {
               const noOption = q.options.find(o => o.label.toLowerCase() === 'no');
               if (noOption) {
@@ -389,7 +399,6 @@ export default function EncuestaSalidaTab({ id }) {
             }
 
           } else if (q.openEnded) {
-            // Pregunta abierta
             const key = section.component + "|" + q.text;
             const rec = recordsMap[key] || { respuesta: "", seleccion: false };
             const requestData = {
@@ -482,6 +491,104 @@ export default function EncuestaSalidaTab({ id }) {
 
   const handleSave = async () => {
     await handleSubmit();
+  };
+
+  const handleGeneratePDF = () => {
+    const doc = new jsPDF();
+
+    // Datos del caracterizacion
+    const c = caracterizacionData;
+
+    // Tabla superior con datos del emprendimiento
+    const infoData = [
+      ["Nombre del emprendimiento", c["Nombre del emprendimiento"] || ""],
+      ["Tipo de documento", c["Tipo de identificacion"] || ""],
+      ["Documento de identidad", c["Numero de identificacion"] || ""],
+      ["Dirección del emprendimiento", c["Direccion de la unidad de negocio"] || ""],
+      ["Localidad donde se encuentra ubicado la microempresa", c["Localidad de la unidad de negocio"] || ""],
+      ["Actividad económica", ""],
+      ["Valor entregado como capitalización", ""],
+      ["Fecha de diligenciamiento", ""]
+    ];
+    autoTable(doc, { startY: 10, body: infoData, theme: 'grid', styles: { fontSize: 8 } });
+
+    // Encuesta (mostramos solo las opciones seleccionadas y las abiertas con su respuesta)
+    let startY = doc.lastAutoTable.finalY + 10;
+    doc.text("Encuesta de Salida y Satisfacción", 14, startY);
+    startY += 5;
+
+    for (const section of initialQuestions) {
+      doc.text(section.component, 14, startY);
+      startY += 5;
+
+      for (const q of section.questions) {
+        doc.setFontSize(9);
+        doc.text(q.text, 14, startY);
+        startY += 5;
+
+        if (q.options && q.options.length > 0) {
+          // Opciones
+          for (const opt of q.options) {
+            const key = section.component + "|" + q.text + "|" + opt.label;
+            const rec = recordsMap[key];
+            if (rec && (rec.seleccion || opt.openEnded)) {
+              let line = opt.label;
+              if (opt.openEnded && rec.respuesta && rec.respuesta !== opt.label) {
+                line += ": " + rec.respuesta;
+              }
+              doc.text("- " + line, 20, startY);
+              startY += 5;
+            }
+          }
+
+          // Campo adicional si es openEndedIfNo
+          if (q.openEndedIfNo) {
+            const noOption = q.options.find(o => o.label.toLowerCase() === 'no');
+            if (noOption) {
+              const noKey = section.component + "|" + q.text + "|" + noOption.label;
+              const noRec = recordsMap[noKey];
+              if (noRec && noRec.seleccion) {
+                const openKey = section.component + "|" + q.text + "|RazónNo";
+                const openRec = recordsMap[openKey];
+                if (openRec && openRec.respuesta) {
+                  doc.text("- Razón No: " + openRec.respuesta, 20, startY);
+                  startY += 5;
+                }
+              }
+            }
+          }
+        } else if (q.openEnded) {
+          const key = section.component + "|" + q.text;
+          const rec = recordsMap[key];
+          doc.text("- " + (rec?.respuesta || ""), 20, startY);
+          startY += 5;
+        }
+
+        startY += 2;
+      }
+      startY += 5;
+    }
+
+    // Datos finales
+    doc.addPage();
+    doc.text("Datos finales:", 14, 10);
+    const finalData1 = [
+      ["Nombre del Empresario:", (c["Nombres"] || "") + " " + (c["Apellidos"] || "")],
+      ["Nombre del Micronegocio:", c["Nombre del emprendimiento"] || ""],
+      ["Documento de identidad:", c["Numero de identificacion"] || ""],
+      ["Firma:", ""]
+    ];
+    autoTable(doc, { startY: 15, body: finalData1, theme: 'grid', styles: { fontSize: 8 } });
+
+    const finalData2 = [
+      ["Nombre del Aliado:", ""],
+      ["Nombre del Asesor empresarial:", ""],
+      ["Documento de identidad:", ""],
+      ["Firma:", ""]
+    ];
+    autoTable(doc, { startY: doc.lastAutoTable.finalY + 10, body: finalData2, theme: 'grid', styles: { fontSize: 8 } });
+
+    doc.save("EncuestaSalida.pdf");
   };
 
   return (
@@ -600,8 +707,11 @@ export default function EncuestaSalidaTab({ id }) {
                   Ver Historial de Cambios
                 </button>
               )}
-              <button className="btn btn-primary btn-sm" onClick={handleSave}>
+              <button className="btn btn-primary btn-sm me-2" onClick={handleSave}>
                 Guardar
+              </button>
+              <button className="btn btn-success btn-sm" onClick={handleGeneratePDF}>
+                Generar PDF
               </button>
             </div>
           </div>
