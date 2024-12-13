@@ -225,7 +225,6 @@ export default function EncuestaSalidaTab({ id }) {
   const [loading, setLoadingState] = useState(true);
   const [error, setErrorState] = useState(null);
 
-  // Estados para historial
   const [history, setHistory] = useState([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyError, setHistoryError] = useState(null);
@@ -249,15 +248,15 @@ export default function EncuestaSalidaTab({ id }) {
 
         const newMap = {};
         response.data.forEach((rec) => {
-          const comp = rec.Componente ? rec.Componente.trim() : "";
-          const preg = rec.Pregunta ? rec.Pregunta.trim() : "";
-          const resp = rec.Respuesta ? rec.Respuesta.trim() : "";
+          const comp = rec.componente ? rec.componente.trim() : "";
+          const preg = rec.pregunta ? rec.pregunta.trim() : "";
+          const resp = rec.respuesta ? rec.respuesta.trim() : "";
           const key = resp
             ? comp + "|" + preg + "|" + resp
             : comp + "|" + preg;
           newMap[key] = {
             respuesta: resp,
-            seleccion: rec.Seleccion,
+            seleccion: rec.seleccion,
             record_id: rec.id
           };
         });
@@ -313,21 +312,20 @@ export default function EncuestaSalidaTab({ id }) {
       for (const section of initialQuestions) {
         for (const q of section.questions) {
           if (q.options && q.options.length > 0) {
-            // Para cada opción creamos/actualizamos un registro
+            // Para cada opción, crear/actualizar registro
             for (const opt of q.options) {
               const key = section.component + "|" + q.text + "|" + opt.label;
               const rec = recordsMap[key] || { respuesta: opt.label, seleccion: false };
               const requestData = {
                 caracterizacion_id: id,
-                Componente: section.component,
-                Pregunta: q.text,
-                Respuesta: rec.respuesta || opt.label || "", // si openEnded y se editó, rec.respuesta, sino opt.label
-                Seleccion: rec.seleccion === true,
+                componente: section.component,
+                pregunta: q.text,
+                respuesta: rec.respuesta || opt.label || "",
+                seleccion: rec.seleccion === true,
                 user_id: userId
               };
 
               if (rec.record_id) {
-                // Actualizar
                 const updatePromise = axios.put(
                   `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/pi_encuesta_salida/record/${rec.record_id}`,
                   requestData,
@@ -335,10 +333,6 @@ export default function EncuestaSalidaTab({ id }) {
                 );
                 requests.push(updatePromise);
               } else {
-                // Crear solo si al menos Seleccion = true o (openEnded con texto)
-                // Realmente, se deben crear todos los registros para todas las opciones,
-                // pero si no se quiere crear registros para opciones no seleccionadas, podría omitirse.
-                // Aquí crearemos todos para mantener consistencia.
                 const createPromise = axios.post(
                   `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/pi_encuesta_salida/record`,
                   requestData,
@@ -353,23 +347,21 @@ export default function EncuestaSalidaTab({ id }) {
               }
             }
 
-            // Si tiene openEndedIfNo, manejar el campo adicional
+            // Manejo del campo abierto si la respuesta es "No"
             if (q.openEndedIfNo) {
-              // Buscar respuesta "No"
-              const noOption = q.options.find(o => o.label.toLowerCase() === "no");
+              const noOption = q.options.find(o => o.label.toLowerCase() === 'no');
               if (noOption) {
                 const noKey = section.component + "|" + q.text + "|" + noOption.label;
                 const noRec = recordsMap[noKey] || {};
                 if (noRec.seleccion) {
-                  // Campo adicional
                   const openKey = section.component + "|" + q.text + "|RazónNo";
                   const openRec = recordsMap[openKey] || { respuesta: "", seleccion: false };
                   const requestData = {
                     caracterizacion_id: id,
-                    Componente: section.component,
-                    Pregunta: q.text + " - RazónNo",
-                    Respuesta: openRec.respuesta || "",
-                    Seleccion: false,
+                    componente: section.component,
+                    pregunta: q.text + " - RazónNo",
+                    respuesta: openRec.respuesta || "",
+                    seleccion: false,
                     user_id: userId
                   };
                   if (openRec.record_id) {
@@ -402,15 +394,14 @@ export default function EncuestaSalidaTab({ id }) {
             const rec = recordsMap[key] || { respuesta: "", seleccion: false };
             const requestData = {
               caracterizacion_id: id,
-              Componente: section.component,
-              Pregunta: q.text,
-              Respuesta: rec.respuesta || "",
-              Seleccion: false,
+              componente: section.component,
+              pregunta: q.text,
+              respuesta: rec.respuesta || "",
+              seleccion: false,
               user_id: userId
             };
 
             if (rec.record_id) {
-              // Actualizar
               const updatePromise = axios.put(
                 `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/pi_encuesta_salida/record/${rec.record_id}`,
                 requestData,
@@ -418,7 +409,6 @@ export default function EncuestaSalidaTab({ id }) {
               );
               requests.push(updatePromise);
             } else {
-              // Crear
               const createPromise = axios.post(
                 `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/pi_encuesta_salida/record`,
                 requestData,
@@ -544,7 +534,6 @@ export default function EncuestaSalidaTab({ id }) {
                           );
                         })}
                         {q.openEndedIfNo && (() => {
-                          // Manejar campo abierto si se responde "No"
                           const noOption = q.options.find(o => o.label.toLowerCase() === 'no');
                           if (noOption) {
                             const noKey = section.component + "|" + q.text + "|" + noOption.label;
