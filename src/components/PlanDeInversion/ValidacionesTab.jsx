@@ -26,7 +26,7 @@ export default function ValidacionesTab({ id }) {
       if (!token) return;
 
       const filesResponse = await axios.get(
-        `https://impulso-local-back.onrender.com/api/inscriptions/tables/${tableName}/record/${caracterizacionId}/files`,
+        `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/${tableName}/record/${caracterizacionId}/files`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -158,11 +158,9 @@ export default function ValidacionesTab({ id }) {
       formData.append('source', 'validaciones');
       formData.append('user_id', userId);
 
-      // Si aún no existe recordId, necesitamos crearlo antes de subir el archivo
-      // pero según la lógica anterior, handleStatusChange o cualquier acción ya debió crearlo.
-      // Si no existe, podríamos crear un registro vacío antes de subir.
       let currentRecordId = recordId;
       if (!currentRecordId) {
+        // Crear el registro si no existe
         const createData = { caracterizacion_id: id, user_id: userId };
         const createResponse = await axios.post(
           `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/${tableName}/record`,
@@ -178,7 +176,7 @@ export default function ValidacionesTab({ id }) {
       }
 
       await axios.post(
-        `https://impulso-local-back.onrender.com/api/inscriptions/tables/${tableName}/record/${currentRecordId}/upload`,
+        `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/${tableName}/record/${currentRecordId}/upload`,
         formData,
         {
           headers: {
@@ -205,7 +203,7 @@ export default function ValidacionesTab({ id }) {
         const token = localStorage.getItem('token');
         const userId = localStorage.getItem('id');
         await axios.delete(
-          `https://impulso-local-back.onrender.com/api/inscriptions/tables/${tableName}/record/${recordId}/file/${fileId}`,
+          `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/${tableName}/record/${recordId}/file/${fileId}`,
           {
             headers: {
               Authorization: `Bearer ${token}`,
