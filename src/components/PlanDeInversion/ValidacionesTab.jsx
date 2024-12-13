@@ -36,7 +36,7 @@ export default function ValidacionesTab({ id }) {
           },
         }
       );
-      setUploadedFiles(filesResponse.data.files);
+      setUploadedFiles(filesResponse.data.files || []);
     } catch (error) {
       console.error('Error obteniendo los archivos:', error);
       setError('Error obteniendo los archivos');
@@ -97,7 +97,6 @@ export default function ValidacionesTab({ id }) {
       const token = localStorage.getItem('token');
       if (!token) return;
 
-      // Agregar user_id para historial
       const userId = localStorage.getItem('id');
       const updatedDataWithUser = { ...updatedData, user_id: userId };
 
@@ -148,14 +147,38 @@ export default function ValidacionesTab({ id }) {
     }
     try {
       const token = localStorage.getItem('token');
+      const userId = localStorage.getItem('id');
+      // Generar un nombre único
+      const uniqueSuffix = Date.now();
+      const fileNameWithUnique = `${fileName}_${uniqueSuffix}`;
       const formData = new FormData();
       formData.append('file', file);
-      formData.append('fileName', fileName);
+      formData.append('fileName', fileNameWithUnique);
       formData.append('caracterizacion_id', id);
       formData.append('source', 'validaciones');
+      formData.append('user_id', userId);
+
+      // Si aún no existe recordId, necesitamos crearlo antes de subir el archivo
+      // pero según la lógica anterior, handleStatusChange o cualquier acción ya debió crearlo.
+      // Si no existe, podríamos crear un registro vacío antes de subir.
+      let currentRecordId = recordId;
+      if (!currentRecordId) {
+        const createData = { caracterizacion_id: id, user_id: userId };
+        const createResponse = await axios.post(
+          `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/${tableName}/record`,
+          createData,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+        currentRecordId = createResponse.data.id;
+        setRecordId(currentRecordId);
+      }
 
       await axios.post(
-        `https://impulso-local-back.onrender.com/api/inscriptions/tables/${tableName}/record/${recordId}/upload`,
+        `https://impulso-local-back.onrender.com/api/inscriptions/tables/${tableName}/record/${currentRecordId}/upload`,
         formData,
         {
           headers: {
@@ -166,6 +189,7 @@ export default function ValidacionesTab({ id }) {
       );
 
       await fetchFiles(id);
+      alert("Archivo subido exitosamente");
       setFile(null);
       setFileName('');
       setShowUploadForm(false);
@@ -179,12 +203,14 @@ export default function ValidacionesTab({ id }) {
     if (window.confirm('¿Estás seguro de que deseas eliminar este archivo?')) {
       try {
         const token = localStorage.getItem('token');
+        const userId = localStorage.getItem('id');
         await axios.delete(
           `https://impulso-local-back.onrender.com/api/inscriptions/tables/${tableName}/record/${recordId}/file/${fileId}`,
           {
             headers: {
               Authorization: `Bearer ${token}`,
             },
+            data: { user_id: userId }
           }
         );
 
@@ -209,7 +235,10 @@ export default function ValidacionesTab({ id }) {
           headers: { Authorization: `Bearer ${token}` }
         }
       );
-      setHistory(historyResponse.data.history || []);
+      const fetchedHistory = historyResponse.data.history || [];
+      // Ordenar historial por fecha descendente
+      fetchedHistory.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+      setHistory(fetchedHistory);
       setHistoryLoading(false);
     } catch (error) {
       console.error('Error obteniendo el historial:', error);
@@ -322,7 +351,11 @@ export default function ValidacionesTab({ id }) {
                 <button
                   type="button"
                   className="btn btn-secondary btn-sm btn-block"
-                  onClick={() => setShowUploadForm(false)}
+                  onClick={() => {
+                    setShowUploadForm(false);
+                    setFile(null);
+                    setFileName('');
+                  }}
                 >
                   Cancelar
                 </button>
@@ -331,16 +364,16 @@ export default function ValidacionesTab({ id }) {
 
             {uploadedFiles.length > 0 ? (
               <ul className="list-group mt-3">
-                {uploadedFiles.map((file) => (
+                {uploadedFiles.map((f) => (
                   <li
-                    key={file.id}
+                    key={f.id}
                     className="list-group-item d-flex justify-content-between align-items-center"
                   >
                     <div>
-                      <strong>{file.name}</strong>
+                      <strong>{f.name}</strong>
                       <br />
                       <a
-                        href={`https://impulso-local-back.onrender.com${file.url}`}
+                        href={`https://impulso-local-back.onrender.com${f.url}`}
                         target="_blank"
                         rel="noopener noreferrer"
                       >
@@ -349,7 +382,7 @@ export default function ValidacionesTab({ id }) {
                     </div>
                     <button
                       className="btn btn-danger btn-sm"
-                      onClick={() => handleFileDelete(file.id)}
+                      onClick={() => handleFileDelete(f.id)}
                     >
                       Eliminar
                     </button>
@@ -361,7 +394,6 @@ export default function ValidacionesTab({ id }) {
             )}
           </div>
 
-          {/* Mostrar botón de historial solo si existe recordId */}
           {recordId && (
             <button
               type="button"
