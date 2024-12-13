@@ -20,23 +20,27 @@ export default function ValidacionesTab({ id }) {
   const [historyError, setHistoryError] = useState(null);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
 
-  const fetchFiles = useCallback(async (caracterizacionId) => {
+  const fetchFiles = useCallback(async (recordIdToUse) => {
+    // Obtener archivos usando recordId
     try {
       const token = localStorage.getItem('token');
       if (!token) return;
 
+      if (!recordIdToUse) {
+        // Si no hay recordId no hay archivos
+        setUploadedFiles([]);
+        return;
+      }
+
+      // Para archivos usamos la ruta sin /pi/
       const filesResponse = await axios.get(
-        `https://impulso-local-back.onrender.com/api/inscriptions/tables/${tableName}/record/${caracterizacionId}/files`,
+        `https://impulso-local-back.onrender.com/api/inscriptions/tables/${tableName}/record/${recordIdToUse}/files`,
         {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-          params: {
-            source: 'validaciones',
-          },
+          headers: { Authorization: `Bearer ${token}` },
+          params: { source: 'validaciones' },
         }
       );
-      setUploadedFiles(filesResponse.data.files);
+      setUploadedFiles(filesResponse.data.files || []);
     } catch (error) {
       console.error('Error obteniendo los archivos:', error);
       setError('Error obteniendo los archivos');
@@ -48,24 +52,25 @@ export default function ValidacionesTab({ id }) {
       setLoading(true);
       try {
         const token = localStorage.getItem('token');
-        if (!token) return;
+        if (!token) {
+          setLoading(false);
+          return;
+        }
 
+        // Obtener campos
         const fieldsResponse = await axios.get(
           `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/${tableName}/fields`,
           {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
+            headers: { Authorization: `Bearer ${token}` },
           }
         );
         setFields(fieldsResponse.data);
 
+        // Obtener registro pi_validaciones filtrando por caracterizacion_id
         const recordsResponse = await axios.get(
           `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/${tableName}/records?caracterizacion_id=${id}`,
           {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
+            headers: { Authorization: `Bearer ${token}` },
           }
         );
 
@@ -73,8 +78,9 @@ export default function ValidacionesTab({ id }) {
           const existingRecord = recordsResponse.data[0];
           setData(existingRecord);
           setRecordId(existingRecord.id);
-          await fetchFiles(id);
+          await fetchFiles(existingRecord.id);
         } else {
+          // No hay registro, no hay archivos
           setUploadedFiles([]);
         }
 
@@ -97,18 +103,16 @@ export default function ValidacionesTab({ id }) {
       const token = localStorage.getItem('token');
       if (!token) return;
 
-      // Agregar user_id para historial
       const userId = localStorage.getItem('id');
       const updatedDataWithUser = { ...updatedData, user_id: userId };
 
+      // Guardar cambios del registro
       if (recordId) {
         await axios.put(
           `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/${tableName}/record/${recordId}`,
           updatedDataWithUser,
           {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
+            headers: { Authorization: `Bearer ${token}` },
           }
         );
         alert('Validación actualizada exitosamente');
@@ -117,13 +121,11 @@ export default function ValidacionesTab({ id }) {
           `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/${tableName}/record`,
           updatedDataWithUser,
           {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
+            headers: { Authorization: `Bearer ${token}` },
           }
         );
         setRecordId(createResponse.data.id);
-        await fetchFiles(id);
+        await fetchFiles(createResponse.data.id);
         alert('Validación creada exitosamente');
       }
     } catch (error) {
@@ -146,16 +148,38 @@ export default function ValidacionesTab({ id }) {
       alert('Por favor, ingresa un nombre y selecciona un archivo');
       return;
     }
+
     try {
       const token = localStorage.getItem('token');
+      const userId = localStorage.getItem('id');
+      const uniqueSuffix = Date.now();
+      const fileNameWithUnique = `${fileName}_${uniqueSuffix}`;
+
       const formData = new FormData();
       formData.append('file', file);
-      formData.append('fileName', fileName);
+      formData.append('fileName', fileNameWithUnique);
       formData.append('caracterizacion_id', id);
       formData.append('source', 'validaciones');
+      formData.append('user_id', userId);
 
+      let currentRecordId = recordId;
+      if (!currentRecordId) {
+        // Crear registro si no existe
+        const createData = { caracterizacion_id: id, user_id: userId };
+        const createResponse = await axios.post(
+          `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/${tableName}/record`,
+          createData,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
+        currentRecordId = createResponse.data.id;
+        setRecordId(currentRecordId);
+      }
+
+      // Subir archivo usando recordId y la ruta sin pi para archivos
       await axios.post(
-        `https://impulso-local-back.onrender.com/api/inscriptions/tables/${tableName}/record/${recordId}/upload`,
+        `https://impulso-local-back.onrender.com/api/inscriptions/tables/${tableName}/record/${currentRecordId}/upload`,
         formData,
         {
           headers: {
@@ -165,7 +189,8 @@ export default function ValidacionesTab({ id }) {
         }
       );
 
-      await fetchFiles(id);
+      await fetchFiles(currentRecordId);
+      alert("Archivo subido exitosamente");
       setFile(null);
       setFileName('');
       setShowUploadForm(false);
@@ -175,20 +200,27 @@ export default function ValidacionesTab({ id }) {
     }
   };
 
+  // Lógica de eliminación de archivos, enviando user_id en el body
   const handleFileDelete = async (fileId) => {
+    if (!recordId) {
+      alert('No hay registro asociado para eliminar el archivo.');
+      return;
+    }
+
     if (window.confirm('¿Estás seguro de que deseas eliminar este archivo?')) {
       try {
         const token = localStorage.getItem('token');
+        const userId = localStorage.getItem('id');
+
         await axios.delete(
           `https://impulso-local-back.onrender.com/api/inscriptions/tables/${tableName}/record/${recordId}/file/${fileId}`,
           {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
+            headers: { Authorization: `Bearer ${token}` },
+            data: { user_id: userId } // Enviar user_id en el body
           }
         );
 
-        await fetchFiles(id);
+        await fetchFiles(recordId);
       } catch (error) {
         console.error('Error eliminando el archivo:', error);
         setError('Error eliminando el archivo');
@@ -196,7 +228,6 @@ export default function ValidacionesTab({ id }) {
     }
   };
 
-  // Función para obtener el historial del registro actual
   const fetchHistory = async () => {
     if (!recordId) return;
     setHistoryLoading(true);
@@ -209,7 +240,9 @@ export default function ValidacionesTab({ id }) {
           headers: { Authorization: `Bearer ${token}` }
         }
       );
-      setHistory(historyResponse.data.history || []);
+      const fetchedHistory = historyResponse.data.history || [];
+      fetchedHistory.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+      setHistory(fetchedHistory);
       setHistoryLoading(false);
     } catch (error) {
       console.error('Error obteniendo el historial:', error);
@@ -322,7 +355,11 @@ export default function ValidacionesTab({ id }) {
                 <button
                   type="button"
                   className="btn btn-secondary btn-sm btn-block"
-                  onClick={() => setShowUploadForm(false)}
+                  onClick={() => {
+                    setShowUploadForm(false);
+                    setFile(null);
+                    setFileName('');
+                  }}
                 >
                   Cancelar
                 </button>
@@ -331,16 +368,16 @@ export default function ValidacionesTab({ id }) {
 
             {uploadedFiles.length > 0 ? (
               <ul className="list-group mt-3">
-                {uploadedFiles.map((file) => (
+                {uploadedFiles.map((f) => (
                   <li
-                    key={file.id}
+                    key={f.id}
                     className="list-group-item d-flex justify-content-between align-items-center"
                   >
                     <div>
-                      <strong>{file.name}</strong>
+                      <strong>{f.name}</strong>
                       <br />
                       <a
-                        href={`https://impulso-local-back.onrender.com${file.url}`}
+                        href={`https://impulso-local-back.onrender.com${f.url}`}
                         target="_blank"
                         rel="noopener noreferrer"
                       >
@@ -349,7 +386,7 @@ export default function ValidacionesTab({ id }) {
                     </div>
                     <button
                       className="btn btn-danger btn-sm"
-                      onClick={() => handleFileDelete(file.id)}
+                      onClick={() => handleFileDelete(f.id)}
                     >
                       Eliminar
                     </button>
@@ -361,7 +398,6 @@ export default function ValidacionesTab({ id }) {
             )}
           </div>
 
-          {/* Mostrar botón de historial solo si existe recordId */}
           {recordId && (
             <button
               type="button"
@@ -453,6 +489,7 @@ export default function ValidacionesTab({ id }) {
           </div>
         </div>
       )}
+
       {showHistoryModal && <div className="modal-backdrop fade show"></div>}
     </div>
   );
