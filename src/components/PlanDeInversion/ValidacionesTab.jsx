@@ -21,13 +21,11 @@ export default function ValidacionesTab({ id }) {
   const [showHistoryModal, setShowHistoryModal] = useState(false);
 
   const fetchFiles = useCallback(async (recordIdToUse) => {
-    // Este fetch debe usar el recordId del registro en pi_validaciones, no el caracterizacion_id
     try {
       const token = localStorage.getItem('token');
       if (!token) return;
 
       if (!recordIdToUse) {
-        // Si no hay recordId no podemos obtener archivos
         setUploadedFiles([]);
         return;
       }
@@ -83,7 +81,7 @@ export default function ValidacionesTab({ id }) {
           const existingRecord = recordsResponse.data[0];
           setData(existingRecord);
           setRecordId(existingRecord.id);
-          await fetchFiles(existingRecord.id); // Usamos el recordId real del registro
+          await fetchFiles(existingRecord.id);
         } else {
           setUploadedFiles([]);
         }
@@ -158,7 +156,6 @@ export default function ValidacionesTab({ id }) {
     try {
       const token = localStorage.getItem('token');
       const userId = localStorage.getItem('id');
-      // Generar un nombre único
       const uniqueSuffix = Date.now();
       const fileNameWithUnique = `${fileName}_${uniqueSuffix}`;
       const formData = new FormData();
@@ -207,6 +204,8 @@ export default function ValidacionesTab({ id }) {
     }
   };
 
+  // Replicamos la lógica de eliminación de archivos:
+  // Se envía user_id en el body y se refresca la lista de archivos luego de eliminar.
   const handleFileDelete = async (fileId) => {
     if (window.confirm('¿Estás seguro de que deseas eliminar este archivo?')) {
       try {
@@ -230,7 +229,6 @@ export default function ValidacionesTab({ id }) {
     }
   };
 
-  // Función para obtener el historial del registro actual
   const fetchHistory = async () => {
     if (!recordId) return;
     setHistoryLoading(true);
@@ -244,7 +242,6 @@ export default function ValidacionesTab({ id }) {
         }
       );
       const fetchedHistory = historyResponse.data.history || [];
-      // Ordenar historial por fecha descendente
       fetchedHistory.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
       setHistory(fetchedHistory);
       setHistoryLoading(false);
