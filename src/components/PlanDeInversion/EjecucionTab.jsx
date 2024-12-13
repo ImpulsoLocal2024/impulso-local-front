@@ -102,6 +102,7 @@ export default function EjecucionTab({ id }) {
   const handleSubmit = async () => {
     try {
       const token = localStorage.getItem("token");
+      const userId = localStorage.getItem('id');
       if (!token) {
         alert("No se encontró el token de autenticación");
         return;
@@ -121,6 +122,7 @@ export default function EjecucionTab({ id }) {
         "Descripción": Descripción || "",
         "Cantidad": parseInt(Cantidad, 10) || 0,
         "Valor Unitario": parseFloat(ValorUnitario) || 0,
+        user_id: userId
       };
 
       await axios.post(
@@ -162,11 +164,13 @@ export default function EjecucionTab({ id }) {
     }
     try {
       const token = localStorage.getItem('token');
+      const userId = localStorage.getItem('id');
       const fileNameWithEjecucion = `${fileName}_ejecucion_${uploadingRecordId}`;
       const formData = new FormData();
       formData.append('file', file);
       formData.append('fileName', fileNameWithEjecucion);
       formData.append('caracterizacion_id', id);
+      formData.append('user_id', userId);
 
       await axios.post(
         `https://impulso-local-back.onrender.com/api/inscriptions/tables/pi_ejecucion/record/${id}/upload`,
@@ -193,8 +197,9 @@ export default function EjecucionTab({ id }) {
     if (window.confirm('¿Estás seguro de que deseas eliminar este archivo?')) {
       try {
         const token = localStorage.getItem('token');
+        const userId = localStorage.getItem('id');
         await axios.delete(
-          `https://impulso-local-back.onrender.com/api/inscriptions/tables/pi_ejecucion/record/${id}/file/${fileId}`,
+          `https://impulso-local-back.onrender.com/api/inscriptions/tables/pi_ejecucion/record/${id}/file/${fileId}?user_id=${userId}`,
           {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -214,8 +219,9 @@ export default function EjecucionTab({ id }) {
     if (window.confirm('¿Estás seguro de que deseas eliminar este registro?')) {
       try {
         const token = localStorage.getItem('token');
+        const userId = localStorage.getItem('id');
         await axios.delete(
-          `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/pi_ejecucion/record/${ejecucion_id}`,
+          `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/pi_ejecucion/record/${ejecucion_id}?user_id=${userId}`,
           {
             headers: { Authorization: `Bearer ${token}` },
           }
