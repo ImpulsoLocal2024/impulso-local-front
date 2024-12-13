@@ -16,9 +16,11 @@ export default function InfoBancariaTab({ id }) {
   const [error, setError] = useState(null);
   const [originalData, setOriginalData] = useState(null);
 
+  // Ahora utilizamos un array para los archivos subidos
+  const [uploadedFiles, setUploadedFiles] = useState([]);
+
   const [file, setFile] = useState(null);
   const [fileName, setFileName] = useState("");
-  const [uploadedFile, setUploadedFile] = useState(null); // para el archivo ya subido
 
   const bancos = [
     "BANCAMIA",
@@ -71,7 +73,7 @@ export default function InfoBancariaTab({ id }) {
   const [historyError, setHistoryError] = useState(null);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
 
-  const fetchAllRecordsFiles = async (fetchedRecords) => {
+  const fetchFilesFromBackend = async () => {
     const token = localStorage.getItem('token');
     if (!token) return;
 
@@ -85,9 +87,9 @@ export default function InfoBancariaTab({ id }) {
     );
 
     const allFiles = filesResponse.data.files || [];
-
-    const infoFile = allFiles.find(f => f.name.includes('info_bancaria_')) || null;
-    setUploadedFile(infoFile);
+    // Filtrar todos los archivos con el prefijo info_bancaria_
+    const filteredFiles = allFiles.filter(f => f.name.includes('info_bancaria_'));
+    setUploadedFiles(filteredFiles);
   };
 
   const fetchRecords = async () => {
@@ -144,7 +146,7 @@ export default function InfoBancariaTab({ id }) {
       }
 
       // Obtener archivos asociados
-      await fetchAllRecordsFiles(response.data || []);
+      await fetchFilesFromBackend();
 
       setLoading(false);
     } catch (err) {
@@ -227,13 +229,14 @@ export default function InfoBancariaTab({ id }) {
     try {
       const token = localStorage.getItem('token');
       const userId = localStorage.getItem('id'); // Obtener el user_id del localStorage
-      // Agregamos el prefijo 'info_bancaria_' al nombre
-      const fileNameWithPrefix = `info_bancaria_${fileName}`;
+      // Generar un nombre único para evitar sobrescritura
+      const uniqueSuffix = Date.now();
+      const fileNameWithPrefix = `info_bancaria_${fileName}_${uniqueSuffix}`;
       const formData = new FormData();
       formData.append('file', file);
       formData.append('fileName', fileNameWithPrefix);
       formData.append('caracterizacion_id', id);
-      formData.append('user_id', userId); // Enviar user_id al backend
+      formData.append('user_id', userId);
 
       await axios.post(
         `https://impulso-local-back.onrender.com/api/inscriptions/tables/pi_informacion_bancaria/record/${id}/upload`,
@@ -247,12 +250,36 @@ export default function InfoBancariaTab({ id }) {
       );
 
       alert("Archivo subido exitosamente");
-      await fetchRecords();
+      await fetchFilesFromBackend();
       setFile(null);
       setFileName("");
     } catch (error) {
       console.error('Error subiendo el archivo:', error);
       setError('Error subiendo el archivo');
+    }
+  };
+
+  const handleFileDelete = async (fileId) => {
+    if (window.confirm('¿Estás seguro de que deseas eliminar este archivo?')) {
+      try {
+        const token = localStorage.getItem('token');
+        const userId = localStorage.getItem('id');
+
+        await axios.delete(
+          `https://impulso-local-back.onrender.com/api/inscriptions/tables/pi_informacion_bancaria/record/${id}/file/${fileId}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+            data: { user_id: userId } // Enviar user_id en el body
+          }
+        );
+
+        await fetchFilesFromBackend();
+      } catch (error) {
+        console.error('Error eliminando el archivo:', error);
+        setError('Error eliminando el archivo');
+      }
     }
   };
 
@@ -389,20 +416,36 @@ export default function InfoBancariaTab({ id }) {
             </div>
 
             <div className="mb-2">
-              <label><strong>Adjuntar archivo</strong></label><br/>
-              {uploadedFile ? (
-                <div className="mb-2">
-                  <a
-                    href={`https://impulso-local-back.onrender.com${uploadedFile.url}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{ marginRight: '10px' }}
-                  >
-                    Ver archivo
-                  </a>
-                </div>
+              <label><strong>Archivos Adjuntos</strong></label><br/>
+              {uploadedFiles && uploadedFiles.length > 0 ? (
+                <ul className="list-group mb-2">
+                  {uploadedFiles.map((f) => (
+                    <li
+                      key={f.id}
+                      className="list-group-item d-flex justify-content-between align-items-center"
+                    >
+                      <div>
+                        <strong>{f.name}</strong>
+                        <br />
+                        <a
+                          href={`https://impulso-local-back.onrender.com${f.url}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          Ver archivo
+                        </a>
+                      </div>
+                      <button
+                        className="btn btn-danger btn-sm"
+                        onClick={() => handleFileDelete(f.id)}
+                      >
+                        Eliminar archivo
+                      </button>
+                    </li>
+                  ))}
+                </ul>
               ) : (
-                <p className="mb-2">No hay archivo adjunto</p>
+                <p className="mb-2">No hay archivos adjuntos</p>
               )}
 
               {file ? (
@@ -544,7 +587,6 @@ export default function InfoBancariaTab({ id }) {
         </div>
       )}
 
-      {/* Backdrop del Modal */}
       {(showHistoryModal) && (
         <div className="modal-backdrop fade show"></div>
       )}
