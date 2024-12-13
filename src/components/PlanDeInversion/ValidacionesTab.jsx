@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import axios from 'axios';
 
@@ -7,7 +7,7 @@ export default function ValidacionesTab({ id }) {
   const [data, setData] = useState({});
   const [tableName] = useState('pi_validaciones');
   const [loading, setLoading] = useState(false);
-  const [recordId, setRecordId] = useState(null);
+  const [recordId, setRecordId] = useState(null); // Seguimos guardando el recordId, por si es necesario
   const [error, setError] = useState(null);
   const [file, setFile] = useState(null);
   const [fileName, setFileName] = useState('');
@@ -20,112 +20,104 @@ export default function ValidacionesTab({ id }) {
   const [historyError, setHistoryError] = useState(null);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
 
-  const fetchFiles = useCallback(async (recordIdToUse) => {
-    // Obtener archivos usando recordId
+  const fetchFilesFromBackend = async () => {
     try {
       const token = localStorage.getItem('token');
       if (!token) return;
 
-      if (!recordIdToUse) {
-        // Si no hay recordId no hay archivos
-        setUploadedFiles([]);
-        return;
-      }
-
-      // Para archivos usamos la ruta sin /pi/
+      // Aquí usamos el caracterizacion_id (id), igual que en AnexosTab
       const filesResponse = await axios.get(
-        `https://impulso-local-back.onrender.com/api/inscriptions/tables/${tableName}/record/${recordIdToUse}/files`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-          params: { source: 'validaciones' },
-        }
+        `https://impulso-local-back.onrender.com/api/inscriptions/tables/${tableName}/record/${id}/files`,
+        { headers: { Authorization: `Bearer ${token}` }, params: { source: 'validaciones' } }
       );
-      setUploadedFiles(filesResponse.data.files || []);
+
+      const allFiles = filesResponse.data.files || [];
+      setUploadedFiles(allFiles);
     } catch (error) {
       console.error('Error obteniendo los archivos:', error);
       setError('Error obteniendo los archivos');
     }
-  }, [tableName]);
+  };
+
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        alert("No se encontró el token de autenticación");
+        setLoading(false);
+        return;
+      }
+
+      // Obtener campos
+      const fieldsResponse = await axios.get(
+        `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/${tableName}/fields`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setFields(fieldsResponse.data);
+
+      // Obtener registro pi_validaciones por caracterizacion_id
+      const recordsResponse = await axios.get(
+        `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/${tableName}/records?caracterizacion_id=${id}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      if (recordsResponse.data.length > 0) {
+        const existingRecord = recordsResponse.data[0];
+        setData(existingRecord);
+        setRecordId(existingRecord.id);
+      } else {
+        // Crear registro si no existe
+        const userId = localStorage.getItem('id');
+        const createResponse = await axios.post(
+          `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/${tableName}/record`,
+          { caracterizacion_id: id, user_id: userId },
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        const newRecord = createResponse.data.record || createResponse.data;
+        setData(newRecord);
+        setRecordId(newRecord.id);
+      }
+
+      // Obtener archivos usando el caracterizacion_id (id)
+      await fetchFilesFromBackend();
+
+      setLoading(false);
+    } catch (err) {
+      console.error("Error obteniendo datos:", err);
+      setError("Error obteniendo datos");
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchFieldsAndData = async () => {
-      setLoading(true);
-      try {
-        const token = localStorage.getItem('token');
-        if (!token) {
-          setLoading(false);
-          return;
-        }
-
-        // Obtener campos
-        const fieldsResponse = await axios.get(
-          `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/${tableName}/fields`,
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
-        );
-        setFields(fieldsResponse.data);
-
-        // Obtener registro pi_validaciones filtrando por caracterizacion_id
-        const recordsResponse = await axios.get(
-          `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/${tableName}/records?caracterizacion_id=${id}`,
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
-        );
-
-        if (recordsResponse.data.length > 0) {
-          const existingRecord = recordsResponse.data[0];
-          setData(existingRecord);
-          setRecordId(existingRecord.id);
-          await fetchFiles(existingRecord.id);
-        } else {
-          // No hay registro, no hay archivos
-          setUploadedFiles([]);
-        }
-
-        setLoading(false);
-      } catch (error) {
-        console.error('Error obteniendo los campos o datos:', error);
-        setError('Error obteniendo los campos o datos');
-        setLoading(false);
-      }
-    };
-
-    fetchFieldsAndData();
-  }, [tableName, id, fetchFiles]);
+    fetchData();
+  }, [id]);
 
   const handleStatusChange = async (field, status) => {
     const updatedData = { ...data, [field]: status, caracterizacion_id: id };
     setData(updatedData);
 
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem("token");
       if (!token) return;
-
       const userId = localStorage.getItem('id');
       const updatedDataWithUser = { ...updatedData, user_id: userId };
 
-      // Guardar cambios del registro
       if (recordId) {
         await axios.put(
           `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/${tableName}/record/${recordId}`,
           updatedDataWithUser,
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
+          { headers: { Authorization: `Bearer ${token}` } }
         );
         alert('Validación actualizada exitosamente');
       } else {
         const createResponse = await axios.post(
           `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/${tableName}/record`,
           updatedDataWithUser,
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
+          { headers: { Authorization: `Bearer ${token}` } }
         );
         setRecordId(createResponse.data.id);
-        await fetchFiles(createResponse.data.id);
         alert('Validación creada exitosamente');
       }
     } catch (error) {
@@ -148,7 +140,6 @@ export default function ValidacionesTab({ id }) {
       alert('Por favor, ingresa un nombre y selecciona un archivo');
       return;
     }
-
     try {
       const token = localStorage.getItem('token');
       const userId = localStorage.getItem('id');
@@ -159,27 +150,11 @@ export default function ValidacionesTab({ id }) {
       formData.append('file', file);
       formData.append('fileName', fileNameWithUnique);
       formData.append('caracterizacion_id', id);
-      formData.append('source', 'validaciones');
       formData.append('user_id', userId);
+      formData.append('source', 'validaciones');
 
-      let currentRecordId = recordId;
-      if (!currentRecordId) {
-        // Crear registro si no existe
-        const createData = { caracterizacion_id: id, user_id: userId };
-        const createResponse = await axios.post(
-          `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/${tableName}/record`,
-          createData,
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
-        );
-        currentRecordId = createResponse.data.id;
-        setRecordId(currentRecordId);
-      }
-
-      // Subir archivo usando recordId y la ruta sin pi para archivos
       await axios.post(
-        `https://impulso-local-back.onrender.com/api/inscriptions/tables/${tableName}/record/${currentRecordId}/upload`,
+        `https://impulso-local-back.onrender.com/api/inscriptions/tables/${tableName}/record/${id}/upload`,
         formData,
         {
           headers: {
@@ -189,8 +164,8 @@ export default function ValidacionesTab({ id }) {
         }
       );
 
-      await fetchFiles(currentRecordId);
       alert("Archivo subido exitosamente");
+      await fetchFilesFromBackend();
       setFile(null);
       setFileName('');
       setShowUploadForm(false);
@@ -200,32 +175,30 @@ export default function ValidacionesTab({ id }) {
     }
   };
 
-  // Lógica de eliminación de archivos, enviando user_id en el body
   const handleFileDelete = async (fileId) => {
-    if (!recordId) {
-      alert('No hay registro asociado para eliminar el archivo.');
-      return;
-    }
-
     if (window.confirm('¿Estás seguro de que deseas eliminar este archivo?')) {
       try {
         const token = localStorage.getItem('token');
         const userId = localStorage.getItem('id');
-
         await axios.delete(
-          `https://impulso-local-back.onrender.com/api/inscriptions/tables/${tableName}/record/${recordId}/file/${fileId}`,
+          `https://impulso-local-back.onrender.com/api/inscriptions/tables/${tableName}/record/${id}/file/${fileId}`,
           {
             headers: { Authorization: `Bearer ${token}` },
             data: { user_id: userId } // Enviar user_id en el body
           }
         );
 
-        await fetchFiles(recordId);
+        await fetchFilesFromBackend();
       } catch (error) {
         console.error('Error eliminando el archivo:', error);
         setError('Error eliminando el archivo');
       }
     }
+  };
+
+  const handleOpenHistoryModal = async () => {
+    await fetchHistory();
+    setShowHistoryModal(true);
   };
 
   const fetchHistory = async () => {
@@ -236,9 +209,7 @@ export default function ValidacionesTab({ id }) {
       const token = localStorage.getItem('token');
       const historyResponse = await axios.get(
         `https://impulso-local-back.onrender.com/api/inscriptions/tables/${tableName}/record/${recordId}/history`,
-        {
-          headers: { Authorization: `Bearer ${token}` }
-        }
+        { headers: { Authorization: `Bearer ${token}` } }
       );
       const fetchedHistory = historyResponse.data.history || [];
       fetchedHistory.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
@@ -251,9 +222,23 @@ export default function ValidacionesTab({ id }) {
     }
   };
 
-  const handleOpenHistoryModal = async () => {
-    await fetchHistory();
-    setShowHistoryModal(true);
+  const handleCancel = () => {
+    fetchData();
+  };
+
+  const handleSave = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        alert("No se encontró el token de autenticación");
+        return;
+      }
+      alert("Información guardada exitosamente");
+      await fetchData();
+    } catch (err) {
+      console.error("Error guardando la información:", err);
+      setError("Error guardando la información");
+    }
   };
 
   return (
@@ -407,6 +392,15 @@ export default function ValidacionesTab({ id }) {
               Ver Historial de Cambios
             </button>
           )}
+
+          <div className="d-flex justify-content-between mt-4">
+            <button className="btn btn-secondary btn-sm" onClick={handleCancel}>
+              Cancelar
+            </button>
+            <button className="btn btn-primary btn-sm" onClick={handleSave}>
+              Guardar
+            </button>
+          </div>
         </div>
       )}
 
