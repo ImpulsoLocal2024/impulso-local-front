@@ -29,6 +29,11 @@ export default function EjecucionTab({ id }) {
   const [fileName, setFileName] = useState('');
   const [error, setError] = useState(null);
 
+  // Estados para cumplimiento
+  const [selectedFileForCompliance, setSelectedFileForCompliance] = useState(null);
+  const [complianceCumple, setComplianceCumple] = useState(null);
+  const [complianceDescripcion, setComplianceDescripcion] = useState('');
+
   const fetchRecords = async () => {
     setLoading(true);
     try {
@@ -235,6 +240,70 @@ export default function EjecucionTab({ id }) {
     }
   };
 
+  // Funciones de cumplimiento
+  const handleOpenComplianceModal = (f) => {
+    setSelectedFileForCompliance(f);
+    setComplianceCumple(
+      f.cumple === 'true' || f.cumple === true || f.cumple === 1
+        ? true
+        : f.cumple === 'false' || f.cumple === false || f.cumple === 0
+        ? false
+        : null
+    );
+    setComplianceDescripcion(f['descripcion cumplimiento'] || '');
+  };
+
+  const handleCloseComplianceModal = () => {
+    setSelectedFileForCompliance(null);
+    setComplianceCumple(null);
+    setComplianceDescripcion('');
+  };
+
+  const handleSaveCompliance = async () => {
+    if (!selectedFileForCompliance) return;
+    try {
+      const token = localStorage.getItem('token');
+      const userId = localStorage.getItem('id');
+      await axios.put(
+        `https://impulso-local-back.onrender.com/api/inscriptions/tables/pi_ejecucion/record/${id}/file/${selectedFileForCompliance.id}/compliance`,
+        {
+          cumple: complianceCumple,
+          descripcion_cumplimiento: complianceDescripcion,
+          user_id: userId
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      const updatedMap = { ...uploadedFilesMap };
+
+      const match = selectedFileForCompliance.name.match(/_ejecucion_(\d+)/);
+      if (match) {
+        const ejecucion_id = parseInt(match[1], 10);
+        const files = updatedMap[ejecucion_id] || [];
+        const updatedFiles = files.map((file) =>
+          file.id === selectedFileForCompliance.id
+            ? {
+                ...file,
+                cumple: complianceCumple,
+                'descripcion cumplimiento': complianceDescripcion,
+              }
+            : file
+        );
+        updatedMap[ejecucion_id] = updatedFiles;
+        setUploadedFilesMap(updatedMap);
+      }
+
+      handleCloseComplianceModal();
+    } catch (error) {
+      console.error('Error actualizando el cumplimiento:', error);
+      setError('Error actualizando el cumplimiento');
+    }
+  };
+
   const resumenPorRubro = rubrosOptions.map((r) => {
     const total = records
       .filter((rec) => rec["Rubro"] === r)
@@ -345,6 +414,46 @@ export default function EjecucionTab({ id }) {
                                   >
                                     Ver archivo
                                   </a>
+                                  <br />
+                                  {/* Etiqueta de Cumplimiento */}
+                                  <span
+                                    className="badge"
+                                    style={{
+                                      backgroundColor:
+                                        f.cumple === true ||
+                                        f.cumple === 'true' ||
+                                        f.cumple === 1
+                                          ? 'green'
+                                          : f.cumple === false ||
+                                            f.cumple === 'false' ||
+                                            f.cumple === 0
+                                          ? 'red'
+                                          : 'gray',
+                                      color: '#fff',
+                                      padding: '5px',
+                                      borderRadius: '5px',
+                                      cursor: 'pointer',
+                                      marginTop: '5px',
+                                      display: 'inline-block',
+                                    }}
+                                    onClick={() => handleOpenComplianceModal(f)}
+                                  >
+                                    {f.cumple === true ||
+                                    f.cumple === 'true' ||
+                                    f.cumple === 1
+                                      ? 'Cumple'
+                                      : f.cumple === false ||
+                                        f.cumple === 'false' ||
+                                        f.cumple === 0
+                                      ? 'No Cumple'
+                                      : 'Cumplimiento'}
+                                  </span>
+                                  {f['descripcion cumplimiento'] && (
+                                    <p style={{ marginTop: '5px' }}>
+                                      <strong>Descripción:</strong>{' '}
+                                      {f['descripcion cumplimiento']}
+                                    </p>
+                                  )}
                                 </div>
                                 <button
                                   className="btn btn-danger btn-sm"
@@ -478,6 +587,86 @@ export default function EjecucionTab({ id }) {
             </tbody>
           </table>
         </div>
+      )}
+
+      {/* Modal de cumplimiento */}
+      {selectedFileForCompliance && (
+        <div
+          className="modal fade show"
+          style={{ display: 'block' }}
+          tabIndex="-1"
+          role="dialog"
+        >
+          <div className="modal-dialog" role="document">
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5 className="modal-title">Actualizar Cumplimiento</h5>
+                <button
+                  type="button"
+                  className="close"
+                  onClick={handleCloseComplianceModal}
+                >
+                  <span>&times;</span>
+                </button>
+              </div>
+              <div className="modal-body">
+                <div className="form-group">
+                  <label>Cumple</label>
+                  <div>
+                    <input
+                      type="radio"
+                      id="cumple-true"
+                      name="cumple"
+                      value="true"
+                      checked={complianceCumple === true}
+                      onChange={() => setComplianceCumple(true)}
+                    />
+                    <label htmlFor="cumple-true">Cumple</label>
+                  </div>
+                  <div>
+                    <input
+                      type="radio"
+                      id="cumple-false"
+                      name="cumple"
+                      value="false"
+                      checked={complianceCumple === false}
+                      onChange={() => setComplianceCumple(false)}
+                    />
+                    <label htmlFor="cumple-false">No Cumple</label>
+                  </div>
+                </div>
+                <div className="form-group">
+                  <label>Descripción cumplimiento</label>
+                  <textarea
+                    className="form-control"
+                    value={complianceDescripcion}
+                    onChange={(e) => setComplianceDescripcion(e.target.value)}
+                  ></textarea>
+                </div>
+              </div>
+              <div className="modal-footer d-flex justify-content-end">
+                <button
+                  type="button"
+                  className="btn btn-secondary mr-2"
+                  onClick={handleCloseComplianceModal}
+                >
+                  Cerrar
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  onClick={handleSaveCompliance}
+                >
+                  Guardar cambios
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {selectedFileForCompliance && (
+        <div className="modal-backdrop fade show"></div>
       )}
     </div>
   );
