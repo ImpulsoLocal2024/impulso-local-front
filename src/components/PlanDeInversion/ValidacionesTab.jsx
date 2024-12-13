@@ -20,13 +20,20 @@ export default function ValidacionesTab({ id }) {
   const [historyError, setHistoryError] = useState(null);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
 
-  const fetchFiles = useCallback(async (caracterizacionId) => {
+  const fetchFiles = useCallback(async (recordIdToUse) => {
+    // Este fetch debe usar el recordId del registro en pi_validaciones, no el caracterizacion_id
     try {
       const token = localStorage.getItem('token');
       if (!token) return;
 
+      if (!recordIdToUse) {
+        // Si no hay recordId no podemos obtener archivos
+        setUploadedFiles([]);
+        return;
+      }
+
       const filesResponse = await axios.get(
-        `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/${tableName}/record/${caracterizacionId}/files`,
+        `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/${tableName}/record/${recordIdToUse}/files`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -48,7 +55,10 @@ export default function ValidacionesTab({ id }) {
       setLoading(true);
       try {
         const token = localStorage.getItem('token');
-        if (!token) return;
+        if (!token) {
+          setLoading(false);
+          return;
+        }
 
         const fieldsResponse = await axios.get(
           `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/${tableName}/fields`,
@@ -73,7 +83,7 @@ export default function ValidacionesTab({ id }) {
           const existingRecord = recordsResponse.data[0];
           setData(existingRecord);
           setRecordId(existingRecord.id);
-          await fetchFiles(id);
+          await fetchFiles(existingRecord.id); // Usamos el recordId real del registro
         } else {
           setUploadedFiles([]);
         }
@@ -122,7 +132,7 @@ export default function ValidacionesTab({ id }) {
           }
         );
         setRecordId(createResponse.data.id);
-        await fetchFiles(id);
+        await fetchFiles(createResponse.data.id);
         alert('Validación creada exitosamente');
       }
     } catch (error) {
@@ -186,7 +196,7 @@ export default function ValidacionesTab({ id }) {
         }
       );
 
-      await fetchFiles(id);
+      await fetchFiles(currentRecordId);
       alert("Archivo subido exitosamente");
       setFile(null);
       setFileName('');
@@ -208,11 +218,11 @@ export default function ValidacionesTab({ id }) {
             headers: {
               Authorization: `Bearer ${token}`,
             },
-            data: { user_id: userId }
+            data: { user_id: userId } // Enviar user_id en el body
           }
         );
 
-        await fetchFiles(id);
+        await fetchFiles(recordId);
       } catch (error) {
         console.error('Error eliminando el archivo:', error);
         setError('Error eliminando el archivo');
