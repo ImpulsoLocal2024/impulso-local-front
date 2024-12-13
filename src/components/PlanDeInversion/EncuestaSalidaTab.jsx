@@ -263,7 +263,6 @@ export default function EncuestaSalidaTab({ id }) {
             record_id: rec.id
           };
         });
-
         setRecordsMap(newMap);
 
         // Obtener datos de la caracterización
@@ -271,9 +270,7 @@ export default function EncuestaSalidaTab({ id }) {
           `https://impulso-local-back.onrender.com/api/inscriptions/caracterizacion/${id}`, 
           { headers: { Authorization: `Bearer ${token}` } }
         );
-
-        setCaracterizacionData(carResponse.data);
-
+        setCaracterizacionData(carResponse.data || {});
       } catch (error) {
         console.error("Error obteniendo registros existentes:", error);
       } finally {
@@ -495,11 +492,13 @@ export default function EncuestaSalidaTab({ id }) {
 
   const handleGeneratePDF = () => {
     const doc = new jsPDF();
+    doc.setFontSize(12);
+    doc.text("ENCUESTA DE SALIDA Y SATISFACCIÓN", 14, 15);
+    doc.setFontSize(10);
 
-    // Datos del caracterizacion
-    const c = caracterizacionData;
+    const c = caracterizacionData || {};
 
-    // Tabla superior con datos del emprendimiento
+    // Datos del emprendimiento (usa los nombres exactos indicados)
     const infoData = [
       ["Nombre del emprendimiento", c["Nombre del emprendimiento"] || ""],
       ["Tipo de documento", c["Tipo de identificacion"] || ""],
@@ -510,38 +509,46 @@ export default function EncuestaSalidaTab({ id }) {
       ["Valor entregado como capitalización", ""],
       ["Fecha de diligenciamiento", ""]
     ];
-    autoTable(doc, { startY: 10, body: infoData, theme: 'grid', styles: { fontSize: 8 } });
+    autoTable(doc, { startY: 20, body: infoData, theme: 'grid', styles: { fontSize: 8 }, tableWidth: 'auto' });
 
-    // Encuesta (mostramos solo las opciones seleccionadas y las abiertas con su respuesta)
     let startY = doc.lastAutoTable.finalY + 10;
-    doc.text("Encuesta de Salida y Satisfacción", 14, startY);
+    doc.setFontSize(12);
+    doc.text("Encuesta", 14, startY);
+    doc.setFontSize(10);
     startY += 5;
 
+    // Mostrar todas las opciones con [X] si seleccionadas, [ ] si no
     for (const section of initialQuestions) {
+      doc.setFontSize(11);
       doc.text(section.component, 14, startY);
-      startY += 5;
-
+      startY += 6;
+      doc.setFontSize(9);
       for (const q of section.questions) {
-        doc.setFontSize(9);
         doc.text(q.text, 14, startY);
         startY += 5;
 
         if (q.options && q.options.length > 0) {
-          // Opciones
           for (const opt of q.options) {
             const key = section.component + "|" + q.text + "|" + opt.label;
             const rec = recordsMap[key];
-            if (rec && (rec.seleccion || opt.openEnded)) {
-              let line = opt.label;
+            let prefix = "[ ]";
+            let line = opt.label;
+            if (rec && rec.seleccion) {
+              prefix = "[X]";
+              // Si openEnded y respuesta diferente a label
               if (opt.openEnded && rec.respuesta && rec.respuesta !== opt.label) {
-                line += ": " + rec.respuesta;
+                line = opt.label + ": " + rec.respuesta;
               }
-              doc.text("- " + line, 20, startY);
-              startY += 5;
+            } else if (opt.openEnded && rec && rec.respuesta && rec.respuesta !== opt.label) {
+              // Si no se seleccionó, pero tiene respuesta abierta (no debería pasar)
+              line = opt.label + ": " + rec.respuesta;
             }
+
+            doc.text(prefix + " " + line, 20, startY);
+            startY += 5;
           }
 
-          // Campo adicional si es openEndedIfNo
+          // Campo adicional si se respondió "No"
           if (q.openEndedIfNo) {
             const noOption = q.options.find(o => o.label.toLowerCase() === 'no');
             if (noOption) {
@@ -551,7 +558,7 @@ export default function EncuestaSalidaTab({ id }) {
                 const openKey = section.component + "|" + q.text + "|RazónNo";
                 const openRec = recordsMap[openKey];
                 if (openRec && openRec.respuesta) {
-                  doc.text("- Razón No: " + openRec.respuesta, 20, startY);
+                  doc.text("[X] Razón No: " + openRec.respuesta, 20, startY);
                   startY += 5;
                 }
               }
@@ -560,25 +567,28 @@ export default function EncuestaSalidaTab({ id }) {
         } else if (q.openEnded) {
           const key = section.component + "|" + q.text;
           const rec = recordsMap[key];
-          doc.text("- " + (rec?.respuesta || ""), 20, startY);
+          doc.text((rec && rec.respuesta) ? rec.respuesta : "", 20, startY);
           startY += 5;
         }
 
-        startY += 2;
+        startY += 3;
       }
       startY += 5;
     }
 
-    // Datos finales
+    // Nueva página para datos finales
     doc.addPage();
-    doc.text("Datos finales:", 14, 10);
+    doc.setFontSize(12);
+    doc.text("Datos finales:", 14, 15);
+    doc.setFontSize(9);
+
     const finalData1 = [
-      ["Nombre del Empresario:", (c["Nombres"] || "") + " " + (c["Apellidos"] || "")],
+      ["Nombre del Empresario:", ((c["Nombres"] || "") + " " + (c["Apellidos"] || "")).trim()],
       ["Nombre del Micronegocio:", c["Nombre del emprendimiento"] || ""],
       ["Documento de identidad:", c["Numero de identificacion"] || ""],
       ["Firma:", ""]
     ];
-    autoTable(doc, { startY: 15, body: finalData1, theme: 'grid', styles: { fontSize: 8 } });
+    autoTable(doc, { startY: 20, body: finalData1, theme: 'grid', styles: { fontSize: 8 } });
 
     const finalData2 = [
       ["Nombre del Aliado:", ""],
@@ -621,7 +631,7 @@ export default function EncuestaSalidaTab({ id }) {
                               />
                               {" "}{opt.label}
                               {opt.openEnded && record.seleccion && (
-                                <div style={{ marginLeft: '20px' }}>
+                                <div style={{ marginLeft: '20px', marginTop: '5px' }}>
                                   <input
                                     type="text"
                                     className="form-control form-control-sm"
