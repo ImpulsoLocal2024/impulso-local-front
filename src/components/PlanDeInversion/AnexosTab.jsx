@@ -9,9 +9,10 @@ export default function AnexosTab({ id }) {
   const [error, setError] = useState(null);
   const [originalData, setOriginalData] = useState(null);
 
+  const [uploadedFiles, setUploadedFiles] = useState([]);
+
   const [file, setFile] = useState(null);
   const [fileName, setFileName] = useState('');
-  const [uploadedFile, setUploadedFile] = useState(null); 
 
   const fetchData = async () => {
     setLoading(true);
@@ -31,14 +32,14 @@ export default function AnexosTab({ id }) {
       const recordData = response.data[0] || null;
 
       if (recordData) {
-        // Existe el registro
         setData(recordData);
         setOriginalData({ ...recordData });
       } else {
-        // Crear registro
+        // Crear registro con user_id si el backend lo necesita
+        const userId = localStorage.getItem('id');
         const createResponse = await axios.post(
           `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/${tableName}/record`,
-          { caracterizacion_id: id, user_id: localStorage.getItem('id') }, // Agregar user_id al crear el registro
+          { caracterizacion_id: id, user_id: userId },
           { headers: { Authorization: `Bearer ${token}` } }
         );
         const newRecord = createResponse.data.record || createResponse.data; 
@@ -46,7 +47,7 @@ export default function AnexosTab({ id }) {
         setOriginalData({ ...newRecord });
       }
 
-      await fetchFileFromBackend();
+      await fetchFilesFromBackend();
 
       setLoading(false);
     } catch (err) {
@@ -56,7 +57,7 @@ export default function AnexosTab({ id }) {
     }
   };
 
-  const fetchFileFromBackend = async () => {
+  const fetchFilesFromBackend = async () => {
     try {
       const token = localStorage.getItem('token');
       if (!token) return;
@@ -67,8 +68,9 @@ export default function AnexosTab({ id }) {
       );
 
       const allFiles = filesResponse.data.files || [];
-      const anexoFile = allFiles.find(f => f.name.includes('anexos_')) || null;
-      setUploadedFile(anexoFile);
+      // Mostrar todos los archivos con el prefijo anexos_
+      const filteredFiles = allFiles.filter(f => f.name.includes('anexos_'));
+      setUploadedFiles(filteredFiles);
 
     } catch (error) {
       console.error('Error obteniendo el archivo:', error);
@@ -96,9 +98,6 @@ export default function AnexosTab({ id }) {
         alert("No se encontró el token de autenticación");
         return;
       }
-
-      // Si necesitas actualizar algo adicional, aquí lo harías con un PUT, 
-      // enviando user_id si es necesario. Si no hace falta, solo el alert.
       alert("Información guardada exitosamente");
       await fetchData();
     } catch (err) {
@@ -120,12 +119,15 @@ export default function AnexosTab({ id }) {
     try {
       const token = localStorage.getItem('token');
       const userId = localStorage.getItem('id');
-      const fileNameWithPrefix = `anexos_${fileName}`;
+      // Generar un nombre único, por ejemplo, anexos_fileName_timestamp
+      const uniqueSuffix = Date.now();
+      const fileNameWithPrefix = `anexos_${fileName}_${uniqueSuffix}`;
+
       const formData = new FormData();
       formData.append('file', file);
       formData.append('fileName', fileNameWithPrefix);
       formData.append('caracterizacion_id', id);
-      formData.append('user_id', userId); // Agregar el user_id aquí
+      formData.append('user_id', userId);
 
       await axios.post(
         `https://impulso-local-back.onrender.com/api/inscriptions/tables/${tableName}/record/${id}/upload`,
@@ -139,7 +141,7 @@ export default function AnexosTab({ id }) {
       );
 
       alert("Archivo subido exitosamente");
-      await fetchFileFromBackend();
+      await fetchFilesFromBackend();
       setFile(null);
       setFileName("");
     } catch (error) {
@@ -148,22 +150,22 @@ export default function AnexosTab({ id }) {
     }
   };
 
-  const handleFileDelete = async () => {
-    if (!uploadedFile) return;
+  const handleFileDelete = async (fileId) => {
     if (window.confirm('¿Estás seguro de que deseas eliminar este archivo?')) {
       try {
         const token = localStorage.getItem('token');
         const userId = localStorage.getItem('id');
         await axios.delete(
-          `https://impulso-local-back.onrender.com/api/inscriptions/tables/${tableName}/record/${id}/file/${uploadedFile.id}?user_id=${userId}`,
+          `https://impulso-local-back.onrender.com/api/inscriptions/tables/${tableName}/record/${id}/file/${fileId}`,
           {
             headers: {
               Authorization: `Bearer ${token}`,
             },
+            data: { user_id: userId } // Enviar user_id en el body para el DELETE
           }
         );
 
-        await fetchFileFromBackend();
+        await fetchFilesFromBackend();
       } catch (error) {
         console.error('Error eliminando el archivo:', error);
         setError('Error eliminando el archivo');
@@ -185,25 +187,36 @@ export default function AnexosTab({ id }) {
 
             <div className="mb-2">
               <label><strong>Adjuntar archivo</strong></label><br/>
-              {uploadedFile ? (
-                <div className="mb-2">
-                  <a
-                    href={`https://impulso-local-back.onrender.com${uploadedFile.url}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{ marginRight: '10px' }}
-                  >
-                    Ver archivo
-                  </a>
-                  <button
-                    className="btn btn-danger btn-sm"
-                    onClick={handleFileDelete}
-                  >
-                    Eliminar archivo
-                  </button>
-                </div>
+
+              {uploadedFiles && uploadedFiles.length > 0 ? (
+                <ul className="list-group mb-2">
+                  {uploadedFiles.map((f) => (
+                    <li
+                      key={f.id}
+                      className="list-group-item d-flex justify-content-between align-items-center"
+                    >
+                      <div>
+                        <strong>{f.name}</strong>
+                        <br />
+                        <a
+                          href={`https://impulso-local-back.onrender.com${f.url}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          Ver archivo
+                        </a>
+                      </div>
+                      <button
+                        className="btn btn-danger btn-sm"
+                        onClick={() => handleFileDelete(f.id)}
+                      >
+                        Eliminar archivo
+                      </button>
+                    </li>
+                  ))}
+                </ul>
               ) : (
-                <p className="mb-2">No hay archivo adjunto</p>
+                <p className="mb-2">No hay archivos adjuntos</p>
               )}
 
               {file ? (
