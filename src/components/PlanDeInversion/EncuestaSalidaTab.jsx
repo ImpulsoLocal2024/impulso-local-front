@@ -273,7 +273,6 @@ export default function EncuestaSalidaTab({ id }) {
           { headers: { Authorization: `Bearer ${token}` } }
         );
         setCaracterizacionData(carResponse.data || {});
-
       } catch (error) {
         console.error("Error obteniendo registros existentes:", error);
       } finally {
@@ -499,54 +498,40 @@ export default function EncuestaSalidaTab({ id }) {
     const pageWidth = doc.internal.pageSize.getWidth();
     const maxLineWidth = pageWidth - margin * 2;
 
-    // Estilos de fuente
     const fontSizes = {
       title: 18,
       subtitle: 14,
       normal: 10,
     };
-
     const blueColor = [77, 20, 140];
+    let yPosition = 40;
 
     const getImageDataUrl = (img) => {
       const canvas = document.createElement('canvas');
       canvas.width = img.width;
       canvas.height = img.height;
-
       const ctx = canvas.getContext('2d');
       ctx.drawImage(img, 0, 0);
-
       return canvas.toDataURL('image/jpeg');
     };
 
     const c = caracterizacionData || {};
-    const nombreEmprendimiento = c["Nombre del emprendimiento"] || 'No disponible';
-    const caracterizacionId = id || 'No disponible';
+    const nombresCompleto = ((c["Nombres"] || "") + " " + (c["Apellidos"] || "")).trim();
 
     const img = new Image();
     img.src = bannerImagePath;
     img.onload = () => {
       const imgData = getImageDataUrl(img);
-      doc.addImage(imgData, 'JPEG', margin, 40, maxLineWidth, 60);
-      let yPosition = 130;
+      doc.addImage(imgData, 'JPEG', margin, yPosition, maxLineWidth, 60);
+      yPosition += 80;
 
-      doc.setFontSize(fontSizes.subtitle);
-      doc.setFont(undefined, 'bold');
-      doc.text(nombreEmprendimiento, pageWidth / 2, yPosition, { align: 'center' });
-
-      yPosition += 20;
-      doc.setFontSize(fontSizes.normal);
-      doc.setFont(undefined, 'normal');
-      doc.text(`ID: ${caracterizacionId}`, pageWidth / 2, yPosition, { align: 'center' });
-
-      yPosition += 30;
       doc.setFontSize(fontSizes.title);
       doc.setFont(undefined, 'bold');
       doc.text("ENCUESTA DE SALIDA Y SATISFACCIÓN", pageWidth / 2, yPosition, { align: 'center' });
 
       yPosition += 30;
 
-      // Tabla superior con datos del emprendimiento
+      // Tabla superior
       const infoData = [
         ["Nombre del emprendimiento", c["Nombre del emprendimiento"] || ""],
         ["Tipo de documento", c["Tipo de identificacion"] || ""],
@@ -565,7 +550,6 @@ export default function EncuestaSalidaTab({ id }) {
         tableWidth: 'auto',
         headStyles: { fillColor: [200, 200, 200] }
       });
-
       yPosition = doc.lastAutoTable.finalY + 20;
 
       doc.setFontSize(fontSizes.subtitle);
@@ -575,7 +559,7 @@ export default function EncuestaSalidaTab({ id }) {
       doc.setFont(undefined, 'normal');
       yPosition += 20;
 
-      // Mostrar la encuesta
+      // Mostrar encuesta
       initialQuestions.forEach(section => {
         doc.setFontSize(fontSizes.subtitle);
         doc.setFont(undefined, 'bold');
@@ -640,7 +624,7 @@ export default function EncuestaSalidaTab({ id }) {
         yPosition += 10;
       });
 
-      // Segunda página con datos finales
+      // Nueva página para datos finales
       doc.addPage();
       let y2 = 60;
       doc.setFontSize(fontSizes.subtitle);
@@ -650,9 +634,8 @@ export default function EncuestaSalidaTab({ id }) {
       doc.setFont(undefined, 'normal');
       y2 += 20;
 
-      const nombres = (c["Nombres"] || "") + " " + (c["Apellidos"] || "");
       const finalData1 = [
-        ["Nombre del Empresario:", nombres.trim()],
+        ["Nombre del Empresario:", nombresCompleto || "No disponible"],
         ["Nombre del Micronegocio:", c["Nombre del emprendimiento"] || ""],
         ["Documento de identidad:", c["Numero de identificacion"] || ""],
         ["Firma:", ""]
