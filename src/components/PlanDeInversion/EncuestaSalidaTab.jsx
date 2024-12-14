@@ -245,7 +245,6 @@ export default function EncuestaSalidaTab({ id }) {
           return;
         }
 
-        // Obtener registros existentes de la encuesta
         const response = await axios.get(
           `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/pi_encuesta_salida/records?caracterizacion_id=${id}`,
           { headers: { Authorization: `Bearer ${token}` } }
@@ -265,7 +264,7 @@ export default function EncuestaSalidaTab({ id }) {
         });
         setRecordsMap(newMap);
 
-        // Obtener datos de la caracterización
+        // Datos de caracterización
         const carResponse = await axios.get(
           `https://impulso-local-back.onrender.com/api/inscriptions/caracterizacion/${id}`, 
           { headers: { Authorization: `Bearer ${token}` } }
@@ -285,12 +284,7 @@ export default function EncuestaSalidaTab({ id }) {
     const key = component + "|" + question + "|" + (optionLabel || "");
     setRecordsMap((prev) => ({
       ...prev,
-      [key]: {
-        ...prev[key],
-        respuesta: optionLabel || "",
-        seleccion: value,
-        record_id: prev[key]?.record_id
-      }
+      [key]: { ...prev[key], respuesta: optionLabel || "", seleccion: value, record_id: prev[key]?.record_id }
     }));
   };
 
@@ -298,12 +292,7 @@ export default function EncuestaSalidaTab({ id }) {
     const key = component + "|" + question;
     setRecordsMap((prev) => ({
       ...prev,
-      [key]: {
-        ...prev[key],
-        respuesta: value || "",
-        seleccion: false,
-        record_id: prev[key]?.record_id
-      }
+      [key]: { ...prev[key], respuesta: value || "", seleccion: false, record_id: prev[key]?.record_id }
     }));
   };
 
@@ -345,8 +334,8 @@ export default function EncuestaSalidaTab({ id }) {
                   `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/pi_encuesta_salida/record`,
                   requestData,
                   { headers: { Authorization: `Bearer ${token}` } }
-                ).then((res) => {
-                  setRecordsMap((prev) => ({
+                ).then(res => {
+                  setRecordsMap(prev => ({
                     ...prev,
                     [key]: { ...prev[key], record_id: res.data.id }
                   }));
@@ -383,8 +372,8 @@ export default function EncuestaSalidaTab({ id }) {
                       `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/pi_encuesta_salida/record`,
                       requestData,
                       { headers: { Authorization: `Bearer ${token}` } }
-                    ).then((res) => {
-                      setRecordsMap((prev) => ({
+                    ).then(res => {
+                      setRecordsMap(prev => ({
                         ...prev,
                         [openKey]: { ...prev[openKey], record_id: res.data.id }
                       }));
@@ -419,8 +408,8 @@ export default function EncuestaSalidaTab({ id }) {
                 `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/pi_encuesta_salida/record`,
                 requestData,
                 { headers: { Authorization: `Bearer ${token}` } }
-              ).then((res) => {
-                setRecordsMap((prev) => ({
+              ).then(res => {
+                setRecordsMap(prev => ({
                   ...prev,
                   [key]: { ...prev[key], record_id: res.data.id }
                 }));
@@ -490,15 +479,38 @@ export default function EncuestaSalidaTab({ id }) {
     await handleSubmit();
   };
 
+  // Función para agregar texto y gestionar saltos de página
+  const addTextWithPageBreak = (doc, textLines, x, y, lineHeight, marginBottom, pageMarginBottom) => {
+    const pageHeight = doc.internal.pageSize.getHeight();
+    textLines.forEach(line => {
+      if (y + lineHeight > pageHeight - pageMarginBottom) {
+        doc.addPage();
+        y = 20; // margen superior en la nueva página
+      }
+      doc.text(line, x, y);
+      y += lineHeight;
+    });
+    return y + marginBottom;
+  };
+
   const handleGeneratePDF = () => {
-    const doc = new jsPDF();
-    doc.setFontSize(12);
-    doc.text("ENCUESTA DE SALIDA Y SATISFACCIÓN", 14, 15);
-    doc.setFontSize(10);
+    const doc = new jsPDF('p', 'pt', 'a4');
+    const marginLeft = 40;
+    const marginRight = 40;
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const maxLineWidth = pageWidth - marginLeft - marginRight;
+    const fontSizes = { title: 14, normal: 10 };
+    const lineHeight = 14;
+    const pageMarginBottom = 40;
+    let y = 40; // posición inicial vertical
 
+    doc.setFontSize(fontSizes.title);
+    doc.setFont(undefined, 'bold');
+    doc.text("ENCUESTA DE SALIDA Y SATISFACCIÓN", pageWidth/2, y, { align: 'center' });
+    y += 30;
+
+    // Tabla superior con datos del emprendimiento
     const c = caracterizacionData || {};
-
-    // Datos del emprendimiento (usa los nombres exactos indicados)
     const infoData = [
       ["Nombre del emprendimiento", c["Nombre del emprendimiento"] || ""],
       ["Tipo de documento", c["Tipo de identificacion"] || ""],
@@ -509,23 +521,36 @@ export default function EncuestaSalidaTab({ id }) {
       ["Valor entregado como capitalización", ""],
       ["Fecha de diligenciamiento", ""]
     ];
-    autoTable(doc, { startY: 20, body: infoData, theme: 'grid', styles: { fontSize: 8 }, tableWidth: 'auto' });
+    autoTable(doc, {
+      startY: y,
+      body: infoData,
+      theme: 'grid',
+      styles: { fontSize: fontSizes.normal },
+      tableWidth: 'auto',
+      margin: { left: marginLeft, right: marginRight },
+    });
+    y = doc.lastAutoTable.finalY + 20;
 
-    let startY = doc.lastAutoTable.finalY + 10;
-    doc.setFontSize(12);
-    doc.text("Encuesta", 14, startY);
-    doc.setFontSize(10);
-    startY += 5;
+    doc.setFontSize(fontSizes.title);
+    doc.setFont(undefined, 'bold');
+    doc.text("Encuesta", pageWidth/2, y, { align: 'center' });
+    y += 20;
 
-    // Mostrar todas las opciones con [X] si seleccionadas, [ ] si no
+    doc.setFontSize(fontSizes.normal);
+    doc.setFont(undefined, 'normal');
+
+    // Mostrar encuesta completa
     for (const section of initialQuestions) {
-      doc.setFontSize(11);
-      doc.text(section.component, 14, startY);
-      startY += 6;
-      doc.setFontSize(9);
+      // Título de sección
+      doc.setFont(undefined, 'bold');
+      let sectionLines = doc.splitTextToSize(section.component, maxLineWidth);
+      y = addTextWithPageBreak(doc, sectionLines, marginLeft, y, lineHeight, 10, pageMarginBottom);
+
+      doc.setFont(undefined, 'normal');
+
       for (const q of section.questions) {
-        doc.text(q.text, 14, startY);
-        startY += 5;
+        let qLines = doc.splitTextToSize(q.text, maxLineWidth);
+        y = addTextWithPageBreak(doc, qLines, marginLeft, y, lineHeight, 5, pageMarginBottom);
 
         if (q.options && q.options.length > 0) {
           for (const opt of q.options) {
@@ -535,17 +560,18 @@ export default function EncuestaSalidaTab({ id }) {
             let line = opt.label;
             if (rec && rec.seleccion) {
               prefix = "[X]";
-              // Si openEnded y respuesta diferente a label
               if (opt.openEnded && rec.respuesta && rec.respuesta !== opt.label) {
                 line = opt.label + ": " + rec.respuesta;
               }
             } else if (opt.openEnded && rec && rec.respuesta && rec.respuesta !== opt.label) {
-              // Si no se seleccionó, pero tiene respuesta abierta (no debería pasar)
               line = opt.label + ": " + rec.respuesta;
             }
 
-            doc.text(prefix + " " + line, 20, startY);
-            startY += 5;
+            let optLine = prefix + " " + line;
+            let optLines = doc.splitTextToSize(optLine, maxLineWidth - 20);
+            // Indentar opciones
+            optLines = optLines.map(l => "   " + l);
+            y = addTextWithPageBreak(doc, optLines, marginLeft, y, lineHeight, 5, pageMarginBottom);
           }
 
           // Campo adicional si se respondió "No"
@@ -558,45 +584,73 @@ export default function EncuestaSalidaTab({ id }) {
                 const openKey = section.component + "|" + q.text + "|RazónNo";
                 const openRec = recordsMap[openKey];
                 if (openRec && openRec.respuesta) {
-                  doc.text("[X] Razón No: " + openRec.respuesta, 20, startY);
-                  startY += 5;
+                  let noLine = "[X] Razón No: " + openRec.respuesta;
+                  let noLines = doc.splitTextToSize(noLine, maxLineWidth - 20);
+                  noLines = noLines.map(l => "   " + l);
+                  y = addTextWithPageBreak(doc, noLines, marginLeft, y, lineHeight, 5, pageMarginBottom);
                 }
               }
             }
           }
+
         } else if (q.openEnded) {
           const key = section.component + "|" + q.text;
           const rec = recordsMap[key];
-          doc.text((rec && rec.respuesta) ? rec.respuesta : "", 20, startY);
-          startY += 5;
+          const respText = (rec && rec.respuesta) ? rec.respuesta : "";
+          let respLines = doc.splitTextToSize(respText, maxLineWidth - 20);
+          respLines = respLines.map(l => "   " + l);
+          y = addTextWithPageBreak(doc, respLines, marginLeft, y, lineHeight, 10, pageMarginBottom);
+        } else {
+          // Sin opciones ni openEnded
+          y += 10;
         }
 
-        startY += 3;
+        y += 5;
       }
-      startY += 5;
+
+      y += 10;
     }
 
     // Nueva página para datos finales
     doc.addPage();
-    doc.setFontSize(12);
-    doc.text("Datos finales:", 14, 15);
-    doc.setFontSize(9);
+    y = 60;
+    doc.setFontSize(fontSizes.title);
+    doc.setFont(undefined, 'bold');
+    doc.text("Datos finales:", doc.internal.pageSize.getWidth() / 2, y, { align: 'center' });
+    y += 20;
+
+    doc.setFontSize(fontSizes.normal);
+    doc.setFont(undefined, 'normal');
+    const nombresCompleto = ((c["Nombres"] || "") + " " + (c["Apellidos"] || "")).trim();
 
     const finalData1 = [
-      ["Nombre del Empresario:", ((c["Nombres"] || "") + " " + (c["Apellidos"] || "")).trim()],
+      ["Nombre del Empresario:", nombresCompleto || "No disponible"],
       ["Nombre del Micronegocio:", c["Nombre del emprendimiento"] || ""],
       ["Documento de identidad:", c["Numero de identificacion"] || ""],
       ["Firma:", ""]
     ];
-    autoTable(doc, { startY: 20, body: finalData1, theme: 'grid', styles: { fontSize: 8 } });
+    autoTable(doc, {
+      startY: y,
+      body: finalData1,
+      theme: 'grid',
+      styles: { fontSize: fontSizes.normal },
+      margin: { left: marginLeft, right: marginRight },
+    });
 
+    y = doc.lastAutoTable.finalY + 10;
     const finalData2 = [
       ["Nombre del Aliado:", ""],
       ["Nombre del Asesor empresarial:", ""],
       ["Documento de identidad:", ""],
       ["Firma:", ""]
     ];
-    autoTable(doc, { startY: doc.lastAutoTable.finalY + 10, body: finalData2, theme: 'grid', styles: { fontSize: 8 } });
+    autoTable(doc, {
+      startY: y,
+      body: finalData2,
+      theme: 'grid',
+      styles: { fontSize: fontSizes.normal },
+      margin: { left: marginLeft, right: marginRight },
+    });
 
     doc.save("EncuestaSalida.pdf");
   };
