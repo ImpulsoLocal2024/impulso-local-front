@@ -256,7 +256,20 @@ export default function EncuestaSalidaTab({ id }) {
           const comp = rec.componente ? rec.componente.trim() : "";
           const preg = rec.pregunta ? rec.pregunta.trim() : "";
           const resp = rec.respuesta ? rec.respuesta.trim() : "";
-          const key = resp ? comp + "|" + preg + "|" + resp : comp + "|" + preg;
+          // Para preguntas abiertas sin opción, la clave es comp|preg
+          // Para preguntas con opción, la clave es comp|preg|resp (si seleccionada)
+          // Pero si es openEnded (dentro de una opción), también guardamos su respuesta
+          // ya se hace: const key = resp ? comp + "|" + preg + "|" + resp : comp + "|" + preg;
+
+          // Ajuste: para mostrar siempre la respuesta en openEnded:
+          // Si es una pregunta abierta sin opciones, resp debería tener su texto.
+          // Si es una opción openEnded, ya se imprime line + ": " + rec.respuesta
+          const key = rec.seleccion === false && resp && !initialQuestions
+            .find(s => s.component === comp)?.questions
+            .find(qq => qq.text === preg)?.options 
+            ? comp + "|" + preg
+            : (resp ? comp + "|" + preg + "|" + resp : comp + "|" + preg);
+
           newMap[key] = {
             respuesta: resp,
             seleccion: rec.seleccion,
@@ -265,7 +278,7 @@ export default function EncuestaSalidaTab({ id }) {
         });
         setRecordsMap(newMap);
 
-        // Ahora obtener datos de inscription_caracterizacion utilizando la ruta correcta:
+        // Ahora obtener datos de inscription_caracterizacion
         const carResponse = await axios.get(
           `https://impulso-local-back.onrender.com/api/inscriptions/tables/inscription_caracterizacion/record/${id}`, 
           { headers: { Authorization: `Bearer ${token}` } }
@@ -273,6 +286,7 @@ export default function EncuestaSalidaTab({ id }) {
         setCaracterizacionData(carResponse.data.record || {});
       } catch (error) {
         console.error("Error obteniendo registros existentes:", error);
+        setErrorState("Error obteniendo los datos de la encuesta.");
       } finally {
         setLoadingState(false);
       }
@@ -285,7 +299,7 @@ export default function EncuestaSalidaTab({ id }) {
     const key = component + "|" + question + "|" + (optionLabel || "");
     setRecordsMap((prev) => ({
       ...prev,
-      [key]: { ...prev[key], respuesta: optionLabel || "", seleccion: value, record_id: prev[key]?.record_id }
+      [key]: { ...prev[key], respuesta: prev[key]?.respuesta || optionLabel || "", seleccion: value, record_id: prev[key]?.record_id }
     }));
   };
 
@@ -557,15 +571,22 @@ export default function EncuestaSalidaTab({ id }) {
           for (const opt of q.options) {
             const key = section.component + "|" + q.text + "|" + opt.label;
             const rec = recordsMap[key];
+
             let prefix = "[ ]";
             let line = opt.label;
+
             if (rec && rec.seleccion) {
               prefix = "[X]";
-              if (opt.openEnded && rec.respuesta && rec.respuesta !== opt.label) {
+              // Si es openEnded dentro de una opción y hay rec.respuesta
+              // la mostramos directamente
+              if (opt.openEnded && rec.respuesta) {
                 line = opt.label + ": " + rec.respuesta;
               }
-            } else if (opt.openEnded && rec && rec.respuesta && rec.respuesta !== opt.label) {
-              line = opt.label + ": " + rec.respuesta;
+            } else {
+              // Si es openEnded pero no seleccionada, o no hay respuesta, solo muestra la etiqueta
+              if (opt.openEnded && rec && rec.respuesta) {
+                line = opt.label + ": " + rec.respuesta;
+              }
             }
 
             let optLine = prefix + " " + line;
@@ -602,7 +623,6 @@ export default function EncuestaSalidaTab({ id }) {
           respLines = respLines.map(l => "   " + l);
           y = addTextWithPageBreak(doc, respLines, marginLeft, y, lineHeight, 10, pageMarginBottom);
         } else {
-          // Sin opciones ni openEnded
           y += 10;
         }
 
@@ -690,7 +710,7 @@ export default function EncuestaSalidaTab({ id }) {
                                   <input
                                     type="text"
                                     className="form-control form-control-sm"
-                                    value={record.respuesta !== opt.label ? record.respuesta : ""}
+                                    value={record.respuesta || ""}
                                     onChange={(e) => {
                                       const val = e.target.value;
                                       setRecordsMap((prev) => ({
@@ -871,4 +891,3 @@ export default function EncuestaSalidaTab({ id }) {
 EncuestaSalidaTab.propTypes = {
   id: PropTypes.string.isRequired,
 };
-
