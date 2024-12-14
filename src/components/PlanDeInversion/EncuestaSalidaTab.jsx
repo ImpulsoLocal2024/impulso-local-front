@@ -4,6 +4,8 @@ import axios from "axios";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
+const bannerImagePath = '/impulso-local-banner-pdf.jpeg';
+
 export default function EncuestaSalidaTab({ id }) {
   const initialQuestions = [
     {
@@ -271,6 +273,7 @@ export default function EncuestaSalidaTab({ id }) {
           { headers: { Authorization: `Bearer ${token}` } }
         );
         setCaracterizacionData(carResponse.data || {});
+
       } catch (error) {
         console.error("Error obteniendo registros existentes:", error);
       } finally {
@@ -492,113 +495,191 @@ export default function EncuestaSalidaTab({ id }) {
 
   const handleGeneratePDF = () => {
     const doc = new jsPDF();
-    doc.setFontSize(12);
-    doc.text("ENCUESTA DE SALIDA Y SATISFACCIÓN", 14, 15);
-    doc.setFontSize(10);
+    const margin = 40;
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const maxLineWidth = pageWidth - margin * 2;
+
+    // Estilos de fuente
+    const fontSizes = {
+      title: 18,
+      subtitle: 14,
+      normal: 10,
+    };
+
+    const blueColor = [77, 20, 140];
+
+    const getImageDataUrl = (img) => {
+      const canvas = document.createElement('canvas');
+      canvas.width = img.width;
+      canvas.height = img.height;
+
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0);
+
+      return canvas.toDataURL('image/jpeg');
+    };
 
     const c = caracterizacionData || {};
+    const nombreEmprendimiento = c["Nombre del emprendimiento"] || 'No disponible';
+    const caracterizacionId = id || 'No disponible';
 
-    // Datos del emprendimiento (usa los nombres exactos indicados)
-    const infoData = [
-      ["Nombre del emprendimiento", c["Nombre del emprendimiento"] || ""],
-      ["Tipo de documento", c["Tipo de identificacion"] || ""],
-      ["Documento de identidad", c["Numero de identificacion"] || ""],
-      ["Dirección del emprendimiento", c["Direccion de la unidad de negocio"] || ""],
-      ["Localidad donde se encuentra ubicado la microempresa", c["Localidad de la unidad de negocio"] || ""],
-      ["Actividad económica", ""],
-      ["Valor entregado como capitalización", ""],
-      ["Fecha de diligenciamiento", ""]
-    ];
-    autoTable(doc, { startY: 20, body: infoData, theme: 'grid', styles: { fontSize: 8 }, tableWidth: 'auto' });
+    const img = new Image();
+    img.src = bannerImagePath;
+    img.onload = () => {
+      const imgData = getImageDataUrl(img);
+      doc.addImage(imgData, 'JPEG', margin, 40, maxLineWidth, 60);
+      let yPosition = 130;
 
-    let startY = doc.lastAutoTable.finalY + 10;
-    doc.setFontSize(12);
-    doc.text("Encuesta", 14, startY);
-    doc.setFontSize(10);
-    startY += 5;
+      doc.setFontSize(fontSizes.subtitle);
+      doc.setFont(undefined, 'bold');
+      doc.text(nombreEmprendimiento, pageWidth / 2, yPosition, { align: 'center' });
 
-    // Mostrar todas las opciones con [X] si seleccionadas, [ ] si no
-    for (const section of initialQuestions) {
-      doc.setFontSize(11);
-      doc.text(section.component, 14, startY);
-      startY += 6;
-      doc.setFontSize(9);
-      for (const q of section.questions) {
-        doc.text(q.text, 14, startY);
-        startY += 5;
+      yPosition += 20;
+      doc.setFontSize(fontSizes.normal);
+      doc.setFont(undefined, 'normal');
+      doc.text(`ID: ${caracterizacionId}`, pageWidth / 2, yPosition, { align: 'center' });
 
-        if (q.options && q.options.length > 0) {
-          for (const opt of q.options) {
-            const key = section.component + "|" + q.text + "|" + opt.label;
-            const rec = recordsMap[key];
-            let prefix = "[ ]";
-            let line = opt.label;
-            if (rec && rec.seleccion) {
-              prefix = "[X]";
-              // Si openEnded y respuesta diferente a label
-              if (opt.openEnded && rec.respuesta && rec.respuesta !== opt.label) {
+      yPosition += 30;
+      doc.setFontSize(fontSizes.title);
+      doc.setFont(undefined, 'bold');
+      doc.text("ENCUESTA DE SALIDA Y SATISFACCIÓN", pageWidth / 2, yPosition, { align: 'center' });
+
+      yPosition += 30;
+
+      // Tabla superior con datos del emprendimiento
+      const infoData = [
+        ["Nombre del emprendimiento", c["Nombre del emprendimiento"] || ""],
+        ["Tipo de documento", c["Tipo de identificacion"] || ""],
+        ["Documento de identidad", c["Numero de identificacion"] || ""],
+        ["Dirección del emprendimiento", c["Direccion de la unidad de negocio"] || ""],
+        ["Localidad donde se encuentra ubicado la microempresa", c["Localidad de la unidad de negocio"] || ""],
+        ["Actividad económica", ""],
+        ["Valor entregado como capitalización", ""],
+        ["Fecha de diligenciamiento", ""]
+      ];
+      autoTable(doc, {
+        startY: yPosition,
+        body: infoData,
+        theme: 'grid',
+        styles: { fontSize: fontSizes.normal },
+        tableWidth: 'auto',
+        headStyles: { fillColor: [200, 200, 200] }
+      });
+
+      yPosition = doc.lastAutoTable.finalY + 20;
+
+      doc.setFontSize(fontSizes.subtitle);
+      doc.setFont(undefined, 'bold');
+      doc.text("Encuesta", pageWidth / 2, yPosition, { align: 'center' });
+      doc.setFontSize(fontSizes.normal);
+      doc.setFont(undefined, 'normal');
+      yPosition += 20;
+
+      // Mostrar la encuesta
+      initialQuestions.forEach(section => {
+        doc.setFontSize(fontSizes.subtitle);
+        doc.setFont(undefined, 'bold');
+        doc.text(section.component, margin, yPosition);
+        yPosition += 15;
+
+        doc.setFontSize(fontSizes.normal);
+        doc.setFont(undefined, 'normal');
+
+        section.questions.forEach(q => {
+          const qLines = doc.splitTextToSize(q.text, maxLineWidth);
+          doc.text(qLines, margin, yPosition);
+          yPosition += qLines.length * 14 + 5;
+
+          if (q.options && q.options.length > 0) {
+            q.options.forEach(opt => {
+              const key = section.component + "|" + q.text + "|" + opt.label;
+              const rec = recordsMap[key];
+              let prefix = "[ ]";
+              let line = opt.label;
+              if (rec && rec.seleccion) {
+                prefix = "[X]";
+                if (opt.openEnded && rec.respuesta && rec.respuesta !== opt.label) {
+                  line = opt.label + ": " + rec.respuesta;
+                }
+              } else if (opt.openEnded && rec && rec.respuesta && rec.respuesta !== opt.label) {
                 line = opt.label + ": " + rec.respuesta;
               }
-            } else if (opt.openEnded && rec && rec.respuesta && rec.respuesta !== opt.label) {
-              // Si no se seleccionó, pero tiene respuesta abierta (no debería pasar)
-              line = opt.label + ": " + rec.respuesta;
-            }
+              doc.text(prefix + " " + line, margin + 20, yPosition);
+              yPosition += 14;
+            });
 
-            doc.text(prefix + " " + line, 20, startY);
-            startY += 5;
-          }
-
-          // Campo adicional si se respondió "No"
-          if (q.openEndedIfNo) {
-            const noOption = q.options.find(o => o.label.toLowerCase() === 'no');
-            if (noOption) {
-              const noKey = section.component + "|" + q.text + "|" + noOption.label;
-              const noRec = recordsMap[noKey];
-              if (noRec && noRec.seleccion) {
-                const openKey = section.component + "|" + q.text + "|RazónNo";
-                const openRec = recordsMap[openKey];
-                if (openRec && openRec.respuesta) {
-                  doc.text("[X] Razón No: " + openRec.respuesta, 20, startY);
-                  startY += 5;
+            if (q.openEndedIfNo) {
+              const noOption = q.options.find(o => o.label.toLowerCase() === 'no');
+              if (noOption) {
+                const noKey = section.component + "|" + q.text + "|" + noOption.label;
+                const noRec = recordsMap[noKey];
+                if (noRec && noRec.seleccion) {
+                  const openKey = section.component + "|" + q.text + "|RazónNo";
+                  const openRec = recordsMap[openKey];
+                  if (openRec && openRec.respuesta) {
+                    doc.text("[X] Razón No: " + openRec.respuesta, margin + 20, yPosition);
+                    yPosition += 14;
+                  }
                 }
               }
             }
+          } else if (q.openEnded) {
+            const key = section.component + "|" + q.text;
+            const rec = recordsMap[key];
+            const respText = (rec && rec.respuesta) ? rec.respuesta : "";
+            const rLines = doc.splitTextToSize(respText, maxLineWidth - 20);
+            rLines.forEach(l => {
+              doc.text(l, margin + 20, yPosition);
+              yPosition += 14;
+            });
           }
-        } else if (q.openEnded) {
-          const key = section.component + "|" + q.text;
-          const rec = recordsMap[key];
-          doc.text((rec && rec.respuesta) ? rec.respuesta : "", 20, startY);
-          startY += 5;
-        }
 
-        startY += 3;
-      }
-      startY += 5;
-    }
+          yPosition += 10;
+        });
 
-    // Nueva página para datos finales
-    doc.addPage();
-    doc.setFontSize(12);
-    doc.text("Datos finales:", 14, 15);
-    doc.setFontSize(9);
+        yPosition += 10;
+      });
 
-    const finalData1 = [
-      ["Nombre del Empresario:", ((c["Nombres"] || "") + " " + (c["Apellidos"] || "")).trim()],
-      ["Nombre del Micronegocio:", c["Nombre del emprendimiento"] || ""],
-      ["Documento de identidad:", c["Numero de identificacion"] || ""],
-      ["Firma:", ""]
-    ];
-    autoTable(doc, { startY: 20, body: finalData1, theme: 'grid', styles: { fontSize: 8 } });
+      // Segunda página con datos finales
+      doc.addPage();
+      let y2 = 60;
+      doc.setFontSize(fontSizes.subtitle);
+      doc.setFont(undefined, 'bold');
+      doc.text("Datos finales:", doc.internal.pageSize.getWidth() / 2, y2, { align: 'center' });
+      doc.setFontSize(fontSizes.normal);
+      doc.setFont(undefined, 'normal');
+      y2 += 20;
 
-    const finalData2 = [
-      ["Nombre del Aliado:", ""],
-      ["Nombre del Asesor empresarial:", ""],
-      ["Documento de identidad:", ""],
-      ["Firma:", ""]
-    ];
-    autoTable(doc, { startY: doc.lastAutoTable.finalY + 10, body: finalData2, theme: 'grid', styles: { fontSize: 8 } });
+      const nombres = (c["Nombres"] || "") + " " + (c["Apellidos"] || "");
+      const finalData1 = [
+        ["Nombre del Empresario:", nombres.trim()],
+        ["Nombre del Micronegocio:", c["Nombre del emprendimiento"] || ""],
+        ["Documento de identidad:", c["Numero de identificacion"] || ""],
+        ["Firma:", ""]
+      ];
+      autoTable(doc, {
+        startY: y2,
+        body: finalData1,
+        theme: 'grid',
+        styles: { fontSize: fontSizes.normal }
+      });
 
-    doc.save("EncuestaSalida.pdf");
+      y2 = doc.lastAutoTable.finalY + 10;
+      const finalData2 = [
+        ["Nombre del Aliado:", ""],
+        ["Nombre del Asesor empresarial:", ""],
+        ["Documento de identidad:", ""],
+        ["Firma:", ""]
+      ];
+      autoTable(doc, {
+        startY: y2,
+        body: finalData2,
+        theme: 'grid',
+        styles: { fontSize: fontSizes.normal }
+      });
+
+      doc.save("EncuestaSalida.pdf");
+    };
   };
 
   return (
