@@ -245,6 +245,7 @@ export default function EncuestaSalidaTab({ id }) {
           return;
         }
 
+        // Obtener registros existentes de la encuesta
         const response = await axios.get(
           `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/pi_encuesta_salida/records?caracterizacion_id=${id}`,
           { headers: { Authorization: `Bearer ${token}` } }
@@ -264,12 +265,12 @@ export default function EncuestaSalidaTab({ id }) {
         });
         setRecordsMap(newMap);
 
-        // Datos de caracterización
+        // Ahora obtener datos de inscription_caracterizacion utilizando la ruta correcta:
         const carResponse = await axios.get(
-          `https://impulso-local-back.onrender.com/api/inscriptions/caracterizacion/${id}`, 
+          `https://impulso-local-back.onrender.com/api/inscriptions/tables/inscription_caracterizacion/record/${id}`, 
           { headers: { Authorization: `Bearer ${token}` } }
         );
-        setCaracterizacionData(carResponse.data || {});
+        setCaracterizacionData(carResponse.data.record || {});
       } catch (error) {
         console.error("Error obteniendo registros existentes:", error);
       } finally {
