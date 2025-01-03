@@ -77,19 +77,24 @@ export default function InfoBancariaTab({ id }) {
     const token = localStorage.getItem('token');
     if (!token) return;
 
-    const filesResponse = await axios.get(
-      `https://impulso-local-back.onrender.com/api/inscriptions/tables/pi_informacion_bancaria/record/${id}/files`,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
+    try {
+      const filesResponse = await axios.get(
+        `https://impulso-local-back.onrender.com/api/inscriptions/tables/pi_informacion_bancaria/record/${id}/files`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          }
         }
-      }
-    );
+      );
 
-    const allFiles = filesResponse.data.files || [];
-    // Filtrar todos los archivos con el prefijo info_bancaria_
-    const filteredFiles = allFiles.filter(f => f.name.includes('info_bancaria_'));
-    setUploadedFiles(filteredFiles);
+      const allFiles = filesResponse.data.files || [];
+      // Filtrar todos los archivos con el prefijo info_bancaria_
+      const filteredFiles = allFiles.filter(f => f.name.includes('info_bancaria_'));
+      setUploadedFiles(filteredFiles);
+    } catch (err) {
+      console.error("Error obteniendo archivos:", err);
+      setError("Error obteniendo archivos");
+    }
   };
 
   const fetchRecords = async () => {
@@ -182,7 +187,11 @@ export default function InfoBancariaTab({ id }) {
         return;
       }
 
+      // Aquí obtenemos el user_id del localStorage
+      const userId = localStorage.getItem("id");
+
       const requestData = {
+        user_id: userId, // <-- importante para que el backend lo reciba
         caracterizacion_id: id,
         "Banco": data["Banco"],
         "Tipo de cuenta": data["Tipo de cuenta"],
@@ -205,7 +214,10 @@ export default function InfoBancariaTab({ id }) {
           requestData,
           { headers: { Authorization: `Bearer ${token}` } }
         );
-        setRecordId(createResponse.data.id);
+        // Guardar el nuevo ID para referencia futura
+        if (createResponse.data && createResponse.data.record) {
+          setRecordId(createResponse.data.record.id);
+        }
       }
 
       alert("Información guardada exitosamente");
@@ -466,7 +478,10 @@ export default function InfoBancariaTab({ id }) {
                   <button
                     type="button"
                     className="btn btn-secondary btn-sm"
-                    onClick={() => { setFile(null); setFileName(""); }}
+                    onClick={() => {
+                      setFile(null);
+                      setFileName("");
+                    }}
                   >
                     Cancelar
                   </button>
@@ -597,5 +612,6 @@ export default function InfoBancariaTab({ id }) {
 InfoBancariaTab.propTypes = {
   id: PropTypes.string.isRequired,
 };
+
 
 
