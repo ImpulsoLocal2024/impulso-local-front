@@ -144,11 +144,12 @@ export default function GenerarFichaTab({ id }) {
         console.log("Datos de pi_formulacion:", formulacionResponse.data);
 
         // 8. Agrupar Rubros y calcular total inversión
+        // Ajustar a "Equipoy/o similares" exactamente
         const rubrosOptions = [
           "Maquinaria",
           "Herramientas",
           "Mobiliario",
-          "Equipo y/o similares",
+          "Equipoy/o similares",
         ];
 
         const resumenPorRubro = rubrosOptions.map((r) => {
@@ -420,7 +421,6 @@ export default function GenerarFichaTab({ id }) {
         startY: yPosition,
         head: [resumenColumns.map(col => col.header)],
         body: groupedRubros.map(row => {
-          // Convertimos el total a string con formato
           const valorFormateado = `$${row.total.toLocaleString()}`;
           return [row.rubro, valorFormateado];
         }),
