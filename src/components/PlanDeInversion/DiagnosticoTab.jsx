@@ -7,29 +7,65 @@ export default function DiagnosticoTab({ id }) {
     {
       component: "Conectándome con mi negocio",
       questions: [
-        { text: "¿Están separadas sus finanzas personales de las de su negocio?", field: "finanzas_separadas" },
-        { text: "¿Lleva registros de ingresos y gastos de su empresa periódicamente?", field: "registros_ingresos_gastos" },
-        { text: "¿Ha calculado y registrado sus costos de producción, ventas y administración?", field: "costos_registrados" },
-        { text: "¿Los ingresos por ventas alcanzan a cubrir sus gastos y costos operativos?", field: "ingresos_cubren_costos" },
-        { text: "¿Cuenta con el inventario suficiente de productos para atender la demanda de sus clientes?", field: "inventario_suficiente" },
-        { text: "¿Maneja un control de inventarios para los bienes que comercializa o productos que fabrica incluyendo sus materias primas e insumos?", field: "control_inventarios" },
-        { text: "¿Considera que debe fortalecer las habilidades para el manejo del talento humano en su empresa?", field: "fortalecer_talento_humano" },
+        {
+          text: "¿Están separadas sus finanzas personales de las de su negocio?",
+          field: "finanzas_separadas",
+        },
+        {
+          text: "¿Lleva registros de ingresos y gastos de su empresa periódicamente?",
+          field: "registros_ingresos_gastos",
+        },
+        {
+          text: "¿Ha calculado y registrado sus costos de producción, ventas y administración?",
+          field: "costos_registrados",
+        },
+        {
+          text: "¿Los ingresos por ventas alcanzan a cubrir sus gastos y costos operativos?",
+          field: "ingresos_cubren_costos",
+        },
+        {
+          text: "¿Cuenta con el inventario suficiente de productos para atender la demanda de sus clientes?",
+          field: "inventario_suficiente",
+        },
+        {
+          text: "¿Maneja un control de inventarios para los bienes que comercializa o productos que fabrica incluyendo sus materias primas e insumos?",
+          field: "control_inventarios",
+        },
+        {
+          text: "¿Considera que debe fortalecer las habilidades para el manejo del talento humano en su empresa?",
+          field: "fortalecer_talento_humano",
+        },
       ],
     },
     {
       component: "Conectándome con mi mercado",
       questions: [
-        { text: "¿Ha desarrollado estrategias para conseguir nuevos clientes?", field: "estrategias_nuevos_clientes" },
-        { text: "¿Ha analizado sus productos/servicios con relación a su competencia?", field: "productos_vs_competencia" },
-        { text: "¿Mis productos/servicios tienen ventas permanentes?", field: "ventas_permanentes" },
-        { text: "¿Ha perdido alguna oportunidad de negocio o venta a causa del servicio al cliente?", field: "oportunidades_perdidas" },
+        {
+          text: "¿Ha desarrollado estrategias para conseguir nuevos clientes?",
+          field: "estrategias_nuevos_clientes",
+        },
+        {
+          text: "¿Ha analizado sus productos/servicios con relación a su competencia?",
+          field: "productos_vs_competencia",
+        },
+        {
+          text: "¿Mis productos/servicios tienen ventas permanentes?",
+          field: "ventas_permanentes",
+        },
+        {
+          text: "¿Ha perdido alguna oportunidad de negocio o venta a causa del servicio al cliente?",
+          field: "oportunidades_perdidas",
+        },
       ],
     },
     {
       component: "Conexiones digitales",
       questions: [
         { text: "¿Ha realizado ventas por internet?", field: "ventas_internet" },
-        { text: "¿Conoce cómo desarrollar la venta de sus productos/servicios por internet?", field: "desarrollo_ventas_online" },
+        {
+          text: "¿Conoce cómo desarrollar la venta de sus productos/servicios por internet?",
+          field: "desarrollo_ventas_online",
+        },
         { text: "¿Cuenta con equipos de cómputo?", field: "equipos_computo" },
         { text: "¿Cuenta con página web?", field: "pagina_web" },
         { text: "¿Cuenta con red social Facebook?", field: "facebook" },
@@ -40,13 +76,19 @@ export default function DiagnosticoTab({ id }) {
     {
       component: "Alístate para crecer",
       questions: [
-        { text: "¿Su empresa cuenta con acceso a créditos o servicios financieros para su apalancamiento?", field: "acceso_creditos" },
+        {
+          text: "¿Su empresa cuenta con acceso a créditos o servicios financieros para su apalancamiento?",
+          field: "acceso_creditos",
+        },
       ],
     },
     {
       component: "Conectándome con el ambiente",
       questions: [
-        { text: "¿Su empresa aplica medidas con enfoque ambiental: ejemplo ahorro de agua, energía, recuperación de residuos, reutilización de desechos, etc.?", field: "enfoque_ambiental" },
+        {
+          text: "¿Su empresa aplica medidas con enfoque ambiental: ejemplo ahorro de agua, energía, recuperación de residuos, reutilización de desechos, etc.?",
+          field: "enfoque_ambiental",
+        },
       ],
     },
   ];
@@ -54,12 +96,37 @@ export default function DiagnosticoTab({ id }) {
   const [answers, setAnswers] = useState({});
   const [recordIds, setRecordIds] = useState({});
   const [loading, setLoading] = useState(true);
-  
+
   // Estados para historial
   const [history, setHistory] = useState([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyError, setHistoryError] = useState(null);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
+
+  // Esta función indica si la pregunta lleva lógica invertida
+  const isInvertedQuestion = (questionText) => {
+    const trimmed = questionText.trim();
+    return (
+      trimmed ===
+        "¿Considera que debe fortalecer las habilidades para el manejo del talento humano en su empresa?" ||
+      trimmed ===
+        "¿Ha perdido alguna oportunidad de negocio o venta a causa del servicio al cliente?"
+    );
+  };
+
+  // Retorna el puntaje de la pregunta según si es invertida o no
+  const getScoreFromState = (question) => {
+    const trimmed = question.text.trim();
+    const currentValue = answers[trimmed];
+
+    // Pregunta invertida: true => 0, false => 1
+    // Pregunta normal: true => 1, false => 0
+    if (isInvertedQuestion(trimmed)) {
+      return currentValue ? 0 : 1;
+    } else {
+      return currentValue ? 1 : 0;
+    }
+  };
 
   useEffect(() => {
     const fetchExistingRecords = async () => {
@@ -98,11 +165,14 @@ export default function DiagnosticoTab({ id }) {
   }, [id]);
 
   const handleAnswerChange = (questionText, value) => {
-    setAnswers((prev) => ({ ...prev, [questionText]: value }));
+    setAnswers((prev) => ({ ...prev, [questionText.trim()]: value }));
   };
 
+  // Calcula el promedio usando la función getScoreFromState
   const calculateAverage = (questions) => {
-    const totalScore = questions.reduce((sum, q) => sum + (answers[q.text.trim()] ? 1 : 0), 0);
+    const totalScore = questions.reduce((sum, q) => {
+      return sum + getScoreFromState(q);
+    }, 0);
     return (totalScore / questions.length).toFixed(2);
   };
 
@@ -114,39 +184,53 @@ export default function DiagnosticoTab({ id }) {
         return;
       }
 
-      const userId = localStorage.getItem('id');
+      const userId = localStorage.getItem("id");
       const requestPromises = [];
       const newRecordIds = { ...recordIds };
 
       for (const section of initialQuestions) {
         for (const question of section.questions) {
-          const currentAnswer = answers[question.text] === undefined ? false : answers[question.text];
+          // Si no hay respuesta, asumimos false
+          const currentAnswer =
+            answers[question.text.trim()] === undefined
+              ? false
+              : answers[question.text.trim()];
+
           const requestData = {
             caracterizacion_id: id,
             Componente: section.component,
-            Pregunta: question.text,
+            Pregunta: question.text.trim(),
             Respuesta: currentAnswer,
-            Puntaje: currentAnswer ? 1 : 0,
-            user_id: userId // Para historial
+            // Puntaje según la lógica invertida si corresponde
+            Puntaje: isInvertedQuestion(question.text.trim())
+              ? currentAnswer
+                ? 0
+                : 1
+              : currentAnswer
+              ? 1
+              : 0,
+            user_id: userId, // Para historial
           };
 
-          if (newRecordIds[question.text]) {
+          if (newRecordIds[question.text.trim()]) {
             // Actualizar
             const updatePromise = axios.put(
-              `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/pi_diagnostico_cap/record/${newRecordIds[question.text]}`,
+              `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/pi_diagnostico_cap/record/${newRecordIds[question.text.trim()]}`,
               requestData,
               { headers: { Authorization: `Bearer ${token}` } }
             );
             requestPromises.push(updatePromise);
           } else {
             // Crear
-            const createPromise = axios.post(
-              `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/pi_diagnostico_cap/record`,
-              requestData,
-              { headers: { Authorization: `Bearer ${token}` } }
-            ).then((response) => {
-              newRecordIds[question.text] = response.data.id;
-            });
+            const createPromise = axios
+              .post(
+                `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/pi_diagnostico_cap/record`,
+                requestData,
+                { headers: { Authorization: `Bearer ${token}` } }
+              )
+              .then((response) => {
+                newRecordIds[question.text.trim()] = response.data.id;
+              });
             requestPromises.push(createPromise);
           }
         }
@@ -165,7 +249,6 @@ export default function DiagnosticoTab({ id }) {
   // Función para obtener el historial de todos los registros
   const fetchAllRecordsHistory = async () => {
     if (Object.keys(recordIds).length === 0) {
-      // Si no hay registros guardados, no hay historial
       setHistory([]);
       return;
     }
@@ -173,14 +256,14 @@ export default function DiagnosticoTab({ id }) {
     setHistoryLoading(true);
     setHistoryError(null);
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem("token");
       const recordIdValues = Object.values(recordIds);
 
       const historyPromises = recordIdValues.map((rid) =>
         axios.get(
           `https://impulso-local-back.onrender.com/api/inscriptions/tables/pi_diagnostico_cap/record/${rid}/history`,
           {
-            headers: { Authorization: `Bearer ${token}` }
+            headers: { Authorization: `Bearer ${token}` },
           }
         )
       );
@@ -194,7 +277,7 @@ export default function DiagnosticoTab({ id }) {
         }
       });
 
-      // Ordenar el historial por fecha
+      // Ordenar el historial por fecha descendente
       combinedHistory.sort(
         (a, b) => new Date(b.created_at) - new Date(a.created_at)
       );
@@ -202,8 +285,8 @@ export default function DiagnosticoTab({ id }) {
       setHistory(combinedHistory);
       setHistoryLoading(false);
     } catch (error) {
-      console.error('Error obteniendo el historial:', error);
-      setHistoryError('Error obteniendo el historial');
+      console.error("Error obteniendo el historial:", error);
+      setHistoryError("Error obteniendo el historial");
       setHistoryLoading(false);
     }
   };
@@ -245,19 +328,23 @@ export default function DiagnosticoTab({ id }) {
                         <input
                           type="radio"
                           name={question.text}
-                          checked={answers[question.text] === true}
-                          onChange={() => handleAnswerChange(question.text, true)}
+                          checked={answers[question.text.trim()] === true}
+                          onChange={() =>
+                            handleAnswerChange(question.text, true)
+                          }
                         />
                       </td>
                       <td>
                         <input
                           type="radio"
                           name={question.text}
-                          checked={answers[question.text] === false}
-                          onChange={() => handleAnswerChange(question.text, false)}
+                          checked={answers[question.text.trim()] === false}
+                          onChange={() =>
+                            handleAnswerChange(question.text, false)
+                          }
                         />
                       </td>
-                      <td>{answers[question.text] ? 1 : 0}</td>
+                      <td>{getScoreFromState(question)}</td>
                     </tr>
                   ))}
                   <tr>
@@ -287,17 +374,22 @@ export default function DiagnosticoTab({ id }) {
         </>
       )}
 
+      {/* Modal de Historial */}
       {showHistoryModal && (
         <div
           className="modal fade show"
-          style={{ display: 'block' }}
+          style={{ display: "block" }}
           tabIndex="-1"
           role="dialog"
         >
-          <div className="modal-dialog modal-lg" role="document" style={{ maxWidth: '90%' }}>
+          <div
+            className="modal-dialog modal-lg"
+            role="document"
+            style={{ maxWidth: "90%" }}
+          >
             <div
               className="modal-content"
-              style={{ maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}
+              style={{ maxHeight: "90vh", display: "flex", flexDirection: "column" }}
             >
               <div className="modal-header">
                 <h5 className="modal-title">Historial de Cambios</h5>
@@ -309,7 +401,7 @@ export default function DiagnosticoTab({ id }) {
                   <span>&times;</span>
                 </button>
               </div>
-              <div className="modal-body" style={{ overflowY: 'auto' }}>
+              <div className="modal-body" style={{ overflowY: "auto" }}>
                 {historyError && (
                   <div className="alert alert-danger">{historyError}</div>
                 )}
@@ -318,7 +410,7 @@ export default function DiagnosticoTab({ id }) {
                 ) : history.length > 0 ? (
                   <div
                     className="table-responsive"
-                    style={{ maxHeight: '400px', overflowY: 'auto' }}
+                    style={{ maxHeight: "400px", overflowY: "auto" }}
                   >
                     <table className="table table-striped table-bordered table-sm">
                       <thead className="thead-light">
@@ -340,10 +432,10 @@ export default function DiagnosticoTab({ id }) {
                             <td>{item.username}</td>
                             <td>{new Date(item.created_at).toLocaleString()}</td>
                             <td>{item.change_type}</td>
-                            <td>{item.field_name || '-'}</td>
-                            <td>{item.old_value || '-'}</td>
-                            <td>{item.new_value || '-'}</td>
-                            <td>{item.description || '-'}</td>
+                            <td>{item.field_name || "-"}</td>
+                            <td>{item.old_value || "-"}</td>
+                            <td>{item.new_value || "-"}</td>
+                            <td>{item.description || "-"}</td>
                           </tr>
                         ))}
                       </tbody>
