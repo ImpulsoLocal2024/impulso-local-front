@@ -197,9 +197,9 @@ export default function GenerarFichaTab({ id }) {
   // Función para verificar el final de la página y agregar una nueva si es necesario
   const checkPageEnd = (doc, currentY, addedHeight) => {
     const pageHeight = doc.internal.pageSize.getHeight();
-    if (currentY + addedHeight > pageHeight - 40) { // Dejamos un margen inferior de 40
+    if (currentY + addedHeight > pageHeight - 40) {
       doc.addPage();
-      currentY = 40; // Reiniciamos yPosition al margen superior después de agregar una nueva página
+      currentY = 40;
     }
     return currentY;
   };
@@ -214,34 +214,34 @@ export default function GenerarFichaTab({ id }) {
 
     // Estilos de fuente y color
     const fontSizes = {
-      title: 18,      // Aumentado para el título principal
+      title: 18,
       subtitle: 14,
       normal: 12,
     };
-    const blueColor = [77, 20, 140]; // Color #4D148C
+
+    // Cambiamos el color de las tablas a #E61A4E => [230, 26, 78]
+    const tableColor = [230, 26, 78];
 
     // Función para convertir imagen a base64
     const getImageDataUrl = (img) => {
       const canvas = document.createElement('canvas');
       canvas.width = img.width;
       canvas.height = img.height;
-
       const ctx = canvas.getContext('2d');
       ctx.drawImage(img, 0, 0);
-
       return canvas.toDataURL('image/jpeg');
     };
 
     // Cargar la imagen y generar el PDF después
     const img = new Image();
-    img.src = bannerImagePath; // Ruta de la imagen en la carpeta public
+    img.src = bannerImagePath;
     img.onload = () => {
       const imgData = getImageDataUrl(img);
 
       // Encabezado con imagen
       doc.addImage(imgData, 'JPEG', margin, 40, maxLineWidth, 60);
 
-      yPosition = 130; // Ajustar la posición vertical después del encabezado
+      yPosition = 130;
 
       // Obtener el nombre del emprendimiento y caracterizacion_id
       const nombreEmprendimiento = caracterizacionData["Nombre del emprendimiento"] || 'No disponible';
@@ -252,60 +252,56 @@ export default function GenerarFichaTab({ id }) {
       doc.setFont(undefined, 'bold');
       doc.text(nombreEmprendimiento, pageWidth / 2, yPosition, { align: 'center' });
 
-      yPosition += 20; // Espacio después del nombre del emprendimiento
+      yPosition += 20;
 
       // Agregar Caracterizacion ID
       doc.setFontSize(fontSizes.normal);
       doc.setFont(undefined, 'normal');
       doc.text(`ID: ${caracterizacionId}`, pageWidth / 2, yPosition, { align: 'center' });
 
-      yPosition += 30; // Espacio después del caracterizacion_id
+      yPosition += 30;
 
-      // 1. Título Principal
+      // 1. Título Principal (cambiado a: PLAN DE INVERSIÓN DEL EMPRENDIMIENTO)
       doc.setFontSize(fontSizes.title);
       doc.setFont(undefined, 'bold');
       doc.setTextColor(0, 0, 0);
-      doc.text("PLAN DE INVERSIÓN DE LA MICROEMPRESA", pageWidth / 2, yPosition, { align: 'center' });
+      doc.text("PLAN DE INVERSIÓN DEL EMPRENDIMIENTO", pageWidth / 2, yPosition, { align: 'center' });
 
-      yPosition += 30; // Espacio después del título principal
+      yPosition += 30;
 
       // 2. Mostrar información de datosTab sin título
       doc.setFontSize(fontSizes.normal);
       doc.setFont(undefined, 'normal');
-      yPosition += 20; // Espacio antes de empezar a mostrar los datos
+      yPosition += 20;
 
-      // Filtrar los campos de pi_datos excluyendo `datosKeys` y `caracterizacion_id`
-      const piDatosFields = Object.keys(datosTab).filter(key => !datosKeys.includes(key) && key !== 'caracterizacion_id');
+      const piDatosFields = Object.keys(datosTab).filter(
+        key => !datosKeys.includes(key) && key !== 'caracterizacion_id'
+      );
       if (piDatosFields.length > 0) {
         piDatosFields.forEach(key => {
           let label = `${key}:`;
           let value = datosTab[key] || 'No disponible';
 
-          // Asegurarse de que 'value' sea una cadena antes de llamar a toLowerCase()
           if (typeof value === 'string' && value.toLowerCase().startsWith('id:')) {
             value = value.substring(3).trim();
           } else if (typeof value !== 'string') {
-            // Convertir a cadena si no es una
             value = String(value);
           }
 
-          // Texto en negrita para el label
           doc.setFont(undefined, 'bold');
           const labelLines = doc.splitTextToSize(label, maxLineWidth);
           yPosition = checkPageEnd(doc, yPosition, labelLines.length * 14);
           doc.text(labelLines, margin, yPosition);
           yPosition += labelLines.length * 14;
 
-          // Texto normal para el valor
           doc.setFont(undefined, 'normal');
           const valueLines = doc.splitTextToSize(value, maxLineWidth);
           yPosition = checkPageEnd(doc, yPosition, valueLines.length * 14);
           doc.text(valueLines, margin, yPosition);
-          yPosition += valueLines.length * 14 + 5; // Espacio adicional entre entradas
+          yPosition += valueLines.length * 14 + 5;
 
-          // Agregar margen extra después de ciertas secciones
           if (key.toLowerCase() === 'descripcion del negocio' || key.toLowerCase() === 'objetivo del plan de inversion') {
-            yPosition += 10; // Añade más espacio
+            yPosition += 10;
           }
         });
       } else {
@@ -316,12 +312,12 @@ export default function GenerarFichaTab({ id }) {
       // 3. PROPUESTA DE MEJORA SOBRE EL DIAGNÓSTICO REALIZADO
       doc.setFontSize(fontSizes.subtitle);
       doc.setFont(undefined, 'bold');
-      yPosition += 20; // Agregar margen superior adicional
+      yPosition += 20;
       doc.text("PROPUESTA DE MEJORA SOBRE EL DIAGNÓSTICO REALIZADO", pageWidth / 2, yPosition, { align: 'center' });
 
       doc.setFontSize(fontSizes.normal);
       doc.setFont(undefined, 'normal');
-      yPosition += 20; // Incrementar espacio después del título
+      yPosition += 20;
 
       if (propuestaMejoraData.length > 0) {
         const propuestaHeaders = [
@@ -343,7 +339,7 @@ export default function GenerarFichaTab({ id }) {
           theme: 'striped',
           styles: { fontSize: fontSizes.normal, cellPadding: 4 },
           tableWidth: 'auto',
-          headStyles: { fillColor: blueColor, textColor: [255, 255, 255], fontStyle: 'bold' },
+          headStyles: { fillColor: tableColor, textColor: [255, 255, 255], fontStyle: 'bold' },
           margin: { left: margin, right: margin },
           didDrawPage: (data) => {
             yPosition = data.cursor.y;
@@ -359,12 +355,12 @@ export default function GenerarFichaTab({ id }) {
       // 4. FORMULACIÓN DE INVERSIÓN
       doc.setFontSize(fontSizes.subtitle);
       doc.setFont(undefined, 'bold');
-      yPosition += 20; // Agregar margen superior adicional
+      yPosition += 20;
       doc.text("FORMULACIÓN DE INVERSIÓN", pageWidth / 2, yPosition, { align: 'center' });
 
       doc.setFontSize(fontSizes.normal);
       doc.setFont(undefined, 'normal');
-      yPosition += 20; // Incrementar espacio después del título
+      yPosition += 20;
 
       if (formulacionData.length > 0) {
         const formulacionHeaders = [
@@ -394,7 +390,7 @@ export default function GenerarFichaTab({ id }) {
           theme: 'striped',
           styles: { fontSize: fontSizes.normal, cellPadding: 4 },
           tableWidth: 'auto',
-          headStyles: { fillColor: blueColor, textColor: [255, 255, 255], fontStyle: 'bold' },
+          headStyles: { fillColor: tableColor, textColor: [255, 255, 255], fontStyle: 'bold' },
           margin: { left: margin, right: margin },
           didDrawPage: (data) => {
             yPosition = data.cursor.y;
@@ -410,10 +406,10 @@ export default function GenerarFichaTab({ id }) {
       // 5. RESUMEN DE LA INVERSIÓN
       doc.setFontSize(fontSizes.subtitle);
       doc.setFont(undefined, 'bold');
-      yPosition += 20; // Agregar margen superior adicional
+      yPosition += 20;
       doc.text("RESUMEN DE LA INVERSIÓN", pageWidth / 2, yPosition, { align: 'center' });
 
-      yPosition += 20; // Incrementar espacio después del título
+      yPosition += 20;
 
       const resumenColumns = [
         { header: 'Rubro', dataKey: 'rubro' },
@@ -423,11 +419,15 @@ export default function GenerarFichaTab({ id }) {
       doc.autoTable({
         startY: yPosition,
         head: [resumenColumns.map(col => col.header)],
-        body: groupedRubros.map(row => resumenColumns.map(col => row[col.dataKey])),
+        body: groupedRubros.map(row => {
+          // Convertimos el total a string con formato
+          const valorFormateado = `$${row.total.toLocaleString()}`;
+          return [row.rubro, valorFormateado];
+        }),
         theme: 'striped',
         styles: { fontSize: fontSizes.normal, cellPadding: 4 },
         tableWidth: 'auto',
-        headStyles: { fillColor: blueColor, textColor: [255, 255, 255], fontStyle: 'bold' },
+        headStyles: { fillColor: tableColor, textColor: [255, 255, 255], fontStyle: 'bold' },
         margin: { left: margin, right: margin },
         didDrawPage: (data) => {
           yPosition = data.cursor.y;
@@ -442,12 +442,12 @@ export default function GenerarFichaTab({ id }) {
       // 6. CONCEPTO DE VIABILIDAD DE PLAN DE INVERSIÓN
       doc.setFontSize(fontSizes.subtitle);
       doc.setFont(undefined, 'bold');
-      yPosition += 30; // Agregar margen superior adicional
+      yPosition += 30;
       doc.text("CONCEPTO DE VIABILIDAD DE PLAN DE INVERSIÓN", pageWidth / 2, yPosition, { align: 'center' });
 
       doc.setFontSize(fontSizes.normal);
       doc.setFont(undefined, 'normal');
-      yPosition += 20; // Incrementar espacio después del título
+      yPosition += 20;
 
       const textoViabilidad = [
         `Yo, ${asesorNombre}, identificado con documento de identidad ${asesorDocumento}, en mi calidad de asesor empresarial del micronegocio denominado ${nombreEmprendimiento} y haciendo parte del equipo ejecutor del programa “Impulso Local” suscrito entre la Corporación para el Desarrollo de las Microempresas - Propaís y la Secretaría de Desarrollo Económico - SDDE, emito concepto de VIABILIDAD para que el beneficiario pueda acceder a los recursos de capitalización proporcionados por el citado programa.`,
@@ -459,17 +459,17 @@ export default function GenerarFichaTab({ id }) {
 
       textoViabilidad.forEach(parrafo => {
         if (parrafo === "") {
-          yPosition += 10; // Espacio para párrafos vacíos
+          yPosition += 10;
           return;
         }
         const lines = doc.splitTextToSize(parrafo, maxLineWidth);
         yPosition = checkPageEnd(doc, yPosition, lines.length * 14);
         doc.text(lines, margin, yPosition);
-        yPosition += lines.length * 14 + 10; // Espacio adicional entre párrafos
+        yPosition += lines.length * 14 + 10;
       });
 
       // 7. Sección de Firmas
-      const firmasSectionHeight = 120; // Altura total estimada de la sección de firmas
+      const firmasSectionHeight = 120;
       yPosition += 10;
       yPosition = checkPageEnd(doc, yPosition, firmasSectionHeight);
 
@@ -481,26 +481,20 @@ export default function GenerarFichaTab({ id }) {
       doc.setFontSize(fontSizes.normal);
       doc.setFont(undefined, 'normal');
 
-      // Posiciones para las cajas de firmas
       const boxWidth = 150;
       const boxHeight = 40;
-
       const beneficiarioBoxX = margin + 30;
       const asesorBoxX = pageWidth - margin - 180;
 
-      // Posicionar etiquetas directamente encima de las cajas
       doc.text("Beneficiario", beneficiarioBoxX + boxWidth / 2, yPosition, { align: 'center' });
       doc.text("Asesor", asesorBoxX + boxWidth / 2, yPosition, { align: 'center' });
 
       yPosition += 10;
-
-      // Dibujar cajas de firmas
       doc.rect(beneficiarioBoxX, yPosition, boxWidth, boxHeight);
       doc.rect(asesorBoxX, yPosition, boxWidth, boxHeight);
 
       yPosition += boxHeight + 15;
 
-      // Nombres debajo de las cajas
       doc.text(emprendedorNombre, beneficiarioBoxX + boxWidth / 2, yPosition, { align: 'center' });
       doc.text(asesorNombre, asesorBoxX + boxWidth / 2, yPosition, { align: 'center' });
 
@@ -510,7 +504,7 @@ export default function GenerarFichaTab({ id }) {
       doc.text(`C.C. ${asesorDocumento}`, asesorBoxX + boxWidth / 2, yPosition, { align: 'center' });
 
       // 8. Sección de Fecha y Hora
-      const dateSectionHeight = 30; // Altura total estimada de la sección de fecha y hora
+      const dateSectionHeight = 30;
       yPosition += 30;
       yPosition = checkPageEnd(doc, yPosition, dateSectionHeight);
 
@@ -520,9 +514,10 @@ export default function GenerarFichaTab({ id }) {
       doc.text(`${fecha.toLocaleDateString()} ${fecha.toLocaleTimeString()}`, pageWidth / 2, yPosition, { align: 'center' });
 
       // Descargar PDF
-      doc.save(`Ficha_Negocio_Local_${id}.pdf`); // Cambiar nombre del archivo si lo deseas
+      doc.save(`Ficha_Negocio_Local_${id}.pdf`);
+    };
   };
-  }
+
   return (
     <div>
       <h3>Generar Ficha</h3>
@@ -534,4 +529,5 @@ export default function GenerarFichaTab({ id }) {
     </div>
   );
 }
+
 
