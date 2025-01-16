@@ -93,6 +93,44 @@ export default function DiagnosticoTab({ id }) {
     },
   ];
 
+  // Este mapeo relaciona la PREGUNTA con los CÓDIGOS en capacitación que se deben activar cuando el puntaje sea 0
+  const questionToCodesMapping = {
+    "¿Están separadas sus finanzas personales de las de su negocio?": ["229"],
+    "¿Lleva registros de ingresos y gastos de su empresa periódicamente?": [
+      "230",
+      "228",
+      "226",
+    ],
+    "¿Ha calculado y registrado sus costos de producción, ventas y administración?":
+      ["230", "228"],
+    "¿Los ingresos por ventas alcanzan a cubrir sus gastos y costos operativos?":
+      ["230", "228"],
+    "¿Cuenta con el inventario suficiente de productos para atender la demanda de sus clientes?":
+      ["230", "225"],
+    "¿Maneja un control de inventarios para los bienes que comercializa o productos que fabrica incluyendo sus materias primas e insumos?":
+      ["230", "225"],
+    "¿Considera que debe fortalecer las habilidades para el manejo del talento humano en su empresa?":
+      ["230", "224"],
+    "¿Ha desarrollado estrategias para conseguir nuevos clientes?": ["227", "234"],
+    "¿Ha analizado sus productos/servicios con relación a su competencia?": ["227"],
+    "¿Mis productos/servicios tienen ventas permanentes?": ["227", "234"],
+    "¿Ha perdido alguna oportunidad de negocio o venta a causa del servicio al cliente?":
+      ["227"],
+    "¿Ha realizado ventas por internet?": ["224"],
+    "¿Conoce cómo desarrollar la venta de sus productos/servicios por internet?": [
+      "224",
+    ],
+    "¿Cuenta con equipos de cómputo?": ["224"],
+    "¿Cuenta con página web?": ["224"],
+    "¿Cuenta con red social Facebook?": ["224"],
+    "¿Cuenta con red social Instagram?": ["224"],
+    "¿Cuenta con red social TikTok?": ["224"],
+    "¿Su empresa cuenta con acceso a créditos o servicios financieros para su apalancamiento?":
+      ["233", "232"],
+    "¿Su empresa aplica medidas con enfoque ambiental: ejemplo ahorro de agua, energía, recuperación de residuos, reutilización de desechos, etc.?":
+      ["231"],
+  };
+
   const [answers, setAnswers] = useState({});
   const [recordIds, setRecordIds] = useState({});
   const [loading, setLoading] = useState(true);
@@ -118,7 +156,6 @@ export default function DiagnosticoTab({ id }) {
   const getScoreFromState = (question) => {
     const trimmed = question.text.trim();
     const currentValue = answers[trimmed];
-
     // Pregunta invertida: true => 0, false => 1
     // Pregunta normal: true => 1, false => 0
     if (isInvertedQuestion(trimmed)) {
@@ -176,6 +213,9 @@ export default function DiagnosticoTab({ id }) {
     return (totalScore / questions.length).toFixed(2);
   };
 
+  // --------------------------------------------------------------------
+  // Función principal de Guardado
+  // --------------------------------------------------------------------
   const handleSubmit = async () => {
     try {
       const token = localStorage.getItem("token");
@@ -188,6 +228,7 @@ export default function DiagnosticoTab({ id }) {
       const requestPromises = [];
       const newRecordIds = { ...recordIds };
 
+      // 1) Guardar/actualizar Diagnóstico (pi_diagnostico_cap)
       for (const section of initialQuestions) {
         for (const question of section.questions) {
           // Si no hay respuesta, asumimos false
@@ -201,7 +242,6 @@ export default function DiagnosticoTab({ id }) {
             Componente: section.component,
             Pregunta: question.text.trim(),
             Respuesta: currentAnswer,
-            // Puntaje según la lógica invertida si corresponde
             Puntaje: isInvertedQuestion(question.text.trim())
               ? currentAnswer
                 ? 0
@@ -209,7 +249,7 @@ export default function DiagnosticoTab({ id }) {
               : currentAnswer
               ? 1
               : 0,
-            user_id: userId, // Para historial
+            user_id: userId,
           };
 
           if (newRecordIds[question.text.trim()]) {
@@ -239,6 +279,28 @@ export default function DiagnosticoTab({ id }) {
       await Promise.all(requestPromises);
       setRecordIds(newRecordIds);
 
+      // 2) Calcular los códigos recomendados (puntaje 0)
+      const triggeredCodes = [];
+      for (const section of initialQuestions) {
+        for (const question of section.questions) {
+          const score = getScoreFromState(question); // 0 o 1
+          if (score === 0) {
+            const questionText = question.text.trim();
+            if (questionToCodesMapping[questionText]) {
+              questionToCodesMapping[questionText].forEach((code) => {
+                if (!triggeredCodes.includes(code)) {
+                  triggeredCodes.push(code);
+                }
+              });
+            }
+          }
+        }
+      }
+
+      // 3) Guardar esos códigos en la tabla pi_capacitacion.recommended_codes
+      //    (insertar o actualizar)
+      await upsertRecommendedCodes(token, id, userId, triggeredCodes);
+
       alert("Diagnóstico guardado exitosamente");
     } catch (error) {
       console.error("Error guardando el diagnóstico:", error);
@@ -246,7 +308,55 @@ export default function DiagnosticoTab({ id }) {
     }
   };
 
-  // Función para obtener el historial de todos los registros
+  // --------------------------------------------------------------------
+  // upsertRecommendedCodes: Crea o actualiza pi_capacitacion
+  // --------------------------------------------------------------------
+  const upsertRecommendedCodes = async (token, caracterizacion_id, userId, codesArray) => {
+    try {
+      // 1) Buscar si ya existe un registro en pi_capacitacion para este caracterizacion_id
+      const resGet = await axios.get(
+        `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/pi_capacitacion/records?caracterizacion_id=${caracterizacion_id}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      if (!resGet.data || resGet.data.length === 0) {
+        // No existe => crear
+        const newRecord = {
+          caracterizacion_id,
+          user_id: userId,
+          recommended_codes: codesArray, // <-- se guardan aquí
+        };
+
+        await axios.post(
+          `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/pi_capacitacion/record`,
+          newRecord,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+      } else {
+        // Existe => actualizar
+        const existing = resGet.data[0];
+        const recordId = existing.id;
+
+        const updatedRecord = {
+          ...existing,
+          user_id: userId,
+          recommended_codes: codesArray,
+        };
+
+        await axios.put(
+          `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/pi_capacitacion/record/${recordId}`,
+          updatedRecord,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+      }
+    } catch (error) {
+      console.error("Error en upsertRecommendedCodes:", error);
+    }
+  };
+
+  // --------------------------------------------------------------------
+  // Historial
+  // --------------------------------------------------------------------
   const fetchAllRecordsHistory = async () => {
     if (Object.keys(recordIds).length === 0) {
       setHistory([]);
@@ -296,6 +406,9 @@ export default function DiagnosticoTab({ id }) {
     setShowHistoryModal(true);
   };
 
+  // --------------------------------------------------------------------
+  // Render
+  // --------------------------------------------------------------------
   return (
     <div>
       <h3>Diagnóstico</h3>
@@ -389,7 +502,11 @@ export default function DiagnosticoTab({ id }) {
           >
             <div
               className="modal-content"
-              style={{ maxHeight: "90vh", display: "flex", flexDirection: "column" }}
+              style={{
+                maxHeight: "90vh",
+                display: "flex",
+                flexDirection: "column",
+              }}
             >
               <div className="modal-header">
                 <h5 className="modal-title">Historial de Cambios</h5>
@@ -466,4 +583,5 @@ export default function DiagnosticoTab({ id }) {
 DiagnosticoTab.propTypes = {
   id: PropTypes.string.isRequired,
 };
+
 
