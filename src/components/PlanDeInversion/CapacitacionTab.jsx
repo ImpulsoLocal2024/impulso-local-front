@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import PropTypes from "prop-types";
 import axios from "axios";
 
-// Mapeo de "código" => "texto a mostrar"
+// Mapeo de "código" => "texto de la columna" en tu BD
 const codeToText = {
   "224": "224 - Fortaleciendo mis capacidades",
   "225": "225 - Gestión Administrativa de mi negocio (La importancia y c",
@@ -20,11 +20,12 @@ const codeToText = {
 };
 
 export default function CapacitacionTab({ id }) {
-  // Aquí ya no usamos un array fijo de questions,
-  // sino que lo construiremos en base a recommended_codes
-  const [recommendedCodes, setRecommendedCodes] = useState([]); 
   const [record, setRecord] = useState(null);
   const [recordId, setRecordId] = useState(null);
+
+  // recommendedCodes se cargará desde la columna recommended_codes (texto JSON en la BD)
+  const [recommendedCodes, setRecommendedCodes] = useState([]); 
+
   const [loading, setLoading] = useState(true);
 
   // Historial
@@ -50,34 +51,29 @@ export default function CapacitacionTab({ id }) {
         );
 
         if (!response.data || response.data.length === 0) {
-          // No existe => creamos uno nuevo vacío
+          // No existe => sin recommended_codes
           setRecord(null);
           setRecordId(null);
           setRecommendedCodes([]);
         } else {
           const existingRecord = response.data[0];
-          setRecord(existingRecord);
           setRecordId(existingRecord.id);
 
-          // Asegurarnos de extraer recommended_codes (puede ser null)
-          const codesArray = existingRecord.recommended_codes || [];
-          setRecommendedCodes(codesArray);
-
-          // Para cada code, si en la BD no existe la columna, 
-          // hay que manejarlo con precaución. 
-          // Este ejemplo asume que la BD sí tiene una columna 
-          // para cada "texto" de la lista (p.ej. "224 - Fortaleciendo..."), 
-          // o que la manejas de otra forma.
-          codesArray.forEach((code) => {
-            const questionText = codeToText[code] || code;
-            if (existingRecord[questionText] === undefined) {
-              // Si no existe, setearlo false en local (solo en front). 
-              // Guardar en BD si deseas con put. 
-              existingRecord[questionText] = false;
+          // recommended_codes viene como texto; parsearlo
+          let codesArray = [];
+          if (existingRecord.recommended_codes) {
+            try {
+              codesArray = JSON.parse(existingRecord.recommended_codes);
+            } catch (err) {
+              console.warn("Error parseando recommended_codes:", err);
+              codesArray = [];
             }
-          });
+          } else {
+            codesArray = [];
+          }
 
-          setRecord({ ...existingRecord });
+          setRecommendedCodes(Array.isArray(codesArray) ? codesArray : []);
+          setRecord(existingRecord);
         }
       } catch (error) {
         console.error("Error obteniendo el registro de capacitación:", error);
@@ -92,9 +88,7 @@ export default function CapacitacionTab({ id }) {
     fetchRecord();
   }, [id]);
 
-  // Función para togglear una cápsula como completada/no completada
-  // Asumiendo que en tu BD la columna se llama igual que en 'record' 
-  // (ej. "224 - Fortaleciendo mis capacidades")
+  // Toggle de cada cápsula
   const handleToggle = async (code) => {
     if (!recordId || !record) return;
     try {
@@ -103,19 +97,17 @@ export default function CapacitacionTab({ id }) {
         alert("No se encontró el token de autenticación");
         return;
       }
-      const questionText = codeToText[code] || code;
 
-      // Actualizar local
-      const currentVal = record[questionText] || false;
+      const columnName = codeToText[code]; // p.ej. "224 - Fortaleciendo mis capacidades"
+      const currentVal = record[columnName] || false;
       const updatedVal = !currentVal;
+
       const updatedRecord = {
         ...record,
-        [questionText]: updatedVal,
+        [columnName]: updatedVal,
       };
 
-      // Enviar al backend
-      // Se asume que la columna en la BD se llama EXACTAMENTE questionText 
-      // o algo similar. Ajusta según tu tabla real.
+      // Guardar en BD
       await axios.put(
         `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/pi_capacitacion/record/${recordId}`,
         updatedRecord,
@@ -125,23 +117,18 @@ export default function CapacitacionTab({ id }) {
       setRecord(updatedRecord);
     } catch (error) {
       console.error("Error toggling capacitación:", error);
-      alert("Error al marcar la cápsula en la BD");
+      alert("Hubo un error al marcar la cápsula en la BD");
     }
   };
 
-  // Calculamos el avance: de recommendedCodes, cuántos están en "true" en record
+  // Calcular progreso
   let progress = 0;
-  if (!loading && record && recommendedCodes.length > 0) {
-    const completedCount = recommendedCodes.reduce((acc, code) => {
-      const questionText = codeToText[code] || code;
-      return acc + (record[questionText] ? 1 : 0);
+  if (!loading && recommendedCodes.length > 0 && record) {
+    const completedCount = recommendedCodes.reduce((count, code) => {
+      const columnName = codeToText[code];
+      return count + (record[columnName] ? 1 : 0);
     }, 0);
     progress = ((completedCount / recommendedCodes.length) * 100).toFixed(2);
-  }
-
-  // Si no hay recommendedCodes, no mostramos nada
-  if (loading) {
-    return <p>Cargando...</p>;
   }
 
   // Historial
@@ -153,11 +140,8 @@ export default function CapacitacionTab({ id }) {
       const token = localStorage.getItem("token");
       const historyResponse = await axios.get(
         `https://impulso-local-back.onrender.com/api/inscriptions/tables/pi_capacitacion/record/${recordId}/history`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
+        { headers: { Authorization: `Bearer ${token}` } }
       );
-
       setHistory(historyResponse.data.history || []);
       setHistoryLoading(false);
     } catch (error) {
@@ -172,20 +156,21 @@ export default function CapacitacionTab({ id }) {
     setShowHistoryModal(true);
   };
 
+  // Render
+  if (loading) {
+    return <p>Cargando...</p>;
+  }
+
   return (
     <div>
       <h3>Capacitación</h3>
-
       {recommendedCodes.length === 0 ? (
         <p>No hay cápsulas recomendadas por el diagnóstico.</p>
       ) : (
         <>
           <div style={{ marginBottom: "1rem" }}>
-            <h5>Porcentaje de avance</h5>
-            <div
-              className="progress"
-              style={{ height: "20px", backgroundColor: "#e9ecef" }}
-            >
+            <h5>Progreso</h5>
+            <div className="progress" style={{ height: "20px", backgroundColor: "#e9ecef" }}>
               <div
                 className="progress-bar"
                 role="progressbar"
@@ -204,8 +189,8 @@ export default function CapacitacionTab({ id }) {
 
           <ul className="list-group mb-3">
             {recommendedCodes.map((code) => {
-              const questionText = codeToText[code] || code;
-              const isDone = record[questionText] || false;
+              const columnName = codeToText[code];
+              const value = record[columnName] || false;
               return (
                 <li
                   key={code}
@@ -213,15 +198,11 @@ export default function CapacitacionTab({ id }) {
                   style={{ cursor: "pointer" }}
                   onClick={() => handleToggle(code)}
                 >
-                  {questionText}
-                  {isDone ? (
-                    <span style={{ color: "green", fontWeight: "bold" }}>
-                      ✔️
-                    </span>
+                  {columnName}
+                  {value ? (
+                    <span style={{ color: "green", fontWeight: "bold" }}>✔️</span>
                   ) : (
-                    <span style={{ color: "red", fontWeight: "bold" }}>
-                      ❌
-                    </span>
+                    <span style={{ color: "red", fontWeight: "bold" }}>❌</span>
                   )}
                 </li>
               );
@@ -230,13 +211,8 @@ export default function CapacitacionTab({ id }) {
         </>
       )}
 
-      {/* Mostrar botón de historial solo si existe recordId */}
       {recordId && (
-        <button
-          type="button"
-          className="btn btn-info btn-sm"
-          onClick={handleOpenHistoryModal}
-        >
+        <button className="btn btn-info btn-sm" onClick={handleOpenHistoryModal}>
           Ver Historial de Cambios
         </button>
       )}
@@ -250,8 +226,8 @@ export default function CapacitacionTab({ id }) {
         >
           <div
             className="modal-dialog modal-lg"
-            role="document"
             style={{ maxWidth: "90%" }}
+            role="document"
           >
             <div
               className="modal-content"
@@ -296,9 +272,7 @@ export default function CapacitacionTab({ id }) {
                           <tr key={item.id}>
                             <td>{item.user_id}</td>
                             <td>{item.username}</td>
-                            <td>
-                              {new Date(item.created_at).toLocaleString()}
-                            </td>
+                            <td>{new Date(item.created_at).toLocaleString()}</td>
                             <td>{item.change_type}</td>
                             <td>{item.field_name || "-"}</td>
                             <td>{item.old_value || "-"}</td>
@@ -310,7 +284,7 @@ export default function CapacitacionTab({ id }) {
                     </table>
                   </div>
                 ) : (
-                  <p className="mt-3">No hay historial de cambios.</p>
+                  <p>No hay historial de cambios.</p>
                 )}
               </div>
               <div className="modal-footer">

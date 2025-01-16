@@ -93,7 +93,7 @@ export default function DiagnosticoTab({ id }) {
     },
   ];
 
-  // Este mapeo relaciona la PREGUNTA con los CÓDIGOS en capacitación que se deben activar cuando el puntaje sea 0
+  // Mapeo: pregunta => códigos que se activan si la respuesta da puntaje 0
   const questionToCodesMapping = {
     "¿Están separadas sus finanzas personales de las de su negocio?": ["229"],
     "¿Lleva registros de ingresos y gastos de su empresa periódicamente?": [
@@ -135,13 +135,13 @@ export default function DiagnosticoTab({ id }) {
   const [recordIds, setRecordIds] = useState({});
   const [loading, setLoading] = useState(true);
 
-  // Estados para historial
+  // Historial
   const [history, setHistory] = useState([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyError, setHistoryError] = useState(null);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
 
-  // Esta función indica si la pregunta lleva lógica invertida
+  // Determina si la pregunta es invertida
   const isInvertedQuestion = (questionText) => {
     const trimmed = questionText.trim();
     return (
@@ -152,19 +152,20 @@ export default function DiagnosticoTab({ id }) {
     );
   };
 
-  // Retorna el puntaje de la pregunta según si es invertida o no
+  // Calcula puntaje según la pregunta
   const getScoreFromState = (question) => {
     const trimmed = question.text.trim();
     const currentValue = answers[trimmed];
-    // Pregunta invertida: true => 0, false => 1
-    // Pregunta normal: true => 1, false => 0
     if (isInvertedQuestion(trimmed)) {
+      // invertida: true => 0, false => 1
       return currentValue ? 0 : 1;
     } else {
+      // normal: true => 1, false => 0
       return currentValue ? 1 : 0;
     }
   };
 
+  // Cargar respuestas actuales de Diagnóstico
   useEffect(() => {
     const fetchExistingRecords = async () => {
       setLoading(true);
@@ -205,17 +206,13 @@ export default function DiagnosticoTab({ id }) {
     setAnswers((prev) => ({ ...prev, [questionText.trim()]: value }));
   };
 
-  // Calcula el promedio usando la función getScoreFromState
+  // Calcula promedio de cada componente
   const calculateAverage = (questions) => {
-    const totalScore = questions.reduce((sum, q) => {
-      return sum + getScoreFromState(q);
-    }, 0);
+    const totalScore = questions.reduce((sum, q) => sum + getScoreFromState(q), 0);
     return (totalScore / questions.length).toFixed(2);
   };
 
-  // --------------------------------------------------------------------
-  // Función principal de Guardado
-  // --------------------------------------------------------------------
+  // Guardar Diagnóstico y recommended_codes
   const handleSubmit = async () => {
     try {
       const token = localStorage.getItem("token");
@@ -223,7 +220,6 @@ export default function DiagnosticoTab({ id }) {
         alert("No se encontró el token de autenticación");
         return;
       }
-
       const userId = localStorage.getItem("id");
       const requestPromises = [];
       const newRecordIds = { ...recordIds };
@@ -231,7 +227,6 @@ export default function DiagnosticoTab({ id }) {
       // 1) Guardar/actualizar Diagnóstico (pi_diagnostico_cap)
       for (const section of initialQuestions) {
         for (const question of section.questions) {
-          // Si no hay respuesta, asumimos false
           const currentAnswer =
             answers[question.text.trim()] === undefined
               ? false
@@ -253,7 +248,7 @@ export default function DiagnosticoTab({ id }) {
           };
 
           if (newRecordIds[question.text.trim()]) {
-            // Actualizar
+            // update
             const updatePromise = axios.put(
               `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/pi_diagnostico_cap/record/${newRecordIds[question.text.trim()]}`,
               requestData,
@@ -261,7 +256,7 @@ export default function DiagnosticoTab({ id }) {
             );
             requestPromises.push(updatePromise);
           } else {
-            // Crear
+            // create
             const createPromise = axios
               .post(
                 `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/pi_diagnostico_cap/record`,
@@ -283,7 +278,7 @@ export default function DiagnosticoTab({ id }) {
       const triggeredCodes = [];
       for (const section of initialQuestions) {
         for (const question of section.questions) {
-          const score = getScoreFromState(question); // 0 o 1
+          const score = getScoreFromState(question);
           if (score === 0) {
             const questionText = question.text.trim();
             if (questionToCodesMapping[questionText]) {
@@ -297,8 +292,7 @@ export default function DiagnosticoTab({ id }) {
         }
       }
 
-      // 3) Guardar esos códigos en la tabla pi_capacitacion.recommended_codes
-      //    (insertar o actualizar)
+      // 3) Guardar recommended_codes en pi_capacitacion
       await upsertRecommendedCodes(token, id, userId, triggeredCodes);
 
       alert("Diagnóstico guardado exitosamente");
@@ -308,41 +302,39 @@ export default function DiagnosticoTab({ id }) {
     }
   };
 
-  // --------------------------------------------------------------------
-  // upsertRecommendedCodes: Crea o actualiza pi_capacitacion
-  // --------------------------------------------------------------------
+  // upsert: serializamos a texto JSON
   const upsertRecommendedCodes = async (token, caracterizacion_id, userId, codesArray) => {
     try {
-      // 1) Buscar si ya existe un registro en pi_capacitacion para este caracterizacion_id
       const resGet = await axios.get(
         `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/pi_capacitacion/records?caracterizacion_id=${caracterizacion_id}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
+      // Convertimos a string
+      const codesString = JSON.stringify(codesArray);
+
       if (!resGet.data || resGet.data.length === 0) {
-        // No existe => crear
+        // crear
         const newRecord = {
           caracterizacion_id,
           user_id: userId,
-          recommended_codes: codesArray, // <-- se guardan aquí
+          recommended_codes: codesString,
         };
-
         await axios.post(
           `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/pi_capacitacion/record`,
           newRecord,
           { headers: { Authorization: `Bearer ${token}` } }
         );
       } else {
-        // Existe => actualizar
+        // actualizar
         const existing = resGet.data[0];
         const recordId = existing.id;
 
         const updatedRecord = {
           ...existing,
           user_id: userId,
-          recommended_codes: codesArray,
+          recommended_codes: codesString,
         };
-
         await axios.put(
           `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/pi_capacitacion/record/${recordId}`,
           updatedRecord,
@@ -354,15 +346,12 @@ export default function DiagnosticoTab({ id }) {
     }
   };
 
-  // --------------------------------------------------------------------
-  // Historial
-  // --------------------------------------------------------------------
+  // Historial de cambios del Diagnóstico
   const fetchAllRecordsHistory = async () => {
     if (Object.keys(recordIds).length === 0) {
       setHistory([]);
       return;
     }
-
     setHistoryLoading(true);
     setHistoryError(null);
     try {
@@ -380,14 +369,12 @@ export default function DiagnosticoTab({ id }) {
 
       const historyResponses = await Promise.all(historyPromises);
       let combinedHistory = [];
-
       historyResponses.forEach((response) => {
         if (response.data.history && Array.isArray(response.data.history)) {
           combinedHistory = combinedHistory.concat(response.data.history);
         }
       });
 
-      // Ordenar el historial por fecha descendente
       combinedHistory.sort(
         (a, b) => new Date(b.created_at) - new Date(a.created_at)
       );
@@ -406,9 +393,6 @@ export default function DiagnosticoTab({ id }) {
     setShowHistoryModal(true);
   };
 
-  // --------------------------------------------------------------------
-  // Render
-  // --------------------------------------------------------------------
   return (
     <div>
       <h3>Diagnóstico</h3>
@@ -470,11 +454,11 @@ export default function DiagnosticoTab({ id }) {
               ))}
             </tbody>
           </table>
+
           <button className="btn btn-primary" onClick={handleSubmit}>
             Guardar
           </button>
 
-          {/* Mostrar el botón de historial solo si hay registros guardados */}
           {Object.keys(recordIds).length > 0 && (
             <button
               type="button"
@@ -495,18 +479,10 @@ export default function DiagnosticoTab({ id }) {
           tabIndex="-1"
           role="dialog"
         >
-          <div
-            className="modal-dialog modal-lg"
-            role="document"
-            style={{ maxWidth: "90%" }}
-          >
+          <div className="modal-dialog modal-lg" style={{ maxWidth: "90%" }} role="document">
             <div
               className="modal-content"
-              style={{
-                maxHeight: "90vh",
-                display: "flex",
-                flexDirection: "column",
-              }}
+              style={{ maxHeight: "90vh", display: "flex", flexDirection: "column" }}
             >
               <div className="modal-header">
                 <h5 className="modal-title">Historial de Cambios</h5>
