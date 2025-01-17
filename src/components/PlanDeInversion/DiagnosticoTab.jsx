@@ -93,37 +93,43 @@ export default function DiagnosticoTab({ id }) {
     },
   ];
 
-  // Mapeo: campo => códigos que se activan si la respuesta da puntaje 0
+  // Mapeo: pregunta => códigos que se activan si la respuesta da puntaje 0
   const questionToCodesMapping = {
-    finanzas_separadas: ["229"],
-    registros_ingresos_gastos: ["230", "228", "226"],
-    costos_registrados: ["230", "228"],
-    ingresos_cubren_costos: ["230", "228"],
-    inventario_suficiente: ["230", "225"],
-    control_inventarios: ["230", "225"],
-    fortalecer_talento_humano: ["230", "224"],
-    estrategias_nuevos_clientes: ["227", "234"],
-    productos_vs_competencia: ["227"],
-    ventas_permanentes: ["227", "234"],
-    oportunidades_perdidas: ["227"],
-    ventas_internet: ["224"],
-    desarrollo_ventas_online: ["224"],
-    equipos_computo: ["224"],
-    pagina_web: ["224"],
-    facebook: ["224"],
-    instagram: ["224"],
-    tiktok: ["224"],
-    acceso_creditos: ["233", "232"],
-    enfoque_ambiental: ["231"],
+    "¿Están separadas sus finanzas personales de las de su negocio?": ["229"],
+    "¿Lleva registros de ingresos y gastos de su empresa periódicamente?": [
+      "230",
+      "228",
+      "226",
+    ],
+    "¿Ha calculado y registrado sus costos de producción, ventas y administración?":
+      ["230", "228"],
+    "¿Los ingresos por ventas alcanzan a cubrir sus gastos y costos operativos?":
+      ["230", "228"],
+    "¿Cuenta con el inventario suficiente de productos para atender la demanda de sus clientes?":
+      ["230", "225"],
+    "¿Maneja un control de inventarios para los bienes que comercializa o productos que fabrica incluyendo sus materias primas e insumos?":
+      ["230", "225"],
+    "¿Considera que debe fortalecer las habilidades para el manejo del talento humano en su empresa?":
+      ["230", "224"],
+    "¿Ha desarrollado estrategias para conseguir nuevos clientes?": ["227", "234"],
+    "¿Ha analizado sus productos/servicios con relación a su competencia?": ["227"],
+    "¿Mis productos/servicios tienen ventas permanentes?": ["227", "234"],
+    "¿Ha perdido alguna oportunidad de negocio o venta a causa del servicio al cliente?":
+      ["227"],
+    "¿Ha realizado ventas por internet?": ["224"],
+    "¿Conoce cómo desarrollar la venta de sus productos/servicios por internet?": [
+      "224",
+    ],
+    "¿Cuenta con equipos de cómputo?": ["224"],
+    "¿Cuenta con página web?": ["224"],
+    "¿Cuenta con red social Facebook?": ["224"],
+    "¿Cuenta con red social Instagram?": ["224"],
+    "¿Cuenta con red social TikTok?": ["224"],
+    "¿Su empresa cuenta con acceso a créditos o servicios financieros para su apalancamiento?":
+      ["233", "232"],
+    "¿Su empresa aplica medidas con enfoque ambiental: ejemplo ahorro de agua, energía, recuperación de residuos, reutilización de desechos, etc.?":
+      ["231"],
   };
-
-  // Mapeo de Pregunta a Field
-  const questionTextToFieldMapping = initialQuestions.reduce((acc, section) => {
-    section.questions.forEach((q) => {
-      acc[q.text.trim()] = q.field;
-    });
-    return acc;
-  }, {});
 
   const [answers, setAnswers] = useState({});
   const [recordIds, setRecordIds] = useState({});
@@ -136,17 +142,21 @@ export default function DiagnosticoTab({ id }) {
   const [showHistoryModal, setShowHistoryModal] = useState(false);
 
   // Determina si la pregunta es invertida
-  const isInvertedQuestion = (field) => {
+  const isInvertedQuestion = (questionText) => {
+    const trimmed = questionText.trim();
     return (
-      field === "fortalecer_talento_humano" ||
-      field === "oportunidades_perdidas"
+      trimmed ===
+        "¿Considera que debe fortalecer las habilidades para el manejo del talento humano en su empresa?" ||
+      trimmed ===
+        "¿Ha perdido alguna oportunidad de negocio o venta a causa del servicio al cliente?"
     );
   };
 
   // Calcula puntaje según la pregunta
-  const getScoreFromState = (field) => {
-    const currentValue = answers[field];
-    if (isInvertedQuestion(field)) {
+  const getScoreFromState = (question) => {
+    const trimmed = question.text.trim();
+    const currentValue = answers[trimmed];
+    if (isInvertedQuestion(trimmed)) {
       // invertida: true => 0, false => 1
       return currentValue ? 0 : 1;
     } else {
@@ -163,7 +173,6 @@ export default function DiagnosticoTab({ id }) {
         const token = localStorage.getItem("token");
         if (!token) {
           alert("No se encontró el token de autenticación");
-          setLoading(false);
           return;
         }
 
@@ -174,21 +183,12 @@ export default function DiagnosticoTab({ id }) {
 
         const records = response.data.reduce(
           (acc, record) => {
-            const pregunta = record.Pregunta.trim();
-            const field = questionTextToFieldMapping[pregunta];
-            if (field) {
-              acc.answers[field] = record.Respuesta;
-              acc.recordIds[field] = record.id;
-            } else {
-              console.warn(`No se encontró el campo para la pregunta: "${pregunta}"`);
-            }
+            acc.answers[record.Pregunta.trim()] = record.Respuesta;
+            acc.recordIds[record.Pregunta.trim()] = record.id;
             return acc;
           },
           { answers: {}, recordIds: {} }
         );
-
-        console.log("Respuestas Cargadas:", records.answers);
-        console.log("IDs de Registros:", records.recordIds);
 
         setAnswers(records.answers);
         setRecordIds(records.recordIds);
@@ -200,15 +200,15 @@ export default function DiagnosticoTab({ id }) {
     };
 
     fetchExistingRecords();
-  }, [id, questionTextToFieldMapping]);
+  }, [id]);
 
-  const handleAnswerChange = (field, value) => {
-    setAnswers((prev) => ({ ...prev, [field]: value }));
+  const handleAnswerChange = (questionText, value) => {
+    setAnswers((prev) => ({ ...prev, [questionText.trim()]: value }));
   };
 
   // Calcula promedio de cada componente
   const calculateAverage = (questions) => {
-    const totalScore = questions.reduce((sum, q) => sum + getScoreFromState(q.field), 0);
+    const totalScore = questions.reduce((sum, q) => sum + getScoreFromState(q), 0);
     return (totalScore / questions.length).toFixed(2);
   };
 
@@ -227,43 +227,33 @@ export default function DiagnosticoTab({ id }) {
       // 1) Guardar/actualizar Diagnóstico (pi_diagnostico_cap)
       for (const section of initialQuestions) {
         for (const question of section.questions) {
-          const field = question.field;
           const currentAnswer =
-            answers[field] === undefined
+            answers[question.text.trim()] === undefined
               ? false
-              : answers[field];
-
-          const puntaje = isInvertedQuestion(field)
-            ? currentAnswer
-              ? 0
-              : 1
-            : currentAnswer
-            ? 1
-            : 0;
+              : answers[question.text.trim()];
 
           const requestData = {
             caracterizacion_id: id,
             Componente: section.component,
             Pregunta: question.text.trim(),
             Respuesta: currentAnswer,
-            Puntaje: puntaje,
+            Puntaje: isInvertedQuestion(question.text.trim())
+              ? currentAnswer
+                ? 0
+                : 1
+              : currentAnswer
+              ? 1
+              : 0,
             user_id: userId,
-            field: field, // Asegúrate de incluir el 'field' si es necesario en el backend
           };
 
-          console.log("Enviando Datos:", requestData);
-
-          if (newRecordIds[field]) {
+          if (newRecordIds[question.text.trim()]) {
             // update
             const updatePromise = axios.put(
-              `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/pi_diagnostico_cap/record/${newRecordIds[field]}`,
+              `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/pi_diagnostico_cap/record/${newRecordIds[question.text.trim()]}`,
               requestData,
               { headers: { Authorization: `Bearer ${token}` } }
-            ).then(response => {
-              console.log(`Registro Actualizado para ${field}:`, response.data);
-            }).catch(error => {
-              console.error(`Error actualizando el registro para ${field}:`, error);
-            });
+            );
             requestPromises.push(updatePromise);
           } else {
             // create
@@ -274,11 +264,7 @@ export default function DiagnosticoTab({ id }) {
                 { headers: { Authorization: `Bearer ${token}` } }
               )
               .then((response) => {
-                console.log(`Registro Creado para ${field}:`, response.data);
-                newRecordIds[field] = response.data.id;
-              })
-              .catch(error => {
-                console.error(`Error creando el registro para ${field}:`, error);
+                newRecordIds[question.text.trim()] = response.data.id;
               });
             requestPromises.push(createPromise);
           }
@@ -292,11 +278,11 @@ export default function DiagnosticoTab({ id }) {
       const triggeredCodes = [];
       for (const section of initialQuestions) {
         for (const question of section.questions) {
-          const field = question.field;
-          const score = getScoreFromState(field);
+          const score = getScoreFromState(question);
           if (score === 0) {
-            if (questionToCodesMapping[field]) {
-              questionToCodesMapping[field].forEach((code) => {
+            const questionText = question.text.trim();
+            if (questionToCodesMapping[questionText]) {
+              questionToCodesMapping[questionText].forEach((code) => {
                 if (!triggeredCodes.includes(code)) {
                   triggeredCodes.push(code);
                 }
@@ -306,30 +292,13 @@ export default function DiagnosticoTab({ id }) {
         }
       }
 
-      console.log("Códigos Activados:", triggeredCodes);
-
       // 3) Guardar recommended_codes en pi_capacitacion
       await upsertRecommendedCodes(token, id, userId, triggeredCodes);
 
       alert("Diagnóstico guardado exitosamente");
-
-      // Recargar los registros para sincronizar el estado
-      await fetchExistingRecords();
     } catch (error) {
       console.error("Error guardando el diagnóstico:", error);
-      if (error.response) {
-        // El servidor respondió con un código de estado fuera del rango 2xx
-        console.error("Datos de Respuesta:", error.response.data);
-        alert(`Error: ${error.response.data.message || "Hubo un error al guardar el diagnóstico"}`);
-      } else if (error.request) {
-        // La solicitud fue hecha pero no se recibió respuesta
-        console.error("Solicitud sin respuesta:", error.request);
-        alert("Error: No se recibió respuesta del servidor");
-      } else {
-        // Algo sucedió al configurar la solicitud
-        console.error("Error al configurar la solicitud:", error.message);
-        alert(`Error: ${error.message}`);
-      }
+      alert("Hubo un error al guardar el diagnóstico");
     }
   };
 
@@ -351,12 +320,11 @@ export default function DiagnosticoTab({ id }) {
           user_id: userId,
           recommended_codes: codesString,
         };
-        const createResponse = await axios.post(
+        await axios.post(
           `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/pi_capacitacion/record`,
           newRecord,
           { headers: { Authorization: `Bearer ${token}` } }
         );
-        console.log("Códigos Recomendados Creado:", createResponse.data);
       } else {
         // actualizar
         const existing = resGet.data[0];
@@ -367,55 +335,14 @@ export default function DiagnosticoTab({ id }) {
           user_id: userId,
           recommended_codes: codesString,
         };
-        const updateResponse = await axios.put(
+        await axios.put(
           `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/pi_capacitacion/record/${recordId}`,
           updatedRecord,
           { headers: { Authorization: `Bearer ${token}` } }
         );
-        console.log("Códigos Recomendados Actualizado:", updateResponse.data);
       }
     } catch (error) {
       console.error("Error en upsertRecommendedCodes:", error);
-      alert("Hubo un error al guardar los códigos recomendados.");
-    }
-  };
-
-  // Función para recargar registros existentes
-  const fetchExistingRecords = async () => {
-    try {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        console.warn("No se encontró el token de autenticación al recargar registros");
-        return;
-      }
-
-      const response = await axios.get(
-        `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/pi_diagnostico_cap/records?caracterizacion_id=${id}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-
-      const records = response.data.reduce(
-        (acc, record) => {
-          const pregunta = record.Pregunta.trim();
-          const field = questionTextToFieldMapping[pregunta];
-          if (field) {
-            acc.answers[field] = record.Respuesta;
-            acc.recordIds[field] = record.id;
-          } else {
-            console.warn(`No se encontró el campo para la pregunta: "${pregunta}"`);
-          }
-          return acc;
-        },
-        { answers: {}, recordIds: {} }
-      );
-
-      console.log("Respuestas Cargadas después de recargar:", records.answers);
-      console.log("IDs de Registros después de recargar:", records.recordIds);
-
-      setAnswers(records.answers);
-      setRecordIds(records.recordIds);
-    } catch (error) {
-      console.error("Error recargando registros existentes:", error);
     }
   };
 
@@ -487,7 +414,7 @@ export default function DiagnosticoTab({ id }) {
               {initialQuestions.map((section) => (
                 <React.Fragment key={section.component}>
                   {section.questions.map((question, index) => (
-                    <tr key={question.field}>
+                    <tr key={question.text}>
                       {index === 0 && (
                         <td rowSpan={section.questions.length}>
                           {section.component}
@@ -497,24 +424,24 @@ export default function DiagnosticoTab({ id }) {
                       <td>
                         <input
                           type="radio"
-                          name={question.field}
-                          checked={answers[question.field] === true}
+                          name={question.text}
+                          checked={answers[question.text.trim()] === true}
                           onChange={() =>
-                            handleAnswerChange(question.field, true)
+                            handleAnswerChange(question.text, true)
                           }
                         />
                       </td>
                       <td>
                         <input
                           type="radio"
-                          name={question.field}
-                          checked={answers[question.field] === false}
+                          name={question.text}
+                          checked={answers[question.text.trim()] === false}
                           onChange={() =>
-                            handleAnswerChange(question.field, false)
+                            handleAnswerChange(question.text, false)
                           }
                         />
                       </td>
-                      <td>{getScoreFromState(question.field)}</td>
+                      <td>{getScoreFromState(question)}</td>
                     </tr>
                   ))}
                   <tr>
@@ -599,8 +526,8 @@ export default function DiagnosticoTab({ id }) {
                             <td>{new Date(item.created_at).toLocaleString()}</td>
                             <td>{item.change_type}</td>
                             <td>{item.field_name || "-"}</td>
-                            <td>{item.old_value !== null ? item.old_value.toString() : "-"}</td>
-                            <td>{item.new_value !== null ? item.new_value.toString() : "-"}</td>
+                            <td>{item.old_value || "-"}</td>
+                            <td>{item.new_value || "-"}</td>
                             <td>{item.description || "-"}</td>
                           </tr>
                         ))}
