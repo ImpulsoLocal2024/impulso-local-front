@@ -1,162 +1,162 @@
-// DiagnosticoTab para impulso-local-back
-
 import React, { useState, useEffect } from "react";
 import PropTypes from "prop-types";
 import axios from "axios";
 
-// Definir initialQuestions y questionToCodesMapping fuera del componente para evitar redefiniciones
-const initialQuestions = [
-  {
-    component: "Conectándome con mi negocio",
-    questions: [
-      {
-        text: "¿Están separadas sus finanzas personales de las de su negocio?",
-        field: "finanzas_separadas",
-      },
-      {
-        text: "¿Lleva registros de ingresos y gastos de su empresa periódicamente?",
-        field: "registros_ingresos_gastos",
-      },
-      {
-        text: "¿Ha calculado y registrado sus costos de producción, ventas y administración?",
-        field: "costos_registrados",
-      },
-      {
-        text: "¿Los ingresos por ventas alcanzan a cubrir sus gastos y costos operativos?",
-        field: "ingresos_cubren_costos",
-      },
-      {
-        text: "¿Cuenta con el inventario suficiente de productos para atender la demanda de sus clientes?",
-        field: "inventario_suficiente",
-      },
-      {
-        text: "¿Maneja un control de inventarios para los bienes que comercializa o productos que fabrica incluyendo sus materias primas e insumos?",
-        field: "control_inventarios",
-      },
-      {
-        text: "¿Considera que debe fortalecer las habilidades para el manejo del talento humano en su empresa?",
-        field: "fortalecer_talento_humano",
-      },
-    ],
-  },
-  {
-    component: "Conectándome con mi mercado",
-    questions: [
-      {
-        text: "¿Ha desarrollado estrategias para conseguir nuevos clientes?",
-        field: "estrategias_nuevos_clientes",
-      },
-      {
-        text: "¿Ha analizado sus productos/servicios con relación a su competencia?",
-        field: "productos_vs_competencia",
-      },
-      {
-        text: "¿Mis productos/servicios tienen ventas permanentes?",
-        field: "ventas_permanentes",
-      },
-      {
-        text: "¿Ha perdido alguna oportunidad de negocio o venta a causa del servicio al cliente?",
-        field: "oportunidades_perdidas",
-      },
-    ],
-  },
-  {
-    component: "Conexiones digitales",
-    questions: [
-      { text: "¿Ha realizado ventas por internet?", field: "ventas_internet" },
-      {
-        text: "¿Conoce cómo desarrollar la venta de sus productos/servicios por internet?",
-        field: "desarrollo_ventas_online",
-      },
-      { text: "¿Cuenta con equipos de cómputo?", field: "equipos_computo" },
-      { text: "¿Cuenta con página web?", field: "pagina_web" },
-      { text: "¿Cuenta con red social Facebook?", field: "facebook" },
-      { text: "¿Cuenta con red social Instagram?", field: "instagram" },
-      { text: "¿Cuenta con red social TikTok?", field: "tiktok" },
-    ],
-  },
-  {
-    component: "Alístate para crecer",
-    questions: [
-      {
-        text: "¿Su empresa cuenta con acceso a créditos o servicios financieros para su apalancamiento?",
-        field: "acceso_creditos",
-      },
-    ],
-  },
-  {
-    component: "Conectándome con el ambiente",
-    questions: [
-      {
-        text: "¿Su empresa aplica medidas con enfoque ambiental: ejemplo ahorro de agua, energía, recuperación de residuos, reutilización de desechos, etc.?",
-        field: "enfoque_ambiental",
-      },
-    ],
-  },
-];
-
-/**
- * Mapeo de pregunta => arreglo de códigos
- */
-const questionToCodesMapping = {
-  "¿Están separadas sus finanzas personales de las de su negocio?": [
-    "210 - Separar finanzas personales y comerciales",
-    "212 - El ABC para el manejo básico de sus finanzas",
-  ],
-  "¿Lleva registros de ingresos y gastos de su empresa periódicamente?": [
-    "209 - Administrar mi negocio",
-    "221 - Contabilidad básica para micronegocios",
-  ],
-  "¿Ha calculado y registrado sus costos de producción, ventas y administración?": [
-    "212 - El ABC para el manejo básico de sus finanzas",
-  ],
-  "¿Los ingresos por ventas alcanzan a cubrir sus gastos y costos operativos?": [
-    "212 - El ABC para el manejo básico de sus finanzas",
-    "213 - Plan de Negocios",
-  ],
-  "¿Cuenta con el inventario suficiente de productos para atender la demanda de sus clientes?": [
-    "209 - Administrar mi negocio",
-  ],
-  "¿Maneja un control de inventarios para los bienes que comercializa o productos que fabrica incluyendo sus materias primas e insumos?": [
-    "209 - Administrar mi negocio",
-    "221 - Contabilidad básica para micronegocios",
-  ],
-  "¿Considera que debe fortalecer las habilidades para el manejo del talento humano en su empresa?": [
-    "206 - Servicio al cliente",
-  ],
-  "¿Ha desarrollado estrategias para conseguir nuevos clientes?": [
-    "215 - Conectándome con mi mercado y mi público objetivo",
-    "216 - Enamorar al cliente",
-  ],
-  "¿Ha analizado sus productos/servicios con relación a su competencia?": [
-    "211 - Marca y empaque",
-  ],
-  "¿Mis productos/servicios tienen ventas permanentes?": [
-    "216 - Enamorar al cliente",
-    "222 - Vitrinas que venden solas",
-  ],
-  "¿Ha perdido alguna oportunidad de negocio o venta a causa del servicio al cliente?": [
-    "206 - Servicio al cliente",
-  ],
-  "¿Ha realizado ventas por internet?": ["217 - Marketing digital, redes sociales, Cliente digital ideal"],
-  "¿Conoce cómo desarrollar la venta de sus productos/servicios por internet?": [
-    "217 - Marketing digital, redes sociales, Cliente digital ideal",
-  ],
-  "¿Cuenta con equipos de cómputo?": ["217 - Marketing digital, redes sociales, Cliente digital ideal"],
-  "¿Cuenta con página web?": ["217 - Marketing digital, redes sociales, Cliente digital ideal"],
-  "¿Cuenta con red social Facebook?": ["217 - Marketing digital, redes sociales, Cliente digital ideal"],
-  "¿Cuenta con red social Instagram?": ["217 - Marketing digital, redes sociales, Cliente digital ideal"],
-  "¿Cuenta con red social TikTok?": ["217 - Marketing digital, redes sociales, Cliente digital ideal"],
-  "¿Su empresa cuenta con acceso a créditos o servicios financieros para su apalancamiento?": [
-    "210 - Formalizando mi negocio",
-  ],
-  "¿Su empresa aplica medidas con enfoque ambiental: ejemplo ahorro de agua, energía, recuperación de residuos, reutilización de desechos, etc.?": [
-    "218 - Tu empresa, tu apuesta verde",
-    "219 - Transición a la sostenibilidad",
-  ],
-};
-
 export default function DiagnosticoTab({ id }) {
+  const initialQuestions = [
+    {
+      component: "Conectándome con mi negocio",
+      questions: [
+        {
+          text: "¿Están separadas sus finanzas personales de las de su negocio?",
+          field: "finanzas_separadas",
+        },
+        {
+          text: "¿Lleva registros de ingresos y gastos de su empresa periódicamente?",
+          field: "registros_ingresos_gastos",
+        },
+        {
+          text: "¿Ha calculado y registrado sus costos de producción, ventas y administración?",
+          field: "costos_registrados",
+        },
+        {
+          text: "¿Los ingresos por ventas alcanzan a cubrir sus gastos y costos operativos?",
+          field: "ingresos_cubren_costos",
+        },
+        {
+          text: "¿Cuenta con el inventario suficiente de productos para atender la demanda de sus clientes?",
+          field: "inventario_suficiente",
+        },
+        {
+          text: "¿Maneja un control de inventarios para los bienes que comercializa o productos que fabrica incluyendo sus materias primas e insumos?",
+          field: "control_inventarios",
+        },
+        {
+          text: "¿Considera que debe fortalecer las habilidades para el manejo del talento humano en su empresa?",
+          field: "fortalecer_talento_humano",
+        },
+      ],
+    },
+    {
+      component: "Conectándome con mi mercado",
+      questions: [
+        {
+          text: "¿Ha desarrollado estrategias para conseguir nuevos clientes?",
+          field: "estrategias_nuevos_clientes",
+        },
+        {
+          text: "¿Ha analizado sus productos/servicios con relación a su competencia?",
+          field: "productos_vs_competencia",
+        },
+        {
+          text: "¿Mis productos/servicios tienen ventas permanentes?",
+          field: "ventas_permanentes",
+        },
+        {
+          text: "¿Ha perdido alguna oportunidad de negocio o venta a causa del servicio al cliente?",
+          field: "oportunidades_perdidas",
+        },
+      ],
+    },
+    {
+      component: "Conexiones digitales",
+      questions: [
+        { text: "¿Ha realizado ventas por internet?", field: "ventas_internet" },
+        {
+          text: "¿Conoce cómo desarrollar la venta de sus productos/servicios por internet?",
+          field: "desarrollo_ventas_online",
+        },
+        { text: "¿Cuenta con equipos de cómputo?", field: "equipos_computo" },
+        { text: "¿Cuenta con página web?", field: "pagina_web" },
+        { text: "¿Cuenta con red social Facebook?", field: "facebook" },
+        { text: "¿Cuenta con red social Instagram?", field: "instagram" },
+        { text: "¿Cuenta con red social TikTok?", field: "tiktok" },
+      ],
+    },
+    {
+      component: "Alístate para crecer",
+      questions: [
+        {
+          text: "¿Su empresa cuenta con acceso a créditos o servicios financieros para su apalancamiento?",
+          field: "acceso_creditos",
+        },
+      ],
+    },
+    {
+      component: "Conectándome con el ambiente",
+      questions: [
+        {
+          text: "¿Su empresa aplica medidas con enfoque ambiental: ejemplo ahorro de agua, energía, recuperación de residuos, reutilización de desechos, etc.?",
+          field: "enfoque_ambiental",
+        },
+      ],
+    },
+  ];
+
+  /**
+   * Mapeo de pregunta => arreglo de códigos 
+   * (Ejemplo: "¿Están separadas sus finanzas...?" => ["210 - Separar finanzas personales y comerciales"])
+   * Para la demo, asigna los códigos que tú decidas. 
+   * Aquí coloco ejemplos tentativos:
+   */
+  const questionToCodesMapping = {
+    "¿Están separadas sus finanzas personales de las de su negocio?": [
+      "210 - Separar finanzas personales y comerciales",
+      "212 - El ABC para el manejo básico de sus finanzas",
+    ],
+    "¿Lleva registros de ingresos y gastos de su empresa periódicamente?": [
+      "209 - Administrar mi negocio",
+      "221 - Contabilidad básica para micronegocios",
+    ],
+    "¿Ha calculado y registrado sus costos de producción, ventas y administración?": [
+      "212 - El ABC para el manejo básico de sus finanzas",
+    ],
+    "¿Los ingresos por ventas alcanzan a cubrir sus gastos y costos operativos?": [
+      "212 - El ABC para el manejo básico de sus finanzas",
+      "213 - Plan de Negocios",
+    ],
+    "¿Cuenta con el inventario suficiente de productos para atender la demanda de sus clientes?": [
+      "209 - Administrar mi negocio",
+    ],
+    "¿Maneja un control de inventarios para los bienes que comercializa o productos que fabrica incluyendo sus materias primas e insumos?": [
+      "209 - Administrar mi negocio",
+      "221 - Contabilidad básica para micronegocios",
+    ],
+    "¿Considera que debe fortalecer las habilidades para el manejo del talento humano en su empresa?": [
+      "206 - Servicio al cliente",
+    ],
+    "¿Ha desarrollado estrategias para conseguir nuevos clientes?": [
+      "215 - Conectándome con mi mercado y mi público objetivo",
+      "216 - Enamorar al cliente",
+    ],
+    "¿Ha analizado sus productos/servicios con relación a su competencia?": [
+      "211 - Marca y empaque",
+    ],
+    "¿Mis productos/servicios tienen ventas permanentes?": [
+      "216 - Enamorar al cliente",
+      "222 - Vitrinas que venden solas",
+    ],
+    "¿Ha perdido alguna oportunidad de negocio o venta a causa del servicio al cliente?": [
+      "206 - Servicio al cliente",
+    ],
+    "¿Ha realizado ventas por internet?": ["217 - Marketing digital, redes sociales, Cliente digital ideal"],
+    "¿Conoce cómo desarrollar la venta de sus productos/servicios por internet?": [
+      "217 - Marketing digital, redes sociales, Cliente digital ideal",
+    ],
+    "¿Cuenta con equipos de cómputo?": ["217 - Marketing digital, redes sociales, Cliente digital ideal"],
+    "¿Cuenta con página web?": ["217 - Marketing digital, redes sociales, Cliente digital ideal"],
+    "¿Cuenta con red social Facebook?": ["217 - Marketing digital, redes sociales, Cliente digital ideal"],
+    "¿Cuenta con red social Instagram?": ["217 - Marketing digital, redes sociales, Cliente digital ideal"],
+    "¿Cuenta con red social TikTok?": ["217 - Marketing digital, redes sociales, Cliente digital ideal"],
+    "¿Su empresa cuenta con acceso a créditos o servicios financieros para su apalancamiento?": [
+      "210 - Formalizando mi negocio",
+    ],
+    "¿Su empresa aplica medidas con enfoque ambiental: ejemplo ahorro de agua, energía, recuperación de residuos, reutilización de desechos, etc.?": [
+      "218 - Tu empresa, tu apuesta verde",
+      "219 - Transición a la sostenibilidad",
+    ],
+  };
+
   const [answers, setAnswers] = useState({});
   const [recordIds, setRecordIds] = useState({});
   const [loading, setLoading] = useState(true);
@@ -167,7 +167,7 @@ export default function DiagnosticoTab({ id }) {
   const [historyError, setHistoryError] = useState(null);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
 
-  // Determina si la pregunta es invertida
+  // Lógica invertida
   const isInvertedQuestion = (questionText) => {
     const trimmed = questionText.trim();
     return (
@@ -178,32 +178,20 @@ export default function DiagnosticoTab({ id }) {
     );
   };
 
-  // Calcula puntaje según la pregunta
+  // Puntaje
   const getScoreFromState = (question) => {
     const trimmed = question.text.trim();
     const currentValue = answers[trimmed];
     if (isInvertedQuestion(trimmed)) {
-      // invertida: true => 0, false => 1
+      // Invertida: true => 0, false => 1
       return currentValue ? 0 : 1;
     } else {
-      // normal: true => 1, false => 0
+      // Normal: true => 1, false => 0
       return currentValue ? 1 : 0;
     }
   };
 
-  // Validar los datos antes de enviar
-  const validateRequestData = (data) => {
-    if (!data.caracterizacion_id) return false;
-    if (!data.Componente) return false;
-    if (!data.Pregunta) return false;
-    if (typeof data.Respuesta !== "boolean") return false;
-    if (typeof data.Puntaje !== "number") return false;
-    if (!data.user_id) return false;
-    // Eliminado 'field' de la validación
-    return true;
-  };
-
-  // Cargar respuestas actuales de Diagnóstico
+  // Fetch Diagnóstico
   useEffect(() => {
     const fetchExistingRecords = async () => {
       setLoading(true);
@@ -211,47 +199,26 @@ export default function DiagnosticoTab({ id }) {
         const token = localStorage.getItem("token");
         if (!token) {
           alert("No se encontró el token de autenticación");
-          setLoading(false);
           return;
         }
 
-        // Solicitud al backend de impulso-local-back
+        // Ajustado a microempresa-local-back
         const response = await axios.get(
           `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/pi_diagnostico_cap/records?caracterizacion_id=${id}`,
           { headers: { Authorization: `Bearer ${token}` } }
         );
 
-        console.log("Datos recibidos del backend:", response.data);
-
         const records = response.data.reduce(
           (acc, record) => {
-            const pregunta = record.Pregunta.trim();
-            acc.answers[pregunta] = record.Respuesta;
-            acc.recordIds[pregunta] = record.id;
+            acc.answers[record.Pregunta.trim()] = record.Respuesta;
+            acc.recordIds[record.Pregunta.trim()] = record.id;
             return acc;
           },
           { answers: {}, recordIds: {} }
         );
 
-        console.log("Respuestas Cargadas:", records.answers);
-        console.log("IDs de Registros:", records.recordIds);
-
         setAnswers(records.answers);
         setRecordIds(records.recordIds);
-
-        // Validar que todas las preguntas tienen una respuesta
-        const preguntasSinRespuesta = initialQuestions
-          .flatMap((section) => section.questions)
-          .filter((question) => !(question.text.trim() in records.answers));
-
-        if (preguntasSinRespuesta.length > 0) {
-          console.warn(
-            "Preguntas sin respuestas cargadas:",
-            preguntasSinRespuesta.map((q) => q.text)
-          );
-        } else {
-          console.log("Todas las preguntas han sido cargadas con respuestas.");
-        }
       } catch (error) {
         console.error("Error obteniendo registros existentes:", error);
       } finally {
@@ -260,13 +227,13 @@ export default function DiagnosticoTab({ id }) {
     };
 
     fetchExistingRecords();
-  }, [id]); // Eliminado 'initialQuestions' de las dependencias
+  }, [id]);
 
   const handleAnswerChange = (questionText, value) => {
     setAnswers((prev) => ({ ...prev, [questionText.trim()]: value }));
   };
 
-  // Calcula promedio de cada componente
+  // Calcula el promedio de cada componente
   const calculateAverage = (questions) => {
     const totalScore = questions.reduce((sum, q) => sum + getScoreFromState(q), 0);
     return (totalScore / questions.length).toFixed(2);
@@ -274,19 +241,6 @@ export default function DiagnosticoTab({ id }) {
 
   // Guardar Diagnóstico y recommended_codes
   const handleSubmit = async () => {
-    // Validar que todas las preguntas han sido respondidas
-    const unansweredQuestions = initialQuestions
-      .flatMap((section) => section.questions)
-      .filter((question) => answers[question.text.trim()] === undefined);
-
-    if (unansweredQuestions.length > 0) {
-      const preguntas = unansweredQuestions.map((q) => `"${q.text}"`).join(", ");
-      alert(
-        `Por favor, responde todas las preguntas antes de guardar. Preguntas faltantes: ${preguntas}`
-      );
-      return;
-    }
-
     try {
       const token = localStorage.getItem("token");
       if (!token) {
@@ -300,63 +254,36 @@ export default function DiagnosticoTab({ id }) {
       // 1) Guardar/actualizar Diagnóstico (pi_diagnostico_cap)
       for (const section of initialQuestions) {
         for (const question of section.questions) {
-          const questionText = question.text.trim();
           const currentAnswer =
-            answers[questionText] === undefined ? false : answers[questionText];
-
-          const puntaje = isInvertedQuestion(questionText)
-            ? currentAnswer
-              ? 0
-              : 1
-            : currentAnswer
-            ? 1
-            : 0;
+            answers[question.text.trim()] === undefined
+              ? false
+              : answers[question.text.trim()];
 
           const requestData = {
             caracterizacion_id: id,
             Componente: section.component,
-            Pregunta: questionText,
+            Pregunta: question.text.trim(),
             Respuesta: currentAnswer,
-            Puntaje: puntaje,
+            Puntaje: isInvertedQuestion(question.text.trim())
+              ? currentAnswer
+                ? 0
+                : 1
+              : currentAnswer
+              ? 1
+              : 0,
             user_id: userId,
           };
 
-          if (!validateRequestData(requestData)) {
-            console.error(
-              `Datos inválidos para la pregunta: "${questionText}"`,
-              requestData
+          if (newRecordIds[question.text.trim()]) {
+            // update
+            const updatePromise = axios.put(
+              `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/pi_diagnostico_cap/record/${newRecordIds[question.text.trim()]}`,
+              requestData,
+              { headers: { Authorization: `Bearer ${token}` } }
             );
-            continue; // O manejar de otra manera
-          }
-
-          console.log(
-            `Enviando datos para la pregunta: "${questionText}"`,
-            requestData
-          );
-
-          if (newRecordIds[questionText]) {
-            // Actualizar registro existente
-            const updatePromise = axios
-              .put(
-                `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/pi_diagnostico_cap/record/${newRecordIds[questionText]}`,
-                requestData,
-                { headers: { Authorization: `Bearer ${token}` } }
-              )
-              .then((response) => {
-                console.log(
-                  `Registro Actualizado para "${questionText}":`,
-                  response.data
-                );
-              })
-              .catch((error) => {
-                console.error(
-                  `Error actualizando el registro para "${questionText}":`,
-                  error
-                );
-              });
             requestPromises.push(updatePromise);
           } else {
-            // Crear nuevo registro
+            // create
             const createPromise = axios
               .post(
                 `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/pi_diagnostico_cap/record`,
@@ -364,50 +291,22 @@ export default function DiagnosticoTab({ id }) {
                 { headers: { Authorization: `Bearer ${token}` } }
               )
               .then((response) => {
-                console.log(
-                  `Registro Creado para "${questionText}":`,
-                  response.data
-                );
-
-                // Obtener el ID correctamente desde la respuesta
-                if (response.data.record && response.data.record.id) {
-                  newRecordIds[questionText] = response.data.record.id;
-                  console.log(`ID obtenido para "${questionText}":`, response.data.record.id);
-                } else if (response.data.id) {
-                  newRecordIds[questionText] = response.data.id;
-                  console.log(`ID obtenido para "${questionText}":`, response.data.id);
-                } else {
-                  console.error(
-                    `No se recibió el ID para la pregunta: "${questionText}"`,
-                    response.data
-                  );
-
-                  // Opcional: Implementar búsqueda post-creación si es necesario
-                  // Ejemplo de búsqueda:
-                  // fetchRecordIdByPregunta(questionText);
-                }
-              })
-              .catch((error) => {
-                console.error(
-                  `Error creando el registro para "${questionText}":`,
-                  error
-                );
+                newRecordIds[question.text.trim()] = response.data.id;
               });
             requestPromises.push(createPromise);
           }
         }
       }
-
       await Promise.all(requestPromises);
       setRecordIds(newRecordIds);
 
-      // 2) Calcular los códigos recomendados (puntaje 0)
+      // 2) Calcular los códigos recomendados (puntaje = 0)
       const triggeredCodes = [];
       for (const section of initialQuestions) {
         for (const question of section.questions) {
-          const questionText = question.text.trim();
           const score = getScoreFromState(question);
           if (score === 0) {
+            const questionText = question.text.trim();
             if (questionToCodesMapping[questionText]) {
               questionToCodesMapping[questionText].forEach((code) => {
                 if (!triggeredCodes.includes(code)) {
@@ -419,15 +318,10 @@ export default function DiagnosticoTab({ id }) {
         }
       }
 
-      console.log("Códigos Activados:", triggeredCodes);
-
-      // 3) Guardar recommended_codes en pi_capacitacion
+      // 3) Guardar recommended_codes en pi_capacitacion (como texto JSON)
       await upsertRecommendedCodes(token, id, userId, triggeredCodes);
 
       alert("Diagnóstico guardado exitosamente");
-
-      // Recargar los registros para sincronizar el estado
-      await fetchExistingRecords();
     } catch (error) {
       console.error("Error guardando el diagnóstico:", error);
       alert("Hubo un error al guardar el diagnóstico");
@@ -446,82 +340,38 @@ export default function DiagnosticoTab({ id }) {
       const codesString = JSON.stringify(codesArray);
 
       if (!resGet.data || resGet.data.length === 0) {
-        // Crear nuevo registro
+        // crear
         const newRecord = {
           caracterizacion_id,
           user_id: userId,
           recommended_codes: codesString,
         };
-        const createResponse = await axios.post(
+        await axios.post(
           `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/pi_capacitacion/record`,
           newRecord,
           { headers: { Authorization: `Bearer ${token}` } }
         );
-        console.log("Códigos Recomendados Creado:", createResponse.data);
       } else {
-        // Actualizar registro existente
+        // actualizar
         const existing = resGet.data[0];
         const recordId = existing.id;
-
         const updatedRecord = {
           ...existing,
           user_id: userId,
           recommended_codes: codesString,
         };
-        const updateResponse = await axios.put(
+        await axios.put(
           `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/pi_capacitacion/record/${recordId}`,
           updatedRecord,
           { headers: { Authorization: `Bearer ${token}` } }
         );
-        console.log("Códigos Recomendados Actualizado:", updateResponse.data);
       }
     } catch (error) {
       console.error("Error en upsertRecommendedCodes:", error);
-      alert("Hubo un error al guardar los códigos recomendados.");
     }
   };
 
-  // Función para recargar registros existentes
-  const fetchExistingRecords = async () => {
-    setLoading(true);
-    try {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        console.warn("No se encontró el token de autenticación al recargar registros");
-        setLoading(false);
-        return;
-      }
-
-      const response = await axios.get(
-        `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/pi_diagnostico_cap/records?caracterizacion_id=${id}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-
-      console.log("Datos recibidos del backend al recargar:", response.data);
-
-      const records = response.data.reduce(
-        (acc, record) => {
-          const pregunta = record.Pregunta.trim();
-          acc.answers[pregunta] = record.Respuesta;
-          acc.recordIds[pregunta] = record.id;
-          return acc;
-        },
-        { answers: {}, recordIds: {} }
-      );
-
-      console.log("Respuestas Cargadas después de recargar:", records.answers);
-      console.log("IDs de Registros después de recargar:", records.recordIds);
-
-      setAnswers(records.answers);
-      setRecordIds(records.recordIds);
-    } catch (error) {
-      console.error("Error recargando registros existentes:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Historial de cambios del Diagnóstico
+  // Historial de TODOS los records del Diagnóstico
   const fetchAllRecordsHistory = async () => {
     if (Object.keys(recordIds).length === 0) {
       setHistory([]);
@@ -661,11 +511,7 @@ export default function DiagnosticoTab({ id }) {
           >
             <div
               className="modal-content"
-              style={{
-                maxHeight: "90vh",
-                display: "flex",
-                flexDirection: "column",
-              }}
+              style={{ maxHeight: "90vh", display: "flex", flexDirection: "column" }}
             >
               <div className="modal-header">
                 <h5 className="modal-title">Historial de Cambios</h5>
@@ -706,21 +552,11 @@ export default function DiagnosticoTab({ id }) {
                           <tr key={item.id}>
                             <td>{item.user_id}</td>
                             <td>{item.username}</td>
-                            <td>
-                              {new Date(item.created_at).toLocaleString()}
-                            </td>
+                            <td>{new Date(item.created_at).toLocaleString()}</td>
                             <td>{item.change_type}</td>
                             <td>{item.field_name || "-"}</td>
-                            <td>
-                              {item.old_value !== null
-                                ? item.old_value.toString()
-                                : "-"}
-                            </td>
-                            <td>
-                              {item.new_value !== null
-                                ? item.new_value.toString()
-                                : "-"}
-                            </td>
+                            <td>{item.old_value || "-"}</td>
+                            <td>{item.new_value || "-"}</td>
                             <td>{item.description || "-"}</td>
                           </tr>
                         ))}
@@ -728,7 +564,7 @@ export default function DiagnosticoTab({ id }) {
                     </table>
                   </div>
                 ) : (
-                  <p className="mt-3">No hay historial de cambios.</p>
+                  <p>No hay historial de cambios.</p>
                 )}
               </div>
               <div className="modal-footer">
@@ -752,3 +588,4 @@ export default function DiagnosticoTab({ id }) {
 DiagnosticoTab.propTypes = {
   id: PropTypes.string.isRequired,
 };
+
