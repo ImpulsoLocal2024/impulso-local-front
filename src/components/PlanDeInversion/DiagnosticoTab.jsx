@@ -308,12 +308,31 @@ export default function DiagnosticoTab({ id }) {
                 requestData,
                 { headers: { Authorization: `Bearer ${token}` } }
               )
-              .then((response) => {
+              .then(async (response) => {
                 console.log(`Registro Creado para "${questionText}":`, response.data);
-                if (response.data.record && response.data.record.id) { // Modificación aquí
+                console.log("Contenido de record:", response.data.record);
+                if (response.data.record && response.data.record.id) { // Ajustado para acceder correctamente al 'id'
                   newRecordIds[questionText] = response.data.record.id;
                 } else {
-                  console.error(`No se recibió el ID para la pregunta: "${questionText}"`);
+                  console.error(`No se recibió el ID para la pregunta: "${questionText}"`, response.data.record);
+                  
+                  // Implementar búsqueda post-creación
+                  try {
+                    const getRecordResponse = await axios.get(
+                      `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/pi_diagnostico_cap/records?caracterizacion_id=${id}&Pregunta=${encodeURIComponent(questionText)}`,
+                      { headers: { Authorization: `Bearer ${token}` } }
+                    );
+                    
+                    if (getRecordResponse.data && getRecordResponse.data.length > 0) {
+                      const createdRecord = getRecordResponse.data[0];
+                      newRecordIds[questionText] = createdRecord.id;
+                      console.log(`ID obtenido para "${questionText}":`, createdRecord.id);
+                    } else {
+                      console.error(`No se encontró el registro creado para la pregunta: "${questionText}"`);
+                    }
+                  } catch (error) {
+                    console.error(`Error obteniendo el registro creado para la pregunta: "${questionText}"`, error);
+                  }
                 }
               })
               .catch((error) => {
