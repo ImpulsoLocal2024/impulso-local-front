@@ -58,15 +58,11 @@ export default function GenerarFichaTab({ id }) {
   const [contrapartida, setContrapartida] = useState(0);
 
   useEffect(() => {
-    let isMounted = true; // Bandera para evitar actualizaciones de estado en componentes desmontados
-
     const fetchData = async () => {
       if (!id) {
         console.error("El ID del registro de caracterización no está definido.");
-        if (isMounted) {
-          setErrorMsg("El ID del registro de caracterización no está definido.");
-          setLoading(false);
-        }
+        setErrorMsg("El ID del registro de caracterización no está definido.");
+        setLoading(false);
         return;
       }
 
@@ -75,16 +71,14 @@ export default function GenerarFichaTab({ id }) {
         const token = localStorage.getItem('token');
         if (!token) {
           console.error("Token de autenticación no encontrado.");
-          if (isMounted) {
-            setErrorMsg("Token de autenticación no encontrado. Por favor, inicia sesión nuevamente.");
-            setLoading(false);
-          }
+          setErrorMsg("Token de autenticación no encontrado. Por favor, inicia sesión nuevamente.");
+          setLoading(false);
           return;
         }
 
         const baseURL = 'https://impulso-local-back.onrender.com/api/inscriptions';
 
-        // Realizar solicitudes en paralelo con timeout de 10 segundos
+        // Realizar solicitudes en paralelo
         const [
           caracterizacionResponse,
           fieldsResponse,
@@ -92,149 +86,119 @@ export default function GenerarFichaTab({ id }) {
           propuestaMejoraResponse,
           formulacionResponse
         ] = await Promise.all([
-          axios.get(`${baseURL}/tables/inscription_caracterizacion/record/${id}`, { 
-            headers: { Authorization: `Bearer ${token}` },
-            timeout: 10000, // 10 segundos
-          }),
-          axios.get(`${baseURL}/pi/tables/inscription_caracterizacion/related-data`, { 
-            headers: { Authorization: `Bearer ${token}` },
-            timeout: 10000, // 10 segundos
-          }),
-          axios.get(`${baseURL}/pi/tables/pi_datos/records?caracterizacion_id=${id}`, { 
-            headers: { Authorization: `Bearer ${token}` },
-            timeout: 10000, // 10 segundos
-          }),
-          axios.get(`${baseURL}/pi/tables/pi_propuesta_mejora/records?caracterizacion_id=${id}`, { 
-            headers: { Authorization: `Bearer ${token}` },
-            timeout: 10000, // 10 segundos
-          }),
-          axios.get(`${baseURL}/pi/tables/pi_formulacion/records?caracterizacion_id=${id}`, { 
-            headers: { Authorization: `Bearer ${token}` },
-            timeout: 10000, // 10 segundos
-          }),
+          axios.get(`${baseURL}/tables/inscription_caracterizacion/record/${id}`, { headers: { Authorization: `Bearer ${token}` } }),
+          axios.get(`${baseURL}/pi/tables/inscription_caracterizacion/related-data`, { headers: { Authorization: `Bearer ${token}` } }),
+          axios.get(`${baseURL}/pi/tables/pi_datos/records?caracterizacion_id=${id}`, { headers: { Authorization: `Bearer ${token}` } }),
+          axios.get(`${baseURL}/pi/tables/pi_propuesta_mejora/records?caracterizacion_id=${id}`, { headers: { Authorization: `Bearer ${token}` } }),
+          axios.get(`${baseURL}/pi/tables/pi_formulacion/records?caracterizacion_id=${id}`, { headers: { Authorization: `Bearer ${token}` } }),
         ]);
 
-        // Procesamiento de datos
-        if (isMounted) {
-          console.log("Datos de caracterización:", caracterizacionResponse.data.record);
-          setCaracterizacionData(caracterizacionResponse.data.record);
+        // 1. Procesar datos de `inscription_caracterizacion`
+        console.log("Datos de caracterización:", caracterizacionResponse.data.record);
+        setCaracterizacionData(caracterizacionResponse.data.record);
 
-          setRelatedData(fieldsResponse.data.relatedData || {});
+        // 2. Procesar datos relacionados
+        setRelatedData(fieldsResponse.data.relatedData || {});
 
-          // Obtener el nombre de la localidad
-          const locId = caracterizacionResponse.data.record["Localidad de la unidad de negocio"];
-          if (locId && fieldsResponse.data.relatedData["Localidad de la unidad de negocio"]) {
-            const localidadesArray = fieldsResponse.data.relatedData["Localidad de la unidad de negocio"];
-            const found = localidadesArray.find((item) => String(item.id) === String(locId));
-            if (found) {
-              setLocalidadName(found.displayValue);
-            } else {
-              setLocalidadName("Localidad no encontrada");
-            }
+        // 3. Obtener el nombre de la localidad
+        const locId = caracterizacionResponse.data.record["Localidad de la unidad de negocio"];
+        if (locId && fieldsResponse.data.relatedData["Localidad de la unidad de negocio"]) {
+          const localidadesArray = fieldsResponse.data.relatedData["Localidad de la unidad de negocio"];
+          const found = localidadesArray.find((item) => String(item.id) === String(locId));
+          if (found) {
+            setLocalidadName(found.displayValue);
           } else {
             setLocalidadName("Localidad no encontrada");
           }
-
-          // Obtener datos del asesor
-          const asesorId = caracterizacionResponse.data.record.Asesor;
-          if (asesorId) {
-            const asesorResponse = await axios.get(`${baseURL}/tables/users/record/${asesorId}`, { 
-              headers: { Authorization: `Bearer ${token}` },
-              timeout: 10000, // 10 segundos
-            });
-            const asesorData = asesorResponse.data.record;
-            const nombreAsesor = asesorData.username || 'No asignado';
-            setAsesorNombre(nombreAsesor);
-            console.log("Nombre del asesor:", nombreAsesor);
-
-            // Obtener el documento del asesor
-            const documentoAsesor = asesorData.documento || 'No disponible';
-            setAsesorDocumento(documentoAsesor);
-            console.log("Documento del asesor:", documentoAsesor);
-          } else {
-            setAsesorNombre('No asignado');
-            setAsesorDocumento('No disponible');
-            console.log("Asesor no asignado.");
-          }
-
-          // Obtener nombre del beneficiario
-          const nombreEmprendedor = [
-            caracterizacionResponse.data.record["Nombres"] || '',
-            caracterizacionResponse.data.record["Apellidos"] || ''
-          ].filter(Boolean).join(' ');
-          setEmprendedorNombre(nombreEmprendedor || '');
-          console.log("Nombre del emprendedor:", nombreEmprendedor);
-
-          // Procesar datos de `pi_datos`
-          if (datosResponse.data.length > 0) {
-            setDatosTab(datosResponse.data[0]);
-            console.log("Datos de pi_datos:", datosResponse.data[0]);
-          } else {
-            console.log("No se encontraron datos en pi_datos para este caracterizacion_id.");
-          }
-
-          // Procesar datos de `pi_propuesta_mejora`
-          setPropuestaMejoraData(propuestaMejoraResponse.data);
-          console.log("Datos de pi_propuesta_mejora:", propuestaMejoraResponse.data);
-
-          // Procesar datos de `pi_formulacion`
-          setFormulacionData(formulacionResponse.data);
-          console.log("Datos de pi_formulacion:", formulacionResponse.data);
-
-          // Agrupar Rubros y calcular total inversión
-          const rubrosOptions = [
-            "Maquinaria y equipo",
-            "Insumos/Materias primas",
-            "Cursos",
-            "Póliza",
-          ];
-
-          const resumenPorRubro = rubrosOptions.map((r) => {
-            const total = formulacionResponse.data
-              .filter((rec) => rec["Rubro"] === r)
-              .reduce((sum, rec) => {
-                const cantidad = rec["Cantidad"] || 0;
-                const valorUnitario = rec["Valor Unitario"] || 0;
-                return sum + (cantidad * valorUnitario);
-              }, 0);
-            return { rubro: r, total };
-          });
-
-          const totalInv = resumenPorRubro.reduce((sum, item) => sum + item.total, 0);
-          const cpart = totalInv > montoDisponible ? totalInv - montoDisponible : 0;
-
-          setGroupedRubros(resumenPorRubro);
-          setTotalInversion(totalInv.toFixed(2));
-          setContrapartida(cpart);
-
-          console.log("Resumen por rubro:", resumenPorRubro);
-          console.log("Total inversión:", totalInv);
-          console.log("Contrapartida:", cpart);
-
-          console.log("Finalizando la carga de datos. Seteando loading a false.");
-          setLoading(false);
-          // No necesitas este console.log aquí ya que setLoading es asíncrono
-        }      
-      } catch (error) {
-        if (isMounted) {
-          console.error("Error al obtener los datos:", error);
-          setErrorMsg("Error al obtener los datos. Por favor, inténtalo nuevamente más tarde.");
-          setLoading(false);
+        } else {
+          setLocalidadName("Localidad no encontrada");
         }
+
+        // 4. Obtener datos del asesor
+        const asesorId = caracterizacionResponse.data.record.Asesor;
+        if (asesorId) {
+          const asesorResponse = await axios.get(`${baseURL}/tables/users/record/${asesorId}`, { headers: { Authorization: `Bearer ${token}` } });
+          const asesorData = asesorResponse.data.record;
+          const nombreAsesor = asesorData.username || 'No asignado';
+          setAsesorNombre(nombreAsesor);
+          console.log("Nombre del asesor:", nombreAsesor);
+
+          // Obtener el documento del asesor
+          const documentoAsesor = asesorData.documento || 'No disponible';
+          setAsesorDocumento(documentoAsesor);
+          console.log("Documento del asesor:", documentoAsesor);
+        } else {
+          setAsesorNombre('No asignado');
+          setAsesorDocumento('No disponible');
+          console.log("Asesor no asignado.");
+        }
+
+        // 5. Obtener nombre del beneficiario
+        const nombreEmprendedor = [
+          caracterizacionResponse.data.record["Nombres"] || '',
+          caracterizacionResponse.data.record["Apellidos"] || ''
+        ].filter(Boolean).join(' ');
+        setEmprendedorNombre(nombreEmprendedor || '');
+        console.log("Nombre del emprendedor:", nombreEmprendedor);
+
+        // 6. Procesar datos de `pi_datos`
+        if (datosResponse.data.length > 0) {
+          setDatosTab(datosResponse.data[0]);
+          console.log("Datos de pi_datos:", datosResponse.data[0]);
+        } else {
+          console.log("No se encontraron datos en pi_datos para este caracterizacion_id.");
+        }
+
+        // 7. Procesar datos de `pi_propuesta_mejora`
+        setPropuestaMejoraData(propuestaMejoraResponse.data);
+        console.log("Datos de pi_propuesta_mejora:", propuestaMejoraResponse.data);
+
+        // 8. Procesar datos de `pi_formulacion`
+        setFormulacionData(formulacionResponse.data);
+        console.log("Datos de pi_formulacion:", formulacionResponse.data);
+
+        // 9. Agrupar Rubros y calcular total inversión
+        const rubrosOptions = [
+          "Maquinaria y equipo",
+          "Insumos/Materias primas",
+          "Cursos",
+          "Póliza",
+        ];
+
+        const resumenPorRubro = rubrosOptions.map((r) => {
+          const total = formulacionResponse.data
+            .filter((rec) => rec["Rubro"] === r)
+            .reduce((sum, rec) => {
+              const cantidad = rec["Cantidad"] || 0;
+              const valorUnitario = rec["Valor Unitario"] || 0;
+              return sum + (cantidad * valorUnitario);
+            }, 0);
+          return { rubro: r, total };
+        });
+
+        const totalInv = resumenPorRubro.reduce((sum, item) => sum + item.total, 0);
+        const cpart = totalInv > montoDisponible ? totalInv - montoDisponible : 0;
+
+        setGroupedRubros(resumenPorRubro);
+        setTotalInversion(totalInv.toFixed(2));
+        setContrapartida(cpart);
+
+        console.log("Resumen por rubro:", resumenPorRubro);
+        console.log("Total inversión:", totalInv);
+        console.log("Contrapartida:", cpart);
+
+        console.log("Finalizando la carga de datos. Seteando loading a false.");
+        setLoading(false);
+        console.log("Estado de loading:", loading);
+      } catch (error) {
+        console.error("Error al obtener los datos:", error);
+        setErrorMsg("Error al obtener los datos. Por favor, inténtalo nuevamente más tarde.");
+        setLoading(false);
       }
     };
 
     fetchData();
-
-    return () => {
-      isMounted = false; // Limpieza para evitar actualizaciones en componentes desmontados
-    };
-  }, [id]); // Asegúrate de que `id` sea estable
-
-  // Monitorear cambios en `loading`
-  useEffect(() => {
-    console.log("El estado de loading ha cambiado a:", loading);
-  }, [loading]);
+  }, [id]); // Eliminamos `relatedData` de las dependencias
 
   // Función para verificar si hay que cortar página
   const checkPageEnd = (doc, currentY, addedHeight) => {
@@ -595,22 +559,22 @@ export default function GenerarFichaTab({ id }) {
       // Descargar PDF
       doc.save(`Ficha_Negocio_Local_${id}.pdf`);
     };
-
-    return (
-      <div>
-        <h3>Generar Ficha</h3>
-        {errorMsg && <div className="alert alert-danger">{errorMsg}</div>}
-        <button onClick={generateFichaPDF} className="btn btn-primary" disabled={loading}>
-          Descargar Ficha PDF
-        </button>
-        {loading && <p>Cargando datos, por favor espera...</p>}
-      </div>
-    );
-  }
-
-  GenerarFichaTab.propTypes = {
-    id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
   };
+
+  return (
+    <div>
+      <h3>Generar Ficha</h3>
+      {errorMsg && <div className="alert alert-danger">{errorMsg}</div>}
+      <button onClick={generateFichaPDF} className="btn btn-primary" disabled={loading}>
+        Descargar Ficha PDF
+      </button>
+      {loading && <p>Cargando datos, por favor espera...</p>}
+    </div>
+  );
 }
+
+GenerarFichaTab.propTypes = {
+  id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
+};
 
 
