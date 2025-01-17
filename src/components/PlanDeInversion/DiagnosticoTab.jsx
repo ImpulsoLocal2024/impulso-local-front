@@ -151,6 +151,17 @@ export default function DiagnosticoTab({ id }) {
     }
   };
 
+  // Validar los datos antes de enviar
+  const validateRequestData = (data) => {
+    if (!data.caracterizacion_id) return false;
+    if (!data.Componente) return false;
+    if (!data.Pregunta) return false;
+    if (typeof data.Respuesta !== 'boolean') return false;
+    if (typeof data.Puntaje !== 'number') return false;
+    if (!data.user_id) return false;
+    return true;
+  };
+
   // Cargar respuestas actuales de Diagnóstico
   useEffect(() => {
     const fetchExistingRecords = async () => {
@@ -185,6 +196,18 @@ export default function DiagnosticoTab({ id }) {
 
         setAnswers(records.answers);
         setRecordIds(records.recordIds);
+
+        // Validar que todas las preguntas tienen una respuesta
+        const preguntasSinRespuesta = initialQuestions
+          .flatMap(section => section.questions)
+          .filter(question => !(question.text.trim() in records.answers));
+
+        if (preguntasSinRespuesta.length > 0) {
+          console.warn("Preguntas sin respuestas cargadas:", preguntasSinRespuesta.map(q => q.text));
+        } else {
+          console.log("Todas las preguntas han sido cargadas con respuestas.");
+        }
+
       } catch (error) {
         console.error("Error obteniendo registros existentes:", error);
       } finally {
@@ -193,7 +216,7 @@ export default function DiagnosticoTab({ id }) {
     };
 
     fetchExistingRecords();
-  }, [id]);
+  }, [id, initialQuestions]);
 
   const handleAnswerChange = (questionText, value) => {
     setAnswers((prev) => ({ ...prev, [questionText.trim()]: value }));
@@ -207,6 +230,17 @@ export default function DiagnosticoTab({ id }) {
 
   // Guardar Diagnóstico y recommended_codes
   const handleSubmit = async () => {
+    // Validar que todas las preguntas han sido respondidas
+    const unansweredQuestions = initialQuestions
+      .flatMap(section => section.questions)
+      .filter(question => answers[question.text.trim()] === undefined);
+
+    if (unansweredQuestions.length > 0) {
+      const preguntas = unansweredQuestions.map(q => `"${q.text}"`).join(", ");
+      alert(`Por favor, responde todas las preguntas antes de guardar. Preguntas faltantes: ${preguntas}`);
+      return;
+    }
+
     try {
       const token = localStorage.getItem("token");
       if (!token) {
@@ -241,6 +275,11 @@ export default function DiagnosticoTab({ id }) {
             user_id: userId,
           };
 
+          if (!validateRequestData(requestData)) {
+            console.error(`Datos inválidos para la pregunta: "${questionText}"`, requestData);
+            continue; // O manejar de otra manera
+          }
+
           console.log(`Enviando datos para la pregunta: "${questionText}"`, requestData);
 
           if (newRecordIds[questionText]) {
@@ -268,7 +307,11 @@ export default function DiagnosticoTab({ id }) {
               )
               .then((response) => {
                 console.log(`Registro Creado para "${questionText}":`, response.data);
-                newRecordIds[questionText] = response.data.id;
+                if (response.data.id) {
+                  newRecordIds[questionText] = response.data.id;
+                } else {
+                  console.error(`No se recibió el ID para la pregunta: "${questionText}"`);
+                }
               })
               .catch((error) => {
                 console.error(`Error creando el registro para "${questionText}":`, error);
