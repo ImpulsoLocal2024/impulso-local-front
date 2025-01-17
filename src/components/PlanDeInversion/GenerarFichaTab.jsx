@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import axios from 'axios';
+import PropTypes from 'prop-types';
 
 // Ruta de la imagen del banner en la carpeta public
 const bannerImagePath = '/impulso-local-banner-pdf.jpeg';
@@ -25,6 +26,9 @@ export default function GenerarFichaTab({ id }) {
   const [emprendedorNombre, setEmprendedorNombre] = useState('');
   const [asesorDocumento, setAsesorDocumento] = useState('');
 
+  // Estado para almacenar el nombre de la localidad
+  const [localidadName, setLocalidadName] = useState('');
+
   // Lista de campos a excluir de la sección de datos
   const datosKeys = [
     "Tiempo de dedicacion al negocio (Parcial o Completo)",
@@ -45,8 +49,13 @@ export default function GenerarFichaTab({ id }) {
     "Como contribuira la inversion a la mejora productiva del negocio",
     "El negocio es sujeto de participacion en espacios de conexion",
     "Recomendaciones tecnica, administrativas y financieras",
-    "id"
+    "id",
+    "localidad_unidad_negocio" // <-- Cambio: Excluimos este campo para que no se muestre
   ];
+
+  // Estados para manejar monto disponible y contrapartida (similar a FormulacionTab)
+  const [montoDisponible, setMontoDisponible] = useState(3000000); // 3 millones
+  const [contrapartida, setContrapartida] = useState(0);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -66,6 +75,7 @@ export default function GenerarFichaTab({ id }) {
           setLoading(false);
           return;
         }
+
         const baseURL = 'https://impulso-local-back.onrender.com/api/inscriptions';
 
         // 1. Obtener datos de `inscription_caracterizacion`
@@ -83,7 +93,21 @@ export default function GenerarFichaTab({ id }) {
         );
         setRelatedData(fieldsResponse.data.relatedData || {});
 
-        // 3. Obtener datos del asesor
+        // 3. Obtener el nombre de la localidad
+        const locId = caracterizacionResponse.data.record["Localidad de la unidad de negocio"];
+        if (locId && relatedData["Localidad de la unidad de negocio"]) {
+          const localidadesArray = relatedData["Localidad de la unidad de negocio"];
+          const found = localidadesArray.find((item) => String(item.id) === String(locId));
+          if (found) {
+            setLocalidadName(found.displayValue);
+          } else {
+            setLocalidadName("Localidad no encontrada");
+          }
+        } else {
+          setLocalidadName("Localidad no encontrada");
+        }
+
+        // 4. Obtener datos del asesor
         const asesorId = caracterizacionResponse.data.record.Asesor;
         if (asesorId) {
           const asesorResponse = await axios.get(
@@ -105,17 +129,20 @@ export default function GenerarFichaTab({ id }) {
           console.log("Asesor no asignado.");
         }
 
-        // 4. Obtener nombre del beneficiario
+        // 5. Obtener nombre del beneficiario
         const nombreEmprendedor = [
           caracterizacionResponse.data.record["Primer nombre"] || '',
           caracterizacionResponse.data.record["Otros nombres"] || '',
           caracterizacionResponse.data.record["Primer apellido"] || '',
           caracterizacionResponse.data.record["Segundo apellido"] || ''
         ].filter(Boolean).join(' ');
-        setEmprendedorNombre(nombreEmprendedor || 'No disponible');
+
+        // Si no hay nada, preferimos dejarlo como cadena vacía para no mostrar "No disponible" en la firma
+        setEmprendedorNombre(nombreEmprendedor || '');
+
         console.log("Nombre del emprendedor:", nombreEmprendedor);
 
-        // 5. Obtener datos de `pi_datos` para el caracterizacion_id
+        // 6. Obtener datos de `pi_datos` para el caracterizacion_id
         const datosResponse = await axios.get(
           `${baseURL}/pi/tables/pi_datos/records?caracterizacion_id=${id}`,
           { headers: { Authorization: `Bearer ${token}` } }
@@ -127,7 +154,7 @@ export default function GenerarFichaTab({ id }) {
           console.log("No se encontraron datos en pi_datos para este caracterizacion_id.");
         }
 
-        // 6. Obtener datos de `pi_propuesta_mejora`
+        // 7. Obtener datos de `pi_propuesta_mejora`
         const propuestaMejoraResponse = await axios.get(
           `${baseURL}/pi/tables/pi_propuesta_mejora/records?caracterizacion_id=${id}`,
           { headers: { Authorization: `Bearer ${token}` } }
@@ -135,7 +162,7 @@ export default function GenerarFichaTab({ id }) {
         setPropuestaMejoraData(propuestaMejoraResponse.data);
         console.log("Datos de pi_propuesta_mejora:", propuestaMejoraResponse.data);
 
-        // 7. Obtener datos de `pi_formulacion` sin referencias a `provider_proveedores`
+        // 8. Obtener datos de `pi_formulacion` sin referencias a `provider_proveedores`
         const formulacionResponse = await axios.get(
           `${baseURL}/pi/tables/pi_formulacion/records?caracterizacion_id=${id}`,
           { headers: { Authorization: `Bearer ${token}` } }
@@ -143,8 +170,7 @@ export default function GenerarFichaTab({ id }) {
         setFormulacionData(formulacionResponse.data);
         console.log("Datos de pi_formulacion:", formulacionResponse.data);
 
-        // 8. Agrupar Rubros y calcular total inversión
-        // Ajustar a "Equipoy/o similares" exactamente
+        // 9. Agrupar Rubros y calcular total inversión
         const rubrosOptions = [
           "Maquinaria y equipo",
           "Insumos/Materias primas",
@@ -164,14 +190,15 @@ export default function GenerarFichaTab({ id }) {
         });
 
         const totalInv = resumenPorRubro.reduce((sum, item) => sum + item.total, 0);
-        const montoDisponible = 3000000; // 3 millones
-        const contrapartida = totalInv > montoDisponible ? totalInv - montoDisponible : 0;
+        const cpart = totalInv > montoDisponible ? totalInv - montoDisponible : 0;
 
         setGroupedRubros(resumenPorRubro);
         setTotalInversion(totalInv.toFixed(2));
+        setContrapartida(cpart);
+
         console.log("Resumen por rubro:", resumenPorRubro);
         console.log("Total inversión:", totalInv);
-        console.log("Contrapartida:", contrapartida);
+        console.log("Contrapartida:", cpart);
 
         setLoading(false);
       } catch (error) {
@@ -182,28 +209,20 @@ export default function GenerarFichaTab({ id }) {
     };
 
     fetchData();
-  }, [id]);
+  }, [id, relatedData]);
 
-  // Función para obtener el valor legible de campos relacionados
-  const getColumnDisplayValue = (column, value) => {
-    if (relatedData[column]) {
-      const relatedRecord = relatedData[column].find(
-        (item) => String(item.id) === String(value)
-      );
-      return relatedRecord ? relatedRecord.displayValue : `ID: ${value}`;
-    }
-    return value;
-  };
-
-  // Función para verificar el final de la página y agregar una nueva si es necesario
+  // Función para verificar si hay que cortar página
   const checkPageEnd = (doc, currentY, addedHeight) => {
     const pageHeight = doc.internal.pageSize.getHeight();
-    if (currentY + addedHeight > pageHeight - 40) {
+    if (currentY + addedHeight > pageHeight - 40) { 
       doc.addPage();
-      currentY = 40;
+      currentY = 40; 
     }
     return currentY;
   };
+
+  // Color de las tablas
+  const tableColor = [230, 26, 78]; // #E61A4E
 
   // Función para generar el PDF completo
   const generateFichaPDF = () => {
@@ -213,15 +232,11 @@ export default function GenerarFichaTab({ id }) {
     const maxLineWidth = pageWidth - margin * 2;
     let yPosition = 100;
 
-    // Estilos de fuente y color
     const fontSizes = {
       title: 18,
       subtitle: 14,
       normal: 12,
     };
-
-    // Cambiamos el color de las tablas a #E61A4E => [230, 26, 78]
-    const tableColor = [230, 26, 78];
 
     // Función para convertir imagen a base64
     const getImageDataUrl = (img) => {
@@ -241,7 +256,6 @@ export default function GenerarFichaTab({ id }) {
 
       // Encabezado con imagen
       doc.addImage(imgData, 'JPEG', margin, 40, maxLineWidth, 60);
-
       yPosition = 130;
 
       // Obtener el nombre del emprendimiento y caracterizacion_id
@@ -254,12 +268,16 @@ export default function GenerarFichaTab({ id }) {
       doc.text(nombreEmprendimiento, pageWidth / 2, yPosition, { align: 'center' });
 
       yPosition += 20;
-
-      // Agregar Caracterizacion ID
       doc.setFontSize(fontSizes.normal);
       doc.setFont(undefined, 'normal');
-      doc.text(`ID: ${caracterizacionId}`, pageWidth / 2, yPosition, { align: 'center' });
 
+      // Agregar ID y Localidad al lado: "ID: 123 - Localidad: Kennedy"
+      const localidadLabel = localidadName && localidadName !== "Localidad no encontrada"
+        ? ` - Localidad: ${localidadName}`
+        : '';
+      const idLocalidadText = `ID: ${caracterizacionId}${localidadLabel}`;
+
+      doc.text(idLocalidadText, pageWidth / 2, yPosition, { align: 'center' });
       yPosition += 30;
 
       // 1. Título Principal (cambiado a: PLAN DE INVERSIÓN DEL EMPRENDIMIENTO)
@@ -270,19 +288,21 @@ export default function GenerarFichaTab({ id }) {
 
       yPosition += 30;
 
-      // 2. Mostrar información de datosTab sin título
+      // 2. Mostrar información de datosTab (filtrando campos no deseados)
       doc.setFontSize(fontSizes.normal);
       doc.setFont(undefined, 'normal');
       yPosition += 20;
 
       const piDatosFields = Object.keys(datosTab).filter(
-        key => !datosKeys.includes(key) && key !== 'caracterizacion_id'
+        (key) => !datosKeys.includes(key) && key !== 'caracterizacion_id'
       );
+
       if (piDatosFields.length > 0) {
-        piDatosFields.forEach(key => {
+        piDatosFields.forEach((key) => {
           let label = `${key}:`;
           let value = datosTab[key] || 'No disponible';
 
+          // Evitar mostrar "ID: " si viene con un prefijo raro
           if (typeof value === 'string' && value.toLowerCase().startsWith('id:')) {
             value = value.substring(3).trim();
           } else if (typeof value !== 'string') {
@@ -301,7 +321,11 @@ export default function GenerarFichaTab({ id }) {
           doc.text(valueLines, margin, yPosition);
           yPosition += valueLines.length * 14 + 5;
 
-          if (key.toLowerCase() === 'descripcion del negocio' || key.toLowerCase() === 'objetivo del plan de inversion') {
+          // Espacio adicional si es "descripcion del negocio" u "objetivo del plan de inversion"
+          if (
+            key.toLowerCase() === 'descripcion del negocio' ||
+            key.toLowerCase() === 'objetivo del plan de inversion'
+          ) {
             yPosition += 10;
           }
         });
@@ -421,7 +445,7 @@ export default function GenerarFichaTab({ id }) {
         startY: yPosition,
         head: [resumenColumns.map(col => col.header)],
         body: groupedRubros.map(row => {
-          const valorFormateado = `$${row.total.toLocaleString()}`;
+          const valorFormateado = `$${Number(row.total).toLocaleString()}`;
           return [row.rubro, valorFormateado];
         }),
         theme: 'striped',
@@ -435,9 +459,29 @@ export default function GenerarFichaTab({ id }) {
       });
 
       yPosition = doc.lastAutoTable.finalY + 10 || yPosition + 10;
-      doc.setFontSize(fontSizes.subtitle);
-      doc.setFont(undefined, 'normal');
-      doc.text(`Total Inversión: $${totalInversion}`, pageWidth - margin, yPosition, { align: 'right' });
+
+      // <-- Cambio: Añadimos otra tabla para "Total Inversión, Monto disponible, Contrapartida"
+      const datosInversion = [
+        ["Total Inversión", `$${Number(totalInversion).toLocaleString()}`],
+        ["Monto disponible", `$${montoDisponible.toLocaleString()}`],
+        ["Contrapartida", `$${Number(contrapartida).toLocaleString()}`],
+      ];
+
+      doc.autoTable({
+        startY: yPosition,
+        head: [["Concepto", "Valor"]],
+        body: datosInversion,
+        theme: 'striped',
+        styles: { fontSize: fontSizes.normal, cellPadding: 4 },
+        tableWidth: 'auto',
+        headStyles: { fillColor: tableColor, textColor: [255, 255, 255], fontStyle: 'bold' },
+        margin: { left: margin, right: margin },
+        didDrawPage: (data) => {
+          yPosition = data.cursor.y;
+        },
+      });
+
+      yPosition = doc.lastAutoTable.finalY + 10 || yPosition + 10;
 
       // 6. CONCEPTO DE VIABILIDAD DE PLAN DE INVERSIÓN
       doc.setFontSize(fontSizes.subtitle);
@@ -495,13 +539,20 @@ export default function GenerarFichaTab({ id }) {
 
       yPosition += boxHeight + 15;
 
-      doc.text(emprendedorNombre, beneficiarioBoxX + boxWidth / 2, yPosition, { align: 'center' });
+      // Si el beneficiario se llama '', lo mostramos en blanco
+      const benefNameToShow = emprendedorNombre.trim() === 'No disponible' ? '' : emprendedorNombre.trim();
+      doc.text(benefNameToShow, beneficiarioBoxX + boxWidth / 2, yPosition, { align: 'center' });
+
       doc.text(asesorNombre, asesorBoxX + boxWidth / 2, yPosition, { align: 'center' });
 
       yPosition += 15;
-      const emprendedorCC = caracterizacionData["Numero de documento de identificacion ciudadano"] || 'No disponible';
-      doc.text(`C.C. ${emprendedorCC}`, beneficiarioBoxX + boxWidth / 2, yPosition, { align: 'center' });
-      doc.text(`C.C. ${asesorDocumento}`, asesorBoxX + boxWidth / 2, yPosition, { align: 'center' });
+      // Para la cédula del beneficiario, si no hay nada, dejar en blanco
+      const emprendedorCC = caracterizacionData["Numero de documento de identificacion ciudadano"] || '';
+      const benefCCToShow = emprendedorCC.trim() === 'No disponible' ? '' : `C.C. ${emprendedorCC.trim()}`;
+      doc.text(benefCCToShow, beneficiarioBoxX + boxWidth / 2, yPosition, { align: 'center' });
+
+      const asesorCCToShow = asesorDocumento === 'No disponible' ? '' : `C.C. ${asesorDocumento}`;
+      doc.text(asesorCCToShow, asesorBoxX + boxWidth / 2, yPosition, { align: 'center' });
 
       // 8. Sección de Fecha y Hora
       const dateSectionHeight = 30;
@@ -529,5 +580,9 @@ export default function GenerarFichaTab({ id }) {
     </div>
   );
 }
+
+GenerarFichaTab.propTypes = {
+  id: PropTypes.string.isRequired,
+};
 
 
