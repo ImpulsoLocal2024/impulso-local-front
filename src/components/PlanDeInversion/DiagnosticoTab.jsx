@@ -96,39 +96,25 @@ export default function DiagnosticoTab({ id }) {
   // Mapeo: pregunta => códigos que se activan si la respuesta da puntaje 0
   const questionToCodesMapping = {
     "¿Están separadas sus finanzas personales de las de su negocio?": ["229"],
-    "¿Lleva registros de ingresos y gastos de su empresa periódicamente?": [
-      "230",
-      "228",
-      "226",
-    ],
-    "¿Ha calculado y registrado sus costos de producción, ventas y administración?":
-      ["230", "228"],
-    "¿Los ingresos por ventas alcanzan a cubrir sus gastos y costos operativos?":
-      ["230", "228"],
-    "¿Cuenta con el inventario suficiente de productos para atender la demanda de sus clientes?":
-      ["230", "225"],
-    "¿Maneja un control de inventarios para los bienes que comercializa o productos que fabrica incluyendo sus materias primas e insumos?":
-      ["230", "225"],
-    "¿Considera que debe fortalecer las habilidades para el manejo del talento humano en su empresa?":
-      ["230", "224"],
+    "¿Lleva registros de ingresos y gastos de su empresa periódicamente?": ["230", "228", "226"],
+    "¿Ha calculado y registrado sus costos de producción, ventas y administración?": ["230", "228"],
+    "¿Los ingresos por ventas alcanzan a cubrir sus gastos y costos operativos?": ["230", "228"],
+    "¿Cuenta con el inventario suficiente de productos para atender la demanda de sus clientes?": ["230", "225"],
+    "¿Maneja un control de inventarios para los bienes que comercializa o productos que fabrica incluyendo sus materias primas e insumos?": ["230", "225"],
+    "¿Considera que debe fortalecer las habilidades para el manejo del talento humano en su empresa?": ["230", "224"],
     "¿Ha desarrollado estrategias para conseguir nuevos clientes?": ["227", "234"],
     "¿Ha analizado sus productos/servicios con relación a su competencia?": ["227"],
     "¿Mis productos/servicios tienen ventas permanentes?": ["227", "234"],
-    "¿Ha perdido alguna oportunidad de negocio o venta a causa del servicio al cliente?":
-      ["227"],
+    "¿Ha perdido alguna oportunidad de negocio o venta a causa del servicio al cliente?": ["227"],
     "¿Ha realizado ventas por internet?": ["224"],
-    "¿Conoce cómo desarrollar la venta de sus productos/servicios por internet?": [
-      "224",
-    ],
+    "¿Conoce cómo desarrollar la venta de sus productos/servicios por internet?": ["224"],
     "¿Cuenta con equipos de cómputo?": ["224"],
     "¿Cuenta con página web?": ["224"],
     "¿Cuenta con red social Facebook?": ["224"],
     "¿Cuenta con red social Instagram?": ["224"],
     "¿Cuenta con red social TikTok?": ["224"],
-    "¿Su empresa cuenta con acceso a créditos o servicios financieros para su apalancamiento?":
-      ["233", "232"],
-    "¿Su empresa aplica medidas con enfoque ambiental: ejemplo ahorro de agua, energía, recuperación de residuos, reutilización de desechos, etc.?":
-      ["231"],
+    "¿Su empresa cuenta con acceso a créditos o servicios financieros para su apalancamiento?": ["233", "232"],
+    "¿Su empresa aplica medidas con enfoque ambiental: ejemplo ahorro de agua, energía, recuperación de residuos, reutilización de desechos, etc.?": ["231"],
   };
 
   const [answers, setAnswers] = useState({});
@@ -173,6 +159,7 @@ export default function DiagnosticoTab({ id }) {
         const token = localStorage.getItem("token");
         if (!token) {
           alert("No se encontró el token de autenticación");
+          setLoading(false);
           return;
         }
 
@@ -183,12 +170,16 @@ export default function DiagnosticoTab({ id }) {
 
         const records = response.data.reduce(
           (acc, record) => {
-            acc.answers[record.Pregunta.trim()] = record.Respuesta;
-            acc.recordIds[record.Pregunta.trim()] = record.id;
+            const pregunta = record.Pregunta.trim();
+            acc.answers[pregunta] = record.Respuesta;
+            acc.recordIds[pregunta] = record.id;
             return acc;
           },
           { answers: {}, recordIds: {} }
         );
+
+        console.log("Respuestas Cargadas:", records.answers);
+        console.log("IDs de Registros:", records.recordIds);
 
         setAnswers(records.answers);
         setRecordIds(records.recordIds);
@@ -227,33 +218,43 @@ export default function DiagnosticoTab({ id }) {
       // 1) Guardar/actualizar Diagnóstico (pi_diagnostico_cap)
       for (const section of initialQuestions) {
         for (const question of section.questions) {
+          const questionText = question.text.trim();
           const currentAnswer =
-            answers[question.text.trim()] === undefined
-              ? false
-              : answers[question.text.trim()];
+            answers[questionText] === undefined ? false : answers[questionText];
+
+          const puntaje = isInvertedQuestion(questionText)
+            ? currentAnswer
+              ? 0
+              : 1
+            : currentAnswer
+            ? 1
+            : 0;
 
           const requestData = {
             caracterizacion_id: id,
             Componente: section.component,
-            Pregunta: question.text.trim(),
+            Pregunta: questionText,
             Respuesta: currentAnswer,
-            Puntaje: isInvertedQuestion(question.text.trim())
-              ? currentAnswer
-                ? 0
-                : 1
-              : currentAnswer
-              ? 1
-              : 0,
+            Puntaje: puntaje,
             user_id: userId,
           };
 
-          if (newRecordIds[question.text.trim()]) {
+          console.log("Enviando Datos:", requestData);
+
+          if (newRecordIds[questionText]) {
             // update
-            const updatePromise = axios.put(
-              `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/pi_diagnostico_cap/record/${newRecordIds[question.text.trim()]}`,
-              requestData,
-              { headers: { Authorization: `Bearer ${token}` } }
-            );
+            const updatePromise = axios
+              .put(
+                `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/pi_diagnostico_cap/record/${newRecordIds[questionText]}`,
+                requestData,
+                { headers: { Authorization: `Bearer ${token}` } }
+              )
+              .then((response) => {
+                console.log(`Registro Actualizado para "${questionText}":`, response.data);
+              })
+              .catch((error) => {
+                console.error(`Error actualizando el registro para "${questionText}":`, error);
+              });
             requestPromises.push(updatePromise);
           } else {
             // create
@@ -264,7 +265,11 @@ export default function DiagnosticoTab({ id }) {
                 { headers: { Authorization: `Bearer ${token}` } }
               )
               .then((response) => {
-                newRecordIds[question.text.trim()] = response.data.id;
+                console.log(`Registro Creado para "${questionText}":`, response.data);
+                newRecordIds[questionText] = response.data.id;
+              })
+              .catch((error) => {
+                console.error(`Error creando el registro para "${questionText}":`, error);
               });
             requestPromises.push(createPromise);
           }
@@ -278,9 +283,9 @@ export default function DiagnosticoTab({ id }) {
       const triggeredCodes = [];
       for (const section of initialQuestions) {
         for (const question of section.questions) {
+          const questionText = question.text.trim();
           const score = getScoreFromState(question);
           if (score === 0) {
-            const questionText = question.text.trim();
             if (questionToCodesMapping[questionText]) {
               questionToCodesMapping[questionText].forEach((code) => {
                 if (!triggeredCodes.includes(code)) {
@@ -292,10 +297,15 @@ export default function DiagnosticoTab({ id }) {
         }
       }
 
+      console.log("Códigos Activados:", triggeredCodes);
+
       // 3) Guardar recommended_codes en pi_capacitacion
       await upsertRecommendedCodes(token, id, userId, triggeredCodes);
 
       alert("Diagnóstico guardado exitosamente");
+
+      // Recargar los registros para sincronizar el estado
+      await fetchExistingRecords();
     } catch (error) {
       console.error("Error guardando el diagnóstico:", error);
       alert("Hubo un error al guardar el diagnóstico");
@@ -320,11 +330,12 @@ export default function DiagnosticoTab({ id }) {
           user_id: userId,
           recommended_codes: codesString,
         };
-        await axios.post(
+        const createResponse = await axios.post(
           `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/pi_capacitacion/record`,
           newRecord,
           { headers: { Authorization: `Bearer ${token}` } }
         );
+        console.log("Códigos Recomendados Creado:", createResponse.data);
       } else {
         // actualizar
         const existing = resGet.data[0];
@@ -335,14 +346,54 @@ export default function DiagnosticoTab({ id }) {
           user_id: userId,
           recommended_codes: codesString,
         };
-        await axios.put(
+        const updateResponse = await axios.put(
           `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/pi_capacitacion/record/${recordId}`,
           updatedRecord,
           { headers: { Authorization: `Bearer ${token}` } }
         );
+        console.log("Códigos Recomendados Actualizado:", updateResponse.data);
       }
     } catch (error) {
       console.error("Error en upsertRecommendedCodes:", error);
+      alert("Hubo un error al guardar los códigos recomendados.");
+    }
+  };
+
+  // Función para recargar registros existentes
+  const fetchExistingRecords = async () => {
+    setLoading(true);
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        console.warn("No se encontró el token de autenticación al recargar registros");
+        setLoading(false);
+        return;
+      }
+
+      const response = await axios.get(
+        `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/pi_diagnostico_cap/records?caracterizacion_id=${id}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      const records = response.data.reduce(
+        (acc, record) => {
+          const pregunta = record.Pregunta.trim();
+          acc.answers[pregunta] = record.Respuesta;
+          acc.recordIds[pregunta] = record.id;
+          return acc;
+        },
+        { answers: {}, recordIds: {} }
+      );
+
+      console.log("Respuestas Cargadas después de recargar:", records.answers);
+      console.log("IDs de Registros después de recargar:", records.recordIds);
+
+      setAnswers(records.answers);
+      setRecordIds(records.recordIds);
+    } catch (error) {
+      console.error("Error recargando registros existentes:", error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -526,8 +577,8 @@ export default function DiagnosticoTab({ id }) {
                             <td>{new Date(item.created_at).toLocaleString()}</td>
                             <td>{item.change_type}</td>
                             <td>{item.field_name || "-"}</td>
-                            <td>{item.old_value || "-"}</td>
-                            <td>{item.new_value || "-"}</td>
+                            <td>{item.old_value !== null ? item.old_value.toString() : "-"}</td>
+                            <td>{item.new_value !== null ? item.new_value.toString() : "-"}</td>
                             <td>{item.description || "-"}</td>
                           </tr>
                         ))}
