@@ -100,61 +100,26 @@ export default function DiagnosticoTab({ id }) {
    * Aquí coloco ejemplos tentativos:
    */
   const questionToCodesMapping = {
-    "¿Están separadas sus finanzas personales de las de su negocio?": [
-      "210 - Separar finanzas personales y comerciales",
-      "212 - El ABC para el manejo básico de sus finanzas",
-    ],
-    "¿Lleva registros de ingresos y gastos de su empresa periódicamente?": [
-      "209 - Administrar mi negocio",
-      "221 - Contabilidad básica para micronegocios",
-    ],
-    "¿Ha calculado y registrado sus costos de producción, ventas y administración?": [
-      "212 - El ABC para el manejo básico de sus finanzas",
-    ],
-    "¿Los ingresos por ventas alcanzan a cubrir sus gastos y costos operativos?": [
-      "212 - El ABC para el manejo básico de sus finanzas",
-      "213 - Plan de Negocios",
-    ],
-    "¿Cuenta con el inventario suficiente de productos para atender la demanda de sus clientes?": [
-      "209 - Administrar mi negocio",
-    ],
-    "¿Maneja un control de inventarios para los bienes que comercializa o productos que fabrica incluyendo sus materias primas e insumos?": [
-      "209 - Administrar mi negocio",
-      "221 - Contabilidad básica para micronegocios",
-    ],
-    "¿Considera que debe fortalecer las habilidades para el manejo del talento humano en su empresa?": [
-      "206 - Servicio al cliente",
-    ],
-    "¿Ha desarrollado estrategias para conseguir nuevos clientes?": [
-      "215 - Conectándome con mi mercado y mi público objetivo",
-      "216 - Enamorar al cliente",
-    ],
-    "¿Ha analizado sus productos/servicios con relación a su competencia?": [
-      "211 - Marca y empaque",
-    ],
-    "¿Mis productos/servicios tienen ventas permanentes?": [
-      "216 - Enamorar al cliente",
-      "222 - Vitrinas que venden solas",
-    ],
-    "¿Ha perdido alguna oportunidad de negocio o venta a causa del servicio al cliente?": [
-      "206 - Servicio al cliente",
-    ],
-    "¿Ha realizado ventas por internet?": ["217 - Marketing digital, redes sociales, Cliente digital ideal"],
-    "¿Conoce cómo desarrollar la venta de sus productos/servicios por internet?": [
-      "217 - Marketing digital, redes sociales, Cliente digital ideal",
-    ],
-    "¿Cuenta con equipos de cómputo?": ["217 - Marketing digital, redes sociales, Cliente digital ideal"],
-    "¿Cuenta con página web?": ["217 - Marketing digital, redes sociales, Cliente digital ideal"],
-    "¿Cuenta con red social Facebook?": ["217 - Marketing digital, redes sociales, Cliente digital ideal"],
-    "¿Cuenta con red social Instagram?": ["217 - Marketing digital, redes sociales, Cliente digital ideal"],
-    "¿Cuenta con red social TikTok?": ["217 - Marketing digital, redes sociales, Cliente digital ideal"],
-    "¿Su empresa cuenta con acceso a créditos o servicios financieros para su apalancamiento?": [
-      "210 - Formalizando mi negocio",
-    ],
-    "¿Su empresa aplica medidas con enfoque ambiental: ejemplo ahorro de agua, energía, recuperación de residuos, reutilización de desechos, etc.?": [
-      "218 - Tu empresa, tu apuesta verde",
-      "219 - Transición a la sostenibilidad",
-    ],
+    "¿Están separadas sus finanzas personales de las de su negocio?": ["229"],
+    "¿Lleva registros de ingresos y gastos de su empresa periódicamente?": ["230", "228", "226"],
+    "¿Ha calculado y registrado sus costos de producción, ventas y administración?": ["230", "228"],
+    "¿Los ingresos por ventas alcanzan a cubrir sus gastos y costos operativos?": ["230", "228"],
+    "¿Cuenta con el inventario suficiente de productos para atender la demanda de sus clientes?": ["230", "225"],
+    "¿Maneja un control de inventarios para los bienes que comercializa o productos que fabrica incluyendo sus materias primas e insumos?": ["230", "225"],
+    "¿Considera que debe fortalecer las habilidades para el manejo del talento humano en su empresa?": ["230", "224"],
+    "¿Ha desarrollado estrategias para conseguir nuevos clientes?": ["227", "234"],
+    "¿Ha analizado sus productos/servicios con relación a su competencia?": ["227"],
+    "¿Mis productos/servicios tienen ventas permanentes?": ["227", "234"],
+    "¿Ha perdido alguna oportunidad de negocio o venta a causa del servicio al cliente?": ["227"],
+    "¿Ha realizado ventas por internet?": ["224"],
+    "¿Conoce cómo desarrollar la venta de sus productos/servicios por internet?": ["224"],
+    "¿Cuenta con equipos de cómputo?": ["224"],
+    "¿Cuenta con página web?": ["224"],
+    "¿Cuenta con red social Facebook?": ["224"],
+    "¿Cuenta con red social Instagram?": ["224"],
+    "¿Cuenta con red social TikTok?": ["224"],
+    "¿Su empresa cuenta con acceso a créditos o servicios financieros para su apalancamiento?": ["233", "232"],
+    "¿Su empresa aplica medidas con enfoque ambiental: ejemplo ahorro de agua, energía, recuperación de residuos, reutilización de desechos, etc.?": ["231"],
   };
 
   const [answers, setAnswers] = useState({});
