@@ -1,8 +1,10 @@
+// DiagnosticoTab para impulso-local-back
+
 import React, { useState, useEffect } from "react";
 import PropTypes from "prop-types";
 import axios from "axios";
 
-// Definir initialQuestions fuera del componente para evitar redefiniciones
+// Definir initialQuestions y questionToCodesMapping fuera del componente para evitar redefiniciones
 const initialQuestions = [
   {
     component: "Conectándome con mi negocio",
@@ -95,29 +97,63 @@ const initialQuestions = [
 
 /**
  * Mapeo de pregunta => arreglo de códigos
- * Asegúrate de que todas las preguntas tengan una entrada en este mapeo.
  */
 const questionToCodesMapping = {
-  "¿Están separadas sus finanzas personales de las de su negocio?": ["229"],
-  "¿Lleva registros de ingresos y gastos de su empresa periódicamente?": ["230", "228", "226"],
-  "¿Ha calculado y registrado sus costos de producción, ventas y administración?": ["230", "228"],
-  "¿Los ingresos por ventas alcanzan a cubrir sus gastos y costos operativos?": ["230", "228"],
-  "¿Cuenta con el inventario suficiente de productos para atender la demanda de sus clientes?": ["230", "225"],
-  "¿Maneja un control de inventarios para los bienes que comercializa o productos que fabrica incluyendo sus materias primas e insumos?": ["230", "225"],
-  "¿Considera que debe fortalecer las habilidades para el manejo del talento humano en su empresa?": ["230", "224"],
-  "¿Ha desarrollado estrategias para conseguir nuevos clientes?": ["227", "234"],
-  "¿Ha analizado sus productos/servicios con relación a su competencia?": ["227"],
-  "¿Mis productos/servicios tienen ventas permanentes?": ["227", "234"],
-  "¿Ha perdido alguna oportunidad de negocio o venta a causa del servicio al cliente?": ["227"],
-  "¿Ha realizado ventas por internet?": ["224"],
-  "¿Conoce cómo desarrollar la venta de sus productos/servicios por internet?": ["224"],
-  "¿Cuenta con equipos de cómputo?": ["224"],
-  "¿Cuenta con página web?": ["224"],
-  "¿Cuenta con red social Facebook?": ["224"],
-  "¿Cuenta con red social Instagram?": ["224"],
-  "¿Cuenta con red social TikTok?": ["224"],
-  "¿Su empresa cuenta con acceso a créditos o servicios financieros para su apalancamiento?": ["233", "232"],
-  "¿Su empresa aplica medidas con enfoque ambiental: ejemplo ahorro de agua, energía, recuperación de residuos, reutilización de desechos, etc.?": ["231"],
+  "¿Están separadas sus finanzas personales de las de su negocio?": [
+    "210 - Separar finanzas personales y comerciales",
+    "212 - El ABC para el manejo básico de sus finanzas",
+  ],
+  "¿Lleva registros de ingresos y gastos de su empresa periódicamente?": [
+    "209 - Administrar mi negocio",
+    "221 - Contabilidad básica para micronegocios",
+  ],
+  "¿Ha calculado y registrado sus costos de producción, ventas y administración?": [
+    "212 - El ABC para el manejo básico de sus finanzas",
+  ],
+  "¿Los ingresos por ventas alcanzan a cubrir sus gastos y costos operativos?": [
+    "212 - El ABC para el manejo básico de sus finanzas",
+    "213 - Plan de Negocios",
+  ],
+  "¿Cuenta con el inventario suficiente de productos para atender la demanda de sus clientes?": [
+    "209 - Administrar mi negocio",
+  ],
+  "¿Maneja un control de inventarios para los bienes que comercializa o productos que fabrica incluyendo sus materias primas e insumos?": [
+    "209 - Administrar mi negocio",
+    "221 - Contabilidad básica para micronegocios",
+  ],
+  "¿Considera que debe fortalecer las habilidades para el manejo del talento humano en su empresa?": [
+    "206 - Servicio al cliente",
+  ],
+  "¿Ha desarrollado estrategias para conseguir nuevos clientes?": [
+    "215 - Conectándome con mi mercado y mi público objetivo",
+    "216 - Enamorar al cliente",
+  ],
+  "¿Ha analizado sus productos/servicios con relación a su competencia?": [
+    "211 - Marca y empaque",
+  ],
+  "¿Mis productos/servicios tienen ventas permanentes?": [
+    "216 - Enamorar al cliente",
+    "222 - Vitrinas que venden solas",
+  ],
+  "¿Ha perdido alguna oportunidad de negocio o venta a causa del servicio al cliente?": [
+    "206 - Servicio al cliente",
+  ],
+  "¿Ha realizado ventas por internet?": ["217 - Marketing digital, redes sociales, Cliente digital ideal"],
+  "¿Conoce cómo desarrollar la venta de sus productos/servicios por internet?": [
+    "217 - Marketing digital, redes sociales, Cliente digital ideal",
+  ],
+  "¿Cuenta con equipos de cómputo?": ["217 - Marketing digital, redes sociales, Cliente digital ideal"],
+  "¿Cuenta con página web?": ["217 - Marketing digital, redes sociales, Cliente digital ideal"],
+  "¿Cuenta con red social Facebook?": ["217 - Marketing digital, redes sociales, Cliente digital ideal"],
+  "¿Cuenta con red social Instagram?": ["217 - Marketing digital, redes sociales, Cliente digital ideal"],
+  "¿Cuenta con red social TikTok?": ["217 - Marketing digital, redes sociales, Cliente digital ideal"],
+  "¿Su empresa cuenta con acceso a créditos o servicios financieros para su apalancamiento?": [
+    "210 - Formalizando mi negocio",
+  ],
+  "¿Su empresa aplica medidas con enfoque ambiental: ejemplo ahorro de agua, energía, recuperación de residuos, reutilización de desechos, etc.?": [
+    "218 - Tu empresa, tu apuesta verde",
+    "219 - Transición a la sostenibilidad",
+  ],
 };
 
 export default function DiagnosticoTab({ id }) {
@@ -179,7 +215,7 @@ export default function DiagnosticoTab({ id }) {
           return;
         }
 
-        // Asegúrate de usar comillas y template literals correctamente
+        // Solicitud al backend de impulso-local-back
         const response = await axios.get(
           `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/pi_diagnostico_cap/records?caracterizacion_id=${id}`,
           { headers: { Authorization: `Bearer ${token}` } }
@@ -283,7 +319,6 @@ export default function DiagnosticoTab({ id }) {
             Respuesta: currentAnswer,
             Puntaje: puntaje,
             user_id: userId,
-            // Eliminado 'field' de requestData
           };
 
           if (!validateRequestData(requestData)) {
@@ -300,7 +335,7 @@ export default function DiagnosticoTab({ id }) {
           );
 
           if (newRecordIds[questionText]) {
-            // update
+            // Actualizar registro existente
             const updatePromise = axios
               .put(
                 `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/pi_diagnostico_cap/record/${newRecordIds[questionText]}`,
@@ -321,61 +356,35 @@ export default function DiagnosticoTab({ id }) {
               });
             requestPromises.push(updatePromise);
           } else {
-            // create
+            // Crear nuevo registro
             const createPromise = axios
               .post(
                 `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/pi_diagnostico_cap/record`,
                 requestData,
                 { headers: { Authorization: `Bearer ${token}` } }
               )
-              .then(async (response) => {
+              .then((response) => {
                 console.log(
                   `Registro Creado para "${questionText}":`,
                   response.data
                 );
 
-                // Ajuste aquí: acceder a response.data.id directamente
-                if (response.data.id) {
-                  newRecordIds[questionText] = response.data.id;
-                } else if (response.data.record && response.data.record.id) {
-                  // Si el servidor aún envía el ID dentro de 'record'
+                // Obtener el ID correctamente desde la respuesta
+                if (response.data.record && response.data.record.id) {
                   newRecordIds[questionText] = response.data.record.id;
+                  console.log(`ID obtenido para "${questionText}":`, response.data.record.id);
+                } else if (response.data.id) {
+                  newRecordIds[questionText] = response.data.id;
+                  console.log(`ID obtenido para "${questionText}":`, response.data.id);
                 } else {
                   console.error(
                     `No se recibió el ID para la pregunta: "${questionText}"`,
                     response.data
                   );
 
-                  // Implementar búsqueda post-creación si es necesario
-                  try {
-                    const getRecordResponse = await axios.get(
-                      `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/pi_diagnostico_cap/records?caracterizacion_id=${id}&Pregunta=${encodeURIComponent(
-                        questionText
-                      )}`,
-                      { headers: { Authorization: `Bearer ${token}` } }
-                    );
-
-                    if (
-                      getRecordResponse.data &&
-                      getRecordResponse.data.length > 0
-                    ) {
-                      const createdRecord = getRecordResponse.data[0];
-                      newRecordIds[questionText] = createdRecord.id;
-                      console.log(
-                        `ID obtenido para "${questionText}":`,
-                        createdRecord.id
-                      );
-                    } else {
-                      console.error(
-                        `No se encontró el registro creado para la pregunta: "${questionText}"`
-                      );
-                    }
-                  } catch (error) {
-                    console.error(
-                      `Error obteniendo el registro creado para la pregunta: "${questionText}"`,
-                      error
-                    );
-                  }
+                  // Opcional: Implementar búsqueda post-creación si es necesario
+                  // Ejemplo de búsqueda:
+                  // fetchRecordIdByPregunta(questionText);
                 }
               })
               .catch((error) => {
@@ -426,12 +435,7 @@ export default function DiagnosticoTab({ id }) {
   };
 
   // upsert recommended_codes
-  const upsertRecommendedCodes = async (
-    token,
-    caracterizacion_id,
-    userId,
-    codesArray
-  ) => {
+  const upsertRecommendedCodes = async (token, caracterizacion_id, userId, codesArray) => {
     try {
       // Buscar si hay registro en pi_capacitacion
       const resGet = await axios.get(
@@ -442,7 +446,7 @@ export default function DiagnosticoTab({ id }) {
       const codesString = JSON.stringify(codesArray);
 
       if (!resGet.data || resGet.data.length === 0) {
-        // crear
+        // Crear nuevo registro
         const newRecord = {
           caracterizacion_id,
           user_id: userId,
@@ -455,7 +459,7 @@ export default function DiagnosticoTab({ id }) {
         );
         console.log("Códigos Recomendados Creado:", createResponse.data);
       } else {
-        // actualizar
+        // Actualizar registro existente
         const existing = resGet.data[0];
         const recordId = existing.id;
 
@@ -626,7 +630,6 @@ export default function DiagnosticoTab({ id }) {
               ))}
             </tbody>
           </table>
-
           <button className="btn btn-primary" onClick={handleSubmit}>
             Guardar
           </button>
