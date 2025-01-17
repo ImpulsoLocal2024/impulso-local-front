@@ -2,98 +2,98 @@ import React, { useState, useEffect } from "react";
 import PropTypes from "prop-types";
 import axios from "axios";
 
-// Define initialQuestions fuera del componente para evitar redefiniciones
-const initialQuestions = [
-  {
-    component: "Conectándome con mi negocio",
-    questions: [
-      {
-        text: "¿Están separadas sus finanzas personales de las de su negocio?",
-        field: "finanzas_separadas",
-      },
-      {
-        text: "¿Lleva registros de ingresos y gastos de su empresa periódicamente?",
-        field: "registros_ingresos_gastos",
-      },
-      {
-        text: "¿Ha calculado y registrado sus costos de producción, ventas y administración?",
-        field: "costos_registrados",
-      },
-      {
-        text: "¿Los ingresos por ventas alcanzan a cubrir sus gastos y costos operativos?",
-        field: "ingresos_cubren_costos",
-      },
-      {
-        text: "¿Cuenta con el inventario suficiente de productos para atender la demanda de sus clientes?",
-        field: "inventario_suficiente",
-      },
-      {
-        text: "¿Maneja un control de inventarios para los bienes que comercializa o productos que fabrica incluyendo sus materias primas e insumos?",
-        field: "control_inventarios",
-      },
-      {
-        text: "¿Considera que debe fortalecer las habilidades para el manejo del talento humano en su empresa?",
-        field: "fortalecer_talento_humano",
-      },
-    ],
-  },
-  {
-    component: "Conectándome con mi mercado",
-    questions: [
-      {
-        text: "¿Ha desarrollado estrategias para conseguir nuevos clientes?",
-        field: "estrategias_nuevos_clientes",
-      },
-      {
-        text: "¿Ha analizado sus productos/servicios con relación a su competencia?",
-        field: "productos_vs_competencia",
-      },
-      {
-        text: "¿Mis productos/servicios tienen ventas permanentes?",
-        field: "ventas_permanentes",
-      },
-      {
-        text: "¿Ha perdido alguna oportunidad de negocio o venta a causa del servicio al cliente?",
-        field: "oportunidades_perdidas",
-      },
-    ],
-  },
-  {
-    component: "Conexiones digitales",
-    questions: [
-      { text: "¿Ha realizado ventas por internet?", field: "ventas_internet" },
-      {
-        text: "¿Conoce cómo desarrollar la venta de sus productos/servicios por internet?",
-        field: "desarrollo_ventas_online",
-      },
-      { text: "¿Cuenta con equipos de cómputo?", field: "equipos_computo" },
-      { text: "¿Cuenta con página web?", field: "pagina_web" },
-      { text: "¿Cuenta con red social Facebook?", field: "facebook" },
-      { text: "¿Cuenta con red social Instagram?", field: "instagram" },
-      { text: "¿Cuenta con red social TikTok?", field: "tiktok" },
-    ],
-  },
-  {
-    component: "Alístate para crecer",
-    questions: [
-      {
-        text: "¿Su empresa cuenta con acceso a créditos o servicios financieros para su apalancamiento?",
-        field: "acceso_creditos",
-      },
-    ],
-  },
-  {
-    component: "Conectándome con el ambiente",
-    questions: [
-      {
-        text: "¿Su empresa aplica medidas con enfoque ambiental: ejemplo ahorro de agua, energía, recuperación de residuos, reutilización de desechos, etc.?",
-        field: "enfoque_ambiental",
-      },
-    ],
-  },
-];
-
+// Mover initialQuestions dentro del componente para consistencia
 export default function DiagnosticoTab({ id }) {
+  const initialQuestions = [
+    {
+      component: "Conectándome con mi negocio",
+      questions: [
+        {
+          text: "¿Están separadas sus finanzas personales de las de su negocio?",
+          field: "finanzas_separadas",
+        },
+        {
+          text: "¿Lleva registros de ingresos y gastos de su empresa periódicamente?",
+          field: "registros_ingresos_gastos",
+        },
+        {
+          text: "¿Ha calculado y registrado sus costos de producción, ventas y administración?",
+          field: "costos_registrados",
+        },
+        {
+          text: "¿Los ingresos por ventas alcanzan a cubrir sus gastos y costos operativos?",
+          field: "ingresos_cubren_costos",
+        },
+        {
+          text: "¿Cuenta con el inventario suficiente de productos para atender la demanda de sus clientes?",
+          field: "inventario_suficiente",
+        },
+        {
+          text: "¿Maneja un control de inventarios para los bienes que comercializa o productos que fabrica incluyendo sus materias primas e insumos?",
+          field: "control_inventarios",
+        },
+        {
+          text: "¿Considera que debe fortalecer las habilidades para el manejo del talento humano en su empresa?",
+          field: "fortalecer_talento_humano",
+        },
+      ],
+    },
+    {
+      component: "Conectándome con mi mercado",
+      questions: [
+        {
+          text: "¿Ha desarrollado estrategias para conseguir nuevos clientes?",
+          field: "estrategias_nuevos_clientes",
+        },
+        {
+          text: "¿Ha analizado sus productos/servicios con relación a su competencia?",
+          field: "productos_vs_competencia",
+        },
+        {
+          text: "¿Mis productos/servicios tienen ventas permanentes?",
+          field: "ventas_permanentes",
+        },
+        {
+          text: "¿Ha perdido alguna oportunidad de negocio o venta a causa del servicio al cliente?",
+          field: "oportunidades_perdidas",
+        },
+      ],
+    },
+    {
+      component: "Conexiones digitales",
+      questions: [
+        { text: "¿Ha realizado ventas por internet?", field: "ventas_internet" },
+        {
+          text: "¿Conoce cómo desarrollar la venta de sus productos/servicios por internet?",
+          field: "desarrollo_ventas_online",
+        },
+        { text: "¿Cuenta con equipos de cómputo?", field: "equipos_computo" },
+        { text: "¿Cuenta con página web?", field: "pagina_web" },
+        { text: "¿Cuenta con red social Facebook?", field: "facebook" },
+        { text: "¿Cuenta con red social Instagram?", field: "instagram" },
+        { text: "¿Cuenta con red social TikTok?", field: "tiktok" },
+      ],
+    },
+    {
+      component: "Alístate para crecer",
+      questions: [
+        {
+          text: "¿Su empresa cuenta con acceso a créditos o servicios financieros para su apalancamiento?",
+          field: "acceso_creditos",
+        },
+      ],
+    },
+    {
+      component: "Conectándome con el ambiente",
+      questions: [
+        {
+          text: "¿Su empresa aplica medidas con enfoque ambiental: ejemplo ahorro de agua, energía, recuperación de residuos, reutilización de desechos, etc.?",
+          field: "enfoque_ambiental",
+        },
+      ],
+    },
+  ];
+
   // Mapeo: pregunta => códigos que se activan si la respuesta da puntaje 0
   const questionToCodesMapping = {
     "¿Están separadas sus finanzas personales de las de su negocio?": ["229"],
@@ -160,7 +160,7 @@ export default function DiagnosticoTab({ id }) {
     if (typeof data.Respuesta !== 'boolean') return false;
     if (typeof data.Puntaje !== 'number') return false;
     if (!data.user_id) return false;
-    if (!data.field) return false; // Añadido 'field'
+    // Eliminado 'field' de la validación
     return true;
   };
 
@@ -218,7 +218,7 @@ export default function DiagnosticoTab({ id }) {
     };
 
     fetchExistingRecords();
-  }, [id]); // Sólo depende de 'id' ahora
+  }, [id, initialQuestions]);
 
   const handleAnswerChange = (questionText, value) => {
     setAnswers((prev) => ({ ...prev, [questionText.trim()]: value }));
@@ -275,7 +275,7 @@ export default function DiagnosticoTab({ id }) {
             Respuesta: currentAnswer,
             Puntaje: puntaje,
             user_id: userId,
-            field: question.field, // Añadido 'field'
+            // Eliminado 'field' de requestData
           };
 
           if (!validateRequestData(requestData)) {
@@ -310,19 +310,23 @@ export default function DiagnosticoTab({ id }) {
               )
               .then(async (response) => {
                 console.log(`Registro Creado para "${questionText}":`, response.data);
-                console.log("Contenido de record:", response.data.record);
-                if (response.data.record && response.data.record.id) { // Ajustado para acceder correctamente al 'id'
+
+                // Ajuste aquí: acceder a response.data.id directamente
+                if (response.data.id) {
+                  newRecordIds[questionText] = response.data.id;
+                } else if (response.data.record && response.data.record.id) {
+                  // Si el servidor aún envía el ID dentro de 'record'
                   newRecordIds[questionText] = response.data.record.id;
                 } else {
-                  console.error(`No se recibió el ID para la pregunta: "${questionText}"`, response.data.record);
-                  
-                  // Implementar búsqueda post-creación
+                  console.error(`No se recibió el ID para la pregunta: "${questionText}"`, response.data);
+
+                  // Implementar búsqueda post-creación si es necesario
                   try {
                     const getRecordResponse = await axios.get(
                       `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/pi_diagnostico_cap/records?caracterizacion_id=${id}&Pregunta=${encodeURIComponent(questionText)}`,
                       { headers: { Authorization: `Bearer ${token}` } }
                     );
-                    
+
                     if (getRecordResponse.data && getRecordResponse.data.length > 0) {
                       const createdRecord = getRecordResponse.data[0];
                       newRecordIds[questionText] = createdRecord.id;
