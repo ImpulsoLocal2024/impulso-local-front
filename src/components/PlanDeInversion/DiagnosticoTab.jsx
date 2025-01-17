@@ -2,97 +2,98 @@ import React, { useState, useEffect } from "react";
 import PropTypes from "prop-types";
 import axios from "axios";
 
-export default function DiagnosticoTab({ id }) {
-  const initialQuestions = [
-    {
-      component: "Conectándome con mi negocio",
-      questions: [
-        {
-          text: "¿Están separadas sus finanzas personales de las de su negocio?",
-          field: "finanzas_separadas",
-        },
-        {
-          text: "¿Lleva registros de ingresos y gastos de su empresa periódicamente?",
-          field: "registros_ingresos_gastos",
-        },
-        {
-          text: "¿Ha calculado y registrado sus costos de producción, ventas y administración?",
-          field: "costos_registrados",
-        },
-        {
-          text: "¿Los ingresos por ventas alcanzan a cubrir sus gastos y costos operativos?",
-          field: "ingresos_cubren_costos",
-        },
-        {
-          text: "¿Cuenta con el inventario suficiente de productos para atender la demanda de sus clientes?",
-          field: "inventario_suficiente",
-        },
-        {
-          text: "¿Maneja un control de inventarios para los bienes que comercializa o productos que fabrica incluyendo sus materias primas e insumos?",
-          field: "control_inventarios",
-        },
-        {
-          text: "¿Considera que debe fortalecer las habilidades para el manejo del talento humano en su empresa?",
-          field: "fortalecer_talento_humano",
-        },
-      ],
-    },
-    {
-      component: "Conectándome con mi mercado",
-      questions: [
-        {
-          text: "¿Ha desarrollado estrategias para conseguir nuevos clientes?",
-          field: "estrategias_nuevos_clientes",
-        },
-        {
-          text: "¿Ha analizado sus productos/servicios con relación a su competencia?",
-          field: "productos_vs_competencia",
-        },
-        {
-          text: "¿Mis productos/servicios tienen ventas permanentes?",
-          field: "ventas_permanentes",
-        },
-        {
-          text: "¿Ha perdido alguna oportunidad de negocio o venta a causa del servicio al cliente?",
-          field: "oportunidades_perdidas",
-        },
-      ],
-    },
-    {
-      component: "Conexiones digitales",
-      questions: [
-        { text: "¿Ha realizado ventas por internet?", field: "ventas_internet" },
-        {
-          text: "¿Conoce cómo desarrollar la venta de sus productos/servicios por internet?",
-          field: "desarrollo_ventas_online",
-        },
-        { text: "¿Cuenta con equipos de cómputo?", field: "equipos_computo" },
-        { text: "¿Cuenta con página web?", field: "pagina_web" },
-        { text: "¿Cuenta con red social Facebook?", field: "facebook" },
-        { text: "¿Cuenta con red social Instagram?", field: "instagram" },
-        { text: "¿Cuenta con red social TikTok?", field: "tiktok" },
-      ],
-    },
-    {
-      component: "Alístate para crecer",
-      questions: [
-        {
-          text: "¿Su empresa cuenta con acceso a créditos o servicios financieros para su apalancamiento?",
-          field: "acceso_creditos",
-        },
-      ],
-    },
-    {
-      component: "Conectándome con el ambiente",
-      questions: [
-        {
-          text: "¿Su empresa aplica medidas con enfoque ambiental: ejemplo ahorro de agua, energía, recuperación de residuos, reutilización de desechos, etc.?",
-          field: "enfoque_ambiental",
-        },
-      ],
-    },
-  ];
+// Define initialQuestions fuera del componente para evitar redefiniciones
+const initialQuestions = [
+  {
+    component: "Conectándome con mi negocio",
+    questions: [
+      {
+        text: "¿Están separadas sus finanzas personales de las de su negocio?",
+        field: "finanzas_separadas",
+      },
+      {
+        text: "¿Lleva registros de ingresos y gastos de su empresa periódicamente?",
+        field: "registros_ingresos_gastos",
+      },
+      {
+        text: "¿Ha calculado y registrado sus costos de producción, ventas y administración?",
+        field: "costos_registrados",
+      },
+      {
+        text: "¿Los ingresos por ventas alcanzan a cubrir sus gastos y costos operativos?",
+        field: "ingresos_cubren_costos",
+      },
+      {
+        text: "¿Cuenta con el inventario suficiente de productos para atender la demanda de sus clientes?",
+        field: "inventario_suficiente",
+      },
+      {
+        text: "¿Maneja un control de inventarios para los bienes que comercializa o productos que fabrica incluyendo sus materias primas e insumos?",
+        field: "control_inventarios",
+      },
+      {
+        text: "¿Considera que debe fortalecer las habilidades para el manejo del talento humano en su empresa?",
+        field: "fortalecer_talento_humano",
+      },
+    ],
+  },
+  {
+    component: "Conectándome con mi mercado",
+    questions: [
+      {
+        text: "¿Ha desarrollado estrategias para conseguir nuevos clientes?",
+        field: "estrategias_nuevos_clientes",
+      },
+      {
+        text: "¿Ha analizado sus productos/servicios con relación a su competencia?",
+        field: "productos_vs_competencia",
+      },
+      {
+        text: "¿Mis productos/servicios tienen ventas permanentes?",
+        field: "ventas_permanentes",
+      },
+      {
+        text: "¿Ha perdido alguna oportunidad de negocio o venta a causa del servicio al cliente?",
+        field: "oportunidades_perdidas",
+      },
+    ],
+  },
+  {
+    component: "Conexiones digitales",
+    questions: [
+      { text: "¿Ha realizado ventas por internet?", field: "ventas_internet" },
+      {
+        text: "¿Conoce cómo desarrollar la venta de sus productos/servicios por internet?",
+        field: "desarrollo_ventas_online",
+      },
+      { text: "¿Cuenta con equipos de cómputo?", field: "equipos_computo" },
+      { text: "¿Cuenta con página web?", field: "pagina_web" },
+      { text: "¿Cuenta con red social Facebook?", field: "facebook" },
+      { text: "¿Cuenta con red social Instagram?", field: "instagram" },
+      { text: "¿Cuenta con red social TikTok?", field: "tiktok" },
+    ],
+  },
+  {
+    component: "Alístate para crecer",
+    questions: [
+      {
+        text: "¿Su empresa cuenta con acceso a créditos o servicios financieros para su apalancamiento?",
+        field: "acceso_creditos",
+      },
+    ],
+  },
+  {
+    component: "Conectándome con el ambiente",
+    questions: [
+      {
+        text: "¿Su empresa aplica medidas con enfoque ambiental: ejemplo ahorro de agua, energía, recuperación de residuos, reutilización de desechos, etc.?",
+        field: "enfoque_ambiental",
+      },
+    ],
+  },
+];
 
+export default function DiagnosticoTab({ id }) {
   // Mapeo: pregunta => códigos que se activan si la respuesta da puntaje 0
   const questionToCodesMapping = {
     "¿Están separadas sus finanzas personales de las de su negocio?": ["229"],
@@ -151,6 +152,18 @@ export default function DiagnosticoTab({ id }) {
     }
   };
 
+  // Validar los datos antes de enviar
+  const validateRequestData = (data) => {
+    if (!data.caracterizacion_id) return false;
+    if (!data.Componente) return false;
+    if (!data.Pregunta) return false;
+    if (typeof data.Respuesta !== 'boolean') return false;
+    if (typeof data.Puntaje !== 'number') return false;
+    if (!data.user_id) return false;
+    if (!data.field) return false; // Añadido 'field'
+    return true;
+  };
+
   // Cargar respuestas actuales de Diagnóstico
   useEffect(() => {
     const fetchExistingRecords = async () => {
@@ -185,6 +198,18 @@ export default function DiagnosticoTab({ id }) {
 
         setAnswers(records.answers);
         setRecordIds(records.recordIds);
+
+        // Validar que todas las preguntas tienen una respuesta
+        const preguntasSinRespuesta = initialQuestions
+          .flatMap(section => section.questions)
+          .filter(question => !(question.text.trim() in records.answers));
+
+        if (preguntasSinRespuesta.length > 0) {
+          console.warn("Preguntas sin respuestas cargadas:", preguntasSinRespuesta.map(q => q.text));
+        } else {
+          console.log("Todas las preguntas han sido cargadas con respuestas.");
+        }
+
       } catch (error) {
         console.error("Error obteniendo registros existentes:", error);
       } finally {
@@ -193,7 +218,7 @@ export default function DiagnosticoTab({ id }) {
     };
 
     fetchExistingRecords();
-  }, [id]);
+  }, [id]); // Sólo depende de 'id' ahora
 
   const handleAnswerChange = (questionText, value) => {
     setAnswers((prev) => ({ ...prev, [questionText.trim()]: value }));
@@ -207,6 +232,17 @@ export default function DiagnosticoTab({ id }) {
 
   // Guardar Diagnóstico y recommended_codes
   const handleSubmit = async () => {
+    // Validar que todas las preguntas han sido respondidas
+    const unansweredQuestions = initialQuestions
+      .flatMap(section => section.questions)
+      .filter(question => answers[question.text.trim()] === undefined);
+
+    if (unansweredQuestions.length > 0) {
+      const preguntas = unansweredQuestions.map(q => `"${q.text}"`).join(", ");
+      alert(`Por favor, responde todas las preguntas antes de guardar. Preguntas faltantes: ${preguntas}`);
+      return;
+    }
+
     try {
       const token = localStorage.getItem("token");
       if (!token) {
@@ -239,7 +275,13 @@ export default function DiagnosticoTab({ id }) {
             Respuesta: currentAnswer,
             Puntaje: puntaje,
             user_id: userId,
+            field: question.field, // Añadido 'field'
           };
+
+          if (!validateRequestData(requestData)) {
+            console.error(`Datos inválidos para la pregunta: "${questionText}"`, requestData);
+            continue; // O manejar de otra manera
+          }
 
           console.log(`Enviando datos para la pregunta: "${questionText}"`, requestData);
 
@@ -268,7 +310,11 @@ export default function DiagnosticoTab({ id }) {
               )
               .then((response) => {
                 console.log(`Registro Creado para "${questionText}":`, response.data);
-                newRecordIds[questionText] = response.data.id;
+                if (response.data.id) {
+                  newRecordIds[questionText] = response.data.id;
+                } else {
+                  console.error(`No se recibió el ID para la pregunta: "${questionText}"`);
+                }
               })
               .catch((error) => {
                 console.error(`Error creando el registro para "${questionText}":`, error);
