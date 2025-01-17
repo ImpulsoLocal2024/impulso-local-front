@@ -168,6 +168,8 @@ export default function DiagnosticoTab({ id }) {
           { headers: { Authorization: `Bearer ${token}` } }
         );
 
+        console.log("Datos recibidos del backend:", response.data);
+
         const records = response.data.reduce(
           (acc, record) => {
             const pregunta = record.Pregunta.trim();
@@ -239,7 +241,7 @@ export default function DiagnosticoTab({ id }) {
             user_id: userId,
           };
 
-          console.log("Enviando Datos:", requestData);
+          console.log(`Enviando datos para la pregunta: "${questionText}"`, requestData);
 
           if (newRecordIds[questionText]) {
             // update
@@ -374,6 +376,8 @@ export default function DiagnosticoTab({ id }) {
         `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/pi_diagnostico_cap/records?caracterizacion_id=${id}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
+
+      console.log("Datos recibidos del backend al recargar:", response.data);
 
       const records = response.data.reduce(
         (acc, record) => {
