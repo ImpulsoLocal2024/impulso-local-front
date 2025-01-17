@@ -208,14 +208,14 @@ export default function GenerarFichaTab({ id }) {
     };
 
     fetchData();
-  }, [id]); // Eliminamos `relatedData` de las dependencias
+  }, [id, relatedData]);
 
   // Función para verificar si hay que cortar página
   const checkPageEnd = (doc, currentY, addedHeight) => {
     const pageHeight = doc.internal.pageSize.getHeight();
     if (currentY + addedHeight > pageHeight - 40) { 
       doc.addPage();
-      return 40; // Reiniciar yPosition en 40 después de agregar una nueva página
+      yPosition = 40; 
     }
     return currentY;
   };
@@ -569,21 +569,23 @@ export default function GenerarFichaTab({ id }) {
       // Descargar PDF
       doc.save(`Ficha_Negocio_Local_${id}.pdf`);
     };
+  }; // <-- Eliminado '};' adicional
 
-    return (
-      <div>
-        <h3>Generar Ficha</h3>
-        {errorMsg && <div className="alert alert-danger">{errorMsg}</div>}
-        <button onClick={generateFichaPDF} className="btn btn-primary" disabled={loading}>
-          Descargar Ficha PDF
-        </button>
-        {loading && <p>Cargando datos, por favor espera...</p>}
-      </div>
-    );
-  }
-
-  GenerarFichaTab.propTypes = {
-    id: PropTypes.string.isRequired,
-  };
+  // Retorno del componente
+  return (
+    <div>
+      <h3>Generar Ficha</h3>
+      {errorMsg && <div className="alert alert-danger">{errorMsg}</div>}
+      <button onClick={generateFichaPDF} className="btn btn-primary" disabled={loading}>
+        Descargar Ficha PDF
+      </button>
+      {loading && <p>Cargando datos, por favor espera...</p>}
+    </div>
+  );
 }
+
+GenerarFichaTab.propTypes = {
+  id: PropTypes.string.isRequired,
+};
+
 
