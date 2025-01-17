@@ -93,42 +93,28 @@ export default function DiagnosticoTab({ id }) {
     },
   ];
 
-  // Mapeo: pregunta => códigos que se activan si la respuesta da puntaje 0
+  // Mapeo: campo => códigos que se activan si la respuesta da puntaje 0
   const questionToCodesMapping = {
-    "¿Están separadas sus finanzas personales de las de su negocio?": ["229"],
-    "¿Lleva registros de ingresos y gastos de su empresa periódicamente?": [
-      "230",
-      "228",
-      "226",
-    ],
-    "¿Ha calculado y registrado sus costos de producción, ventas y administración?":
-      ["230", "228"],
-    "¿Los ingresos por ventas alcanzan a cubrir sus gastos y costos operativos?":
-      ["230", "228"],
-    "¿Cuenta con el inventario suficiente de productos para atender la demanda de sus clientes?":
-      ["230", "225"],
-    "¿Maneja un control de inventarios para los bienes que comercializa o productos que fabrica incluyendo sus materias primas e insumos?":
-      ["230", "225"],
-    "¿Considera que debe fortalecer las habilidades para el manejo del talento humano en su empresa?":
-      ["230", "224"],
-    "¿Ha desarrollado estrategias para conseguir nuevos clientes?": ["227", "234"],
-    "¿Ha analizado sus productos/servicios con relación a su competencia?": ["227"],
-    "¿Mis productos/servicios tienen ventas permanentes?": ["227", "234"],
-    "¿Ha perdido alguna oportunidad de negocio o venta a causa del servicio al cliente?":
-      ["227"],
-    "¿Ha realizado ventas por internet?": ["224"],
-    "¿Conoce cómo desarrollar la venta de sus productos/servicios por internet?": [
-      "224",
-    ],
-    "¿Cuenta con equipos de cómputo?": ["224"],
-    "¿Cuenta con página web?": ["224"],
-    "¿Cuenta con red social Facebook?": ["224"],
-    "¿Cuenta con red social Instagram?": ["224"],
-    "¿Cuenta con red social TikTok?": ["224"],
-    "¿Su empresa cuenta con acceso a créditos o servicios financieros para su apalancamiento?":
-      ["233", "232"],
-    "¿Su empresa aplica medidas con enfoque ambiental: ejemplo ahorro de agua, energía, recuperación de residuos, reutilización de desechos, etc.?":
-      ["231"],
+    finanzas_separadas: ["229"],
+    registros_ingresos_gastos: ["230", "228", "226"],
+    costos_registrados: ["230", "228"],
+    ingresos_cubren_costos: ["230", "228"],
+    inventario_suficiente: ["230", "225"],
+    control_inventarios: ["230", "225"],
+    fortalecer_talento_humano: ["230", "224"],
+    estrategias_nuevos_clientes: ["227", "234"],
+    productos_vs_competencia: ["227"],
+    ventas_permanentes: ["227", "234"],
+    oportunidades_perdidas: ["227"],
+    ventas_internet: ["224"],
+    desarrollo_ventas_online: ["224"],
+    equipos_computo: ["224"],
+    pagina_web: ["224"],
+    facebook: ["224"],
+    instagram: ["224"],
+    tiktok: ["224"],
+    acceso_creditos: ["233", "232"],
+    enfoque_ambiental: ["231"],
   };
 
   const [answers, setAnswers] = useState({});
@@ -142,21 +128,17 @@ export default function DiagnosticoTab({ id }) {
   const [showHistoryModal, setShowHistoryModal] = useState(false);
 
   // Determina si la pregunta es invertida
-  const isInvertedQuestion = (questionText) => {
-    const trimmed = questionText.trim();
+  const isInvertedQuestion = (field) => {
     return (
-      trimmed ===
-        "¿Considera que debe fortalecer las habilidades para el manejo del talento humano en su empresa?" ||
-      trimmed ===
-        "¿Ha perdido alguna oportunidad de negocio o venta a causa del servicio al cliente?"
+      field === "fortalecer_talento_humano" ||
+      field === "oportunidades_perdidas"
     );
   };
 
   // Calcula puntaje según la pregunta
-  const getScoreFromState = (question) => {
-    const trimmed = question.text.trim();
-    const currentValue = answers[trimmed];
-    if (isInvertedQuestion(trimmed)) {
+  const getScoreFromState = (field) => {
+    const currentValue = answers[field];
+    if (isInvertedQuestion(field)) {
       // invertida: true => 0, false => 1
       return currentValue ? 0 : 1;
     } else {
@@ -173,6 +155,7 @@ export default function DiagnosticoTab({ id }) {
         const token = localStorage.getItem("token");
         if (!token) {
           alert("No se encontró el token de autenticación");
+          setLoading(false);
           return;
         }
 
@@ -183,12 +166,15 @@ export default function DiagnosticoTab({ id }) {
 
         const records = response.data.reduce(
           (acc, record) => {
-            acc.answers[record.Pregunta.trim()] = record.Respuesta;
-            acc.recordIds[record.Pregunta.trim()] = record.id;
+            acc.answers[record.field] = record.Respuesta;
+            acc.recordIds[record.field] = record.id;
             return acc;
           },
           { answers: {}, recordIds: {} }
         );
+
+        console.log("Respuestas Cargadas:", records.answers);
+        console.log("IDs de Registros:", records.recordIds);
 
         setAnswers(records.answers);
         setRecordIds(records.recordIds);
@@ -202,13 +188,13 @@ export default function DiagnosticoTab({ id }) {
     fetchExistingRecords();
   }, [id]);
 
-  const handleAnswerChange = (questionText, value) => {
-    setAnswers((prev) => ({ ...prev, [questionText.trim()]: value }));
+  const handleAnswerChange = (field, value) => {
+    setAnswers((prev) => ({ ...prev, [field]: value }));
   };
 
   // Calcula promedio de cada componente
   const calculateAverage = (questions) => {
-    const totalScore = questions.reduce((sum, q) => sum + getScoreFromState(q), 0);
+    const totalScore = questions.reduce((sum, q) => sum + getScoreFromState(q.field), 0);
     return (totalScore / questions.length).toFixed(2);
   };
 
@@ -228,32 +214,39 @@ export default function DiagnosticoTab({ id }) {
       for (const section of initialQuestions) {
         for (const question of section.questions) {
           const currentAnswer =
-            answers[question.text.trim()] === undefined
+            answers[question.field] === undefined
               ? false
-              : answers[question.text.trim()];
+              : answers[question.field];
+
+          const puntaje = isInvertedQuestion(question.field)
+            ? currentAnswer
+              ? 0
+              : 1
+            : currentAnswer
+            ? 1
+            : 0;
 
           const requestData = {
             caracterizacion_id: id,
             Componente: section.component,
             Pregunta: question.text.trim(),
             Respuesta: currentAnswer,
-            Puntaje: isInvertedQuestion(question.text.trim())
-              ? currentAnswer
-                ? 0
-                : 1
-              : currentAnswer
-              ? 1
-              : 0,
+            Puntaje: puntaje,
             user_id: userId,
+            field: question.field, // Asegúrate de incluir el 'field' si es necesario en el backend
           };
 
-          if (newRecordIds[question.text.trim()]) {
+          console.log("Enviando Datos:", requestData);
+
+          if (newRecordIds[question.field]) {
             // update
             const updatePromise = axios.put(
-              `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/pi_diagnostico_cap/record/${newRecordIds[question.text.trim()]}`,
+              `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/pi_diagnostico_cap/record/${newRecordIds[question.field]}`,
               requestData,
               { headers: { Authorization: `Bearer ${token}` } }
-            );
+            ).then(response => {
+              console.log(`Registro Actualizado para ${question.field}:`, response.data);
+            });
             requestPromises.push(updatePromise);
           } else {
             // create
@@ -264,7 +257,8 @@ export default function DiagnosticoTab({ id }) {
                 { headers: { Authorization: `Bearer ${token}` } }
               )
               .then((response) => {
-                newRecordIds[question.text.trim()] = response.data.id;
+                console.log(`Registro Creado para ${question.field}:`, response.data);
+                newRecordIds[question.field] = response.data.id;
               });
             requestPromises.push(createPromise);
           }
@@ -278,11 +272,11 @@ export default function DiagnosticoTab({ id }) {
       const triggeredCodes = [];
       for (const section of initialQuestions) {
         for (const question of section.questions) {
-          const score = getScoreFromState(question);
+          const score = getScoreFromState(question.field);
           if (score === 0) {
-            const questionText = question.text.trim();
-            if (questionToCodesMapping[questionText]) {
-              questionToCodesMapping[questionText].forEach((code) => {
+            const questionField = question.field;
+            if (questionToCodesMapping[questionField]) {
+              questionToCodesMapping[questionField].forEach((code) => {
                 if (!triggeredCodes.includes(code)) {
                   triggeredCodes.push(code);
                 }
@@ -292,13 +286,30 @@ export default function DiagnosticoTab({ id }) {
         }
       }
 
+      console.log("Códigos Activados:", triggeredCodes);
+
       // 3) Guardar recommended_codes en pi_capacitacion
       await upsertRecommendedCodes(token, id, userId, triggeredCodes);
 
       alert("Diagnóstico guardado exitosamente");
+
+      // Recargar los registros para sincronizar el estado
+      await fetchExistingRecords();
     } catch (error) {
       console.error("Error guardando el diagnóstico:", error);
-      alert("Hubo un error al guardar el diagnóstico");
+      if (error.response) {
+        // El servidor respondió con un código de estado fuera del rango 2xx
+        console.error("Datos de Respuesta:", error.response.data);
+        alert(`Error: ${error.response.data.message || "Hubo un error al guardar el diagnóstico"}`);
+      } else if (error.request) {
+        // La solicitud fue hecha pero no se recibió respuesta
+        console.error("Solicitud sin respuesta:", error.request);
+        alert("Error: No se recibió respuesta del servidor");
+      } else {
+        // Algo sucedió al configurar la solicitud
+        console.error("Error al configurar la solicitud:", error.message);
+        alert(`Error: ${error.message}`);
+      }
     }
   };
 
@@ -320,11 +331,12 @@ export default function DiagnosticoTab({ id }) {
           user_id: userId,
           recommended_codes: codesString,
         };
-        await axios.post(
+        const createResponse = await axios.post(
           `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/pi_capacitacion/record`,
           newRecord,
           { headers: { Authorization: `Bearer ${token}` } }
         );
+        console.log("Códigos Recomendados Creado:", createResponse.data);
       } else {
         // actualizar
         const existing = resGet.data[0];
@@ -335,14 +347,16 @@ export default function DiagnosticoTab({ id }) {
           user_id: userId,
           recommended_codes: codesString,
         };
-        await axios.put(
+        const updateResponse = await axios.put(
           `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/pi_capacitacion/record/${recordId}`,
           updatedRecord,
           { headers: { Authorization: `Bearer ${token}` } }
         );
+        console.log("Códigos Recomendados Actualizado:", updateResponse.data);
       }
     } catch (error) {
       console.error("Error en upsertRecommendedCodes:", error);
+      alert("Hubo un error al guardar los códigos recomendados.");
     }
   };
 
@@ -414,7 +428,7 @@ export default function DiagnosticoTab({ id }) {
               {initialQuestions.map((section) => (
                 <React.Fragment key={section.component}>
                   {section.questions.map((question, index) => (
-                    <tr key={question.text}>
+                    <tr key={question.field}>
                       {index === 0 && (
                         <td rowSpan={section.questions.length}>
                           {section.component}
@@ -424,24 +438,24 @@ export default function DiagnosticoTab({ id }) {
                       <td>
                         <input
                           type="radio"
-                          name={question.text}
-                          checked={answers[question.text.trim()] === true}
+                          name={question.field}
+                          checked={answers[question.field] === true}
                           onChange={() =>
-                            handleAnswerChange(question.text, true)
+                            handleAnswerChange(question.field, true)
                           }
                         />
                       </td>
                       <td>
                         <input
                           type="radio"
-                          name={question.text}
-                          checked={answers[question.text.trim()] === false}
+                          name={question.field}
+                          checked={answers[question.field] === false}
                           onChange={() =>
-                            handleAnswerChange(question.text, false)
+                            handleAnswerChange(question.field, false)
                           }
                         />
                       </td>
-                      <td>{getScoreFromState(question)}</td>
+                      <td>{getScoreFromState(question.field)}</td>
                     </tr>
                   ))}
                   <tr>
@@ -526,8 +540,8 @@ export default function DiagnosticoTab({ id }) {
                             <td>{new Date(item.created_at).toLocaleString()}</td>
                             <td>{item.change_type}</td>
                             <td>{item.field_name || "-"}</td>
-                            <td>{item.old_value || "-"}</td>
-                            <td>{item.new_value || "-"}</td>
+                            <td>{item.old_value !== null ? item.old_value.toString() : "-"}</td>
+                            <td>{item.new_value !== null ? item.new_value.toString() : "-"}</td>
                             <td>{item.description || "-"}</td>
                           </tr>
                         ))}
@@ -559,5 +573,4 @@ export default function DiagnosticoTab({ id }) {
 DiagnosticoTab.propTypes = {
   id: PropTypes.string.isRequired,
 };
-
 
