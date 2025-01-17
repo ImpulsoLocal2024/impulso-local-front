@@ -95,8 +95,8 @@ export default function GenerarFichaTab({ id }) {
 
         // 3. Obtener el nombre de la localidad
         const locId = caracterizacionResponse.data.record["Localidad de la unidad de negocio"];
-        if (locId && fieldsResponse.data.relatedData["Localidad de la unidad de negocio"]) {
-          const localidadesArray = fieldsResponse.data.relatedData["Localidad de la unidad de negocio"];
+        if (locId && relatedData["Localidad de la unidad de negocio"]) {
+          const localidadesArray = relatedData["Localidad de la unidad de negocio"];
           const found = localidadesArray.find((item) => String(item.id) === String(locId));
           if (found) {
             setLocalidadName(found.displayValue);
@@ -139,6 +139,7 @@ export default function GenerarFichaTab({ id }) {
 
         // Si no hay nada, preferimos dejarlo como cadena vacía para no mostrar "No disponible" en la firma
         setEmprendedorNombre(nombreEmprendedor || '');
+
         console.log("Nombre del emprendedor:", nombreEmprendedor);
 
         // 6. Obtener datos de `pi_datos` para el caracterizacion_id
@@ -215,7 +216,7 @@ export default function GenerarFichaTab({ id }) {
     const pageHeight = doc.internal.pageSize.getHeight();
     if (currentY + addedHeight > pageHeight - 40) { 
       doc.addPage();
-      yPosition = 40; 
+      currentY = 40; 
     }
     return currentY;
   };
@@ -492,15 +493,12 @@ export default function GenerarFichaTab({ id }) {
       doc.setFont(undefined, 'normal');
       yPosition += 20;
 
-      // <-- Cambio: Actualizar textoViabilidad con el nuevo contenido
       const textoViabilidad = [
-        `Yo, ${asesorNombre}, identificado(a) con documento de identidad N° ${asesorDocumento}, en mi calidad de asesor empresarial del beneficiario denominado ${nombreEmprendimiento} y haciendo parte del equipo ejecutor del programa “Impulso Local 4.0” que emana del Convenio Interadministrativo suscrito entre la Corporación para el Desarrollo de las Microempresas – PROPAIS y el Fondo de desarrollo local, emito concepto de VIABILIDAD para acceder a los recursos de capitalización proporcionados por el citado Programa.`,
+        `Yo, ${asesorNombre}, identificado con documento de identidad ${asesorDocumento}, en mi calidad de asesor empresarial del micronegocio denominado ${nombreEmprendimiento} y haciendo parte del equipo ejecutor del programa “Impulso Local” suscrito entre la Corporación para el Desarrollo de las Microempresas - Propaís y la Secretaría de Desarrollo Económico - SDDE, emito concepto de VIABILIDAD para que el beneficiario pueda acceder a los recursos de capitalización proporcionados por el citado programa.`,
         "",
-        "NOTA: Declaro que toda la información sobre el plan de inversión aquí consignada fue diligenciada en conjunto con el asesor empresarial a cargo, está de acuerdo con las condiciones del negocio, es verdadera, completa y correcta, la cual puede ser verificada en cualquier momento.",
+        "Nota: El valor detallado en el presente documento corresponde a la planeación de las inversiones que requiere cada negocio local, sin embargo, es preciso aclarar que el programa Impulso Local no capitalizará este valor en su totalidad, sino que fortalecerá cada unidad productiva con algunos de estos bienes hasta por $3.000.000 de pesos en total, de acuerdo con la disponibilidad de los mismos y la mayor eficiencia en el uso de los recursos públicos.",
         "",
-        "NOTA: En caso de que se presente un incremento en la planeación de los recursos del 20% de la capitalización al momento de la ejecución de esta, por favor revisar en conjunto con el empresario (a) el alcance de los mismos, y reformular si aplica, siempre manteniendo el tope máximo del 20% de la destinación.",
-        "",
-        "NOTA: El beneficiario asegura, mediante la firma del presente documento, que cuenta con el recurso adicional necesario para realizar la adquisición de: los productos, servicios, maquinarias, equipos y/o herramientas que planea adquirir con los recursos de la capitalización, en caso de que estos tengan un valor mayor al entregado por el programa."
+        "Nota: Declaro que toda la información sobre el plan de inversión aquí consignada fue diligenciada en conjunto con el asesor empresarial a cargo, está de acuerdo con las condiciones del negocio, es verdadera, completa y correcta, la cual puede ser verificada en cualquier momento."
       ];
 
       textoViabilidad.forEach(parrafo => {
@@ -569,9 +567,8 @@ export default function GenerarFichaTab({ id }) {
       // Descargar PDF
       doc.save(`Ficha_Negocio_Local_${id}.pdf`);
     };
-  }; // <-- Eliminado '};' adicional
+  };
 
-  // Retorno del componente
   return (
     <div>
       <h3>Generar Ficha</h3>
