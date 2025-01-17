@@ -146,10 +146,10 @@ export default function GenerarFichaTab({ id }) {
         // 8. Agrupar Rubros y calcular total inversión
         // Ajustar a "Equipoy/o similares" exactamente
         const rubrosOptions = [
-          "Maquinaria",
-          "Herramientas",
-          "Mobiliario",
-          "Equipoy/o similares",
+          "Maquinaria y equipo",
+          "Insumos/Materias primas",
+          "Cursos",
+          "Póliza",
         ];
 
         const resumenPorRubro = rubrosOptions.map((r) => {

@@ -1,835 +1,587 @@
-import { useState, useEffect } from 'react';
-import PropTypes from 'prop-types';
+// GenerarFichaTab.jsx
+
+import React, { useState, useEffect } from 'react';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
 import axios from 'axios';
+import PropTypes from 'prop-types';
 
-export default function FormulacionTab({ id }) {
-  const [records, setRecords] = useState([]);
+// Ruta de la imagen del banner en la carpeta public
+const bannerImagePath = '/impulso-local-banner-pdf.jpeg';
+
+export default function GenerarFichaTab({ id }) {
+  // Estados para almacenar los datos obtenidos de la API
+  const [caracterizacionData, setCaracterizacionData] = useState({});
+  const [datosTab, setDatosTab] = useState({});
+  const [propuestaMejoraData, setPropuestaMejoraData] = useState([]);
+  const [formulacionData, setFormulacionData] = useState([]);
+  const [groupedRubros, setGroupedRubros] = useState([]);
+  const [totalInversion, setTotalInversion] = useState(0);
+  const [relatedData, setRelatedData] = useState({});
   const [loading, setLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState('');
 
-  const [newRubro, setNewRubro] = useState({
-    "Rubro": "",
-    "Elemento": "",
-    "Descripción": "",
-    "Cantidad": "",
-    "Valor Unitario": "",
-  });
+  // Estados para almacenar los nombres del asesor y del emprendedor
+  const [asesorNombre, setAsesorNombre] = useState('');
+  const [emprendedorNombre, setEmprendedorNombre] = useState('');
+  const [asesorDocumento, setAsesorDocumento] = useState('');
 
-  const rubrosOptions = [
-    "Maquinaria",
-    "Herramientas",
-    "Mobiliario",
-    "Equipoy/o similares",
+  // Estado para almacenar el nombre de la localidad
+  const [localidadName, setLocalidadName] = useState('');
+
+  // Lista de campos a excluir de la sección de datos
+  const datosKeys = [
+    "Tiempo de dedicacion al negocio (Parcial o Completo)",
+    "Descripcion general del negocio",
+    "Descripcion de el lugar donde desarrolla la actividad",
+    "Descripcion de los activos del negocio",
+    "Valor aproximado de los activos del negocio",
+    "Total costos fijos mensuales",
+    "Total costos variables",
+    "Total gastos mensuales",
+    "Total ventas mensuales del negocio",
+    "Descripcion de la capacidad de produccion",
+    "Valor de los gastos familiares mensuales promedio",
+    "Lleva registros separados de finanzas personales y del negocio",
+    "Usa billeteras moviles",
+    "Cual",
+    "Concepto y justificacion del valor de la capitalizacion",
+    "Como contribuira la inversion a la mejora productiva del negocio",
+    "El negocio es sujeto de participacion en espacios de conexion",
+    "Recomendaciones tecnica, administrativas y financieras",
+    "id",
+    "localidad_unidad_negocio" // <-- Cambio: Excluimos este campo para que no se muestre
   ];
 
-  const montoDisponible = 3000000; // 3 millones
+  // Estados para manejar monto disponible y contrapartida (similar a FormulacionTab)
+  const [montoDisponible, setMontoDisponible] = useState(3000000); // 3 millones
+  const [contrapartida, setContrapartida] = useState(0);
 
-  const [uploadedFilesMap, setUploadedFilesMap] = useState({});
-  const [uploadingRecordId, setUploadingRecordId] = useState(null); 
-  const [file, setFile] = useState(null);
-  const [fileName, setFileName] = useState('');
-  const [error, setError] = useState(null);
-
-  // Estados para cumplimiento
-  const [selectedFileForCompliance, setSelectedFileForCompliance] = useState(null);
-  const [complianceCumple, setComplianceCumple] = useState(null);
-  const [complianceDescripcion, setComplianceDescripcion] = useState('');
-
-  // Estados para historial
-  const [history, setHistory] = useState([]);
-  const [historyLoading, setHistoryLoading] = useState(false);
-  const [historyError, setHistoryError] = useState(null);
-  const [showHistoryModal, setShowHistoryModal] = useState(false);
-
-  const fetchAllRecordsFiles = async (fetchedRecords) => {
-    const token = localStorage.getItem('token');
-    if (!token) return;
-
-    const filesResponse = await axios.get(
-      `https://impulso-local-back.onrender.com/api/inscriptions/tables/pi_formulacion/record/${id}/files`,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        }
-      }
-    );
-
-    const allFiles = filesResponse.data.files || [];
-
-    const updatedMap = {};
-    fetchedRecords.forEach((rec) => {
-      const formulacion_id = rec.id;
-      const formulacionFiles = allFiles.filter(f => {
-        const match = f.name.match(/_formulacion_(\d+)/);
-        if (!match) return false;
-        const fileFormulacionId = parseInt(match[1], 10);
-        return fileFormulacionId === formulacion_id;
-      });
-      updatedMap[formulacion_id] = formulacionFiles;
-    });
-
-    setUploadedFilesMap(updatedMap);
-  };
-
-  const fetchRecords = async () => {
-    setLoading(true);
-    try {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        alert("No se encontró el token de autenticación");
+  useEffect(() => {
+    const fetchData = async () => {
+      if (!id) {
+        console.error("El ID del registro de caracterización no está definido.");
+        setErrorMsg("El ID del registro de caracterización no está definido.");
         setLoading(false);
         return;
       }
 
-      const response = await axios.get(
-        `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/pi_formulacion/records?caracterizacion_id=${id}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-
-      const fetchedRecords = response.data || [];
-      setRecords(fetchedRecords);
-
-      await fetchAllRecordsFiles(fetchedRecords);
-
-    } catch (error) {
-      console.error("Error obteniendo registros de formulación:", error);
-      setError('Error obteniendo los registros de formulación');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchRecords();
-  }, [id]);
-
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setNewRubro((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-  };
-
-  const handleSubmit = async () => {
-    try {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        alert("No se encontró el token de autenticación");
-        return;
-      }
-
-      const { Rubro, Elemento, Descripción, Cantidad, "Valor Unitario": ValorUnitario } = newRubro;
-
-      if (!Rubro || !Elemento || !Cantidad || !ValorUnitario) {
-        alert("Por favor completa Rubro, Elemento, Cantidad y Valor Unitario.");
-        return;
-      }
-
-      const userId = localStorage.getItem('id'); 
-      const requestData = {
-        caracterizacion_id: id,
-        "Rubro": Rubro,
-        "Elemento": Elemento,
-        "Descripción": Descripción || "",
-        "Cantidad": parseInt(Cantidad, 10) || 0,
-        "Valor Unitario": parseFloat(ValorUnitario) || 0,
-        user_id: userId
-      };
-
-      await axios.post(
-        `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/pi_formulacion/record`,
-        requestData,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-
-      await fetchRecords();
-
-      setNewRubro({
-        "Rubro": "",
-        "Elemento": "",
-        "Descripción": "",
-        "Cantidad": "",
-        "Valor Unitario": "",
-      });
-
-      alert("Rubro guardado exitosamente");
-    } catch (error) {
-      console.error("Error guardando el rubro:", error);
-      alert("Hubo un error al guardar el rubro");
-    }
-  };
-
-  const handleFileChange = (e) => {
-    setFile(e.target.files[0]);
-  };
-
-  const handleFileNameChange = (e) => {
-    setFileName(e.target.value);
-  };
-
-  const handleFileUpload = async (e) => {
-    e.preventDefault();
-    if (!file || !fileName) {
-      alert('Por favor, ingresa un nombre y selecciona un archivo');
-      return;
-    }
-    try {
-      const token = localStorage.getItem('token');
-      const userId = localStorage.getItem('id');
-      const fileNameWithFormulacion = `${fileName}_formulacion_${uploadingRecordId}`;
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('fileName', fileNameWithFormulacion);
-      formData.append('caracterizacion_id', id);
-      formData.append('user_id', userId);
-
-      await axios.post(
-        `https://impulso-local-back.onrender.com/api/inscriptions/tables/pi_formulacion/record/${id}/upload`,
-        formData,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'multipart/form-data',
-          },
+      try {
+        setLoading(true);
+        const token = localStorage.getItem('token');
+        if (!token) {
+          console.error("Token de autenticación no encontrado.");
+          setErrorMsg("Token de autenticación no encontrado. Por favor, inicia sesión nuevamente.");
+          setLoading(false);
+          return;
         }
+
+        const baseURL = 'https://impulso-local-back.onrender.com/api/inscriptions';
+
+        // 1. Obtener datos de `inscription_caracterizacion`
+        const caracterizacionResponse = await axios.get(
+          `${baseURL}/tables/inscription_caracterizacion/record/${id}`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        console.log("Datos de caracterización:", caracterizacionResponse.data.record);
+        setCaracterizacionData(caracterizacionResponse.data.record);
+
+        // 2. Obtener datos relacionados para claves foráneas (si aplica)
+        const fieldsResponse = await axios.get(
+          `${baseURL}/pi/tables/inscription_caracterizacion/related-data`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        setRelatedData(fieldsResponse.data.relatedData || {});
+
+        // 3. Obtener el nombre de la localidad
+        const locId = caracterizacionResponse.data.record["Localidad de la unidad de negocio"];
+        if (locId && relatedData["Localidad de la unidad de negocio"]) {
+          const localidadesArray = relatedData["Localidad de la unidad de negocio"];
+          const found = localidadesArray.find((item) => String(item.id) === String(locId));
+          if (found) {
+            setLocalidadName(found.displayValue);
+          } else {
+            setLocalidadName("Localidad no encontrada");
+          }
+        } else {
+          setLocalidadName("Localidad no encontrada");
+        }
+
+        // 4. Obtener datos del asesor
+        const asesorId = caracterizacionResponse.data.record.Asesor;
+        if (asesorId) {
+          const asesorResponse = await axios.get(
+            `${baseURL}/tables/users/record/${asesorId}`,
+            { headers: { Authorization: `Bearer ${token}` } }
+          );
+          const asesorData = asesorResponse.data.record;
+          const nombreAsesor = asesorData.username || 'No asignado';
+          setAsesorNombre(nombreAsesor);
+          console.log("Nombre del asesor:", nombreAsesor);
+
+          // Obtener el documento del asesor
+          const documentoAsesor = asesorData.documento || 'No disponible';
+          setAsesorDocumento(documentoAsesor);
+          console.log("Documento del asesor:", documentoAsesor);
+        } else {
+          setAsesorNombre('No asignado');
+          setAsesorDocumento('No disponible');
+          console.log("Asesor no asignado.");
+        }
+
+        // 5. Obtener nombre del beneficiario
+        const nombreEmprendedor = [
+          caracterizacionResponse.data.record["Primer nombre"] || '',
+          caracterizacionResponse.data.record["Otros nombres"] || '',
+          caracterizacionResponse.data.record["Primer apellido"] || '',
+          caracterizacionResponse.data.record["Segundo apellido"] || ''
+        ].filter(Boolean).join(' ');
+
+        // Si no hay nada, preferimos dejarlo como cadena vacía para no mostrar "No disponible" en la firma
+        setEmprendedorNombre(nombreEmprendedor || '');
+
+        console.log("Nombre del emprendedor:", nombreEmprendedor);
+
+        // 6. Obtener datos de `pi_datos` para el caracterizacion_id
+        const datosResponse = await axios.get(
+          `${baseURL}/pi/tables/pi_datos/records?caracterizacion_id=${id}`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        if (datosResponse.data.length > 0) {
+          setDatosTab(datosResponse.data[0]);
+          console.log("Datos de pi_datos:", datosResponse.data[0]);
+        } else {
+          console.log("No se encontraron datos en pi_datos para este caracterizacion_id.");
+        }
+
+        // 7. Obtener datos de `pi_propuesta_mejora`
+        const propuestaMejoraResponse = await axios.get(
+          `${baseURL}/pi/tables/pi_propuesta_mejora/records?caracterizacion_id=${id}`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        setPropuestaMejoraData(propuestaMejoraResponse.data);
+        console.log("Datos de pi_propuesta_mejora:", propuestaMejoraResponse.data);
+
+        // 8. Obtener datos de `pi_formulacion` sin referencias a `provider_proveedores`
+        const formulacionResponse = await axios.get(
+          `${baseURL}/pi/tables/pi_formulacion/records?caracterizacion_id=${id}`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        setFormulacionData(formulacionResponse.data);
+        console.log("Datos de pi_formulacion:", formulacionResponse.data);
+
+        // 9. Agrupar Rubros y calcular total inversión
+        const rubrosOptions = [
+          "Maquinaria y equipo",
+          "Insumos/Materias primas",
+          "Cursos",
+          "Póliza",
+        ];
+
+        const resumenPorRubro = rubrosOptions.map((r) => {
+          const total = formulacionResponse.data
+            .filter((rec) => rec["Rubro"] === r)
+            .reduce((sum, rec) => {
+              const cantidad = rec["Cantidad"] || 0;
+              const valorUnitario = rec["Valor Unitario"] || 0;
+              return sum + (cantidad * valorUnitario);
+            }, 0);
+          return { rubro: r, total };
+        });
+
+        const totalInv = resumenPorRubro.reduce((sum, item) => sum + item.total, 0);
+        const cpart = totalInv > montoDisponible ? totalInv - montoDisponible : 0;
+
+        setGroupedRubros(resumenPorRubro);
+        setTotalInversion(totalInv.toFixed(2));
+        setContrapartida(cpart);
+
+        console.log("Resumen por rubro:", resumenPorRubro);
+        console.log("Total inversión:", totalInv);
+        console.log("Contrapartida:", cpart);
+
+        setLoading(false);
+      } catch (error) {
+        console.error("Error al obtener los datos:", error);
+        setErrorMsg("Error al obtener los datos. Por favor, inténtalo nuevamente más tarde.");
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [id, relatedData]);
+
+  // Función para verificar si hay que cortar página
+  const checkPageEnd = (doc, currentY, addedHeight) => {
+    const pageHeight = doc.internal.pageSize.getHeight();
+    if (currentY + addedHeight > pageHeight - 40) { 
+      doc.addPage();
+      currentY = 40; 
+    }
+    return currentY;
+  };
+
+  // Color de las tablas
+  const tableColor = [230, 26, 78]; // #E61A4E
+
+  // Función para generar el PDF completo
+  const generateFichaPDF = () => {
+    const doc = new jsPDF('p', 'pt', 'a4');
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const margin = 40;
+    const maxLineWidth = pageWidth - margin * 2;
+    let yPosition = 100;
+
+    const fontSizes = {
+      title: 18,
+      subtitle: 14,
+      normal: 12,
+    };
+
+    // Función para convertir imagen a base64
+    const getImageDataUrl = (img) => {
+      const canvas = document.createElement('canvas');
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0);
+      return canvas.toDataURL('image/jpeg');
+    };
+
+    // Cargar la imagen y generar el PDF después
+    const img = new Image();
+    img.src = bannerImagePath;
+    img.onload = () => {
+      const imgData = getImageDataUrl(img);
+
+      // Encabezado con imagen
+      doc.addImage(imgData, 'JPEG', margin, 40, maxLineWidth, 60);
+      yPosition = 130;
+
+      // Obtener el nombre del emprendimiento y caracterizacion_id
+      const nombreEmprendimiento = caracterizacionData["Nombre del emprendimiento"] || 'No disponible';
+      const caracterizacionId = id || 'No disponible';
+
+      // Agregar Nombre del Emprendimiento
+      doc.setFontSize(fontSizes.subtitle);
+      doc.setFont(undefined, 'bold');
+      doc.text(nombreEmprendimiento, pageWidth / 2, yPosition, { align: 'center' });
+
+      yPosition += 20;
+      doc.setFontSize(fontSizes.normal);
+      doc.setFont(undefined, 'normal');
+
+      // Agregar ID y Localidad al lado: "ID: 123 - Localidad: Kennedy"
+      const localidadLabel = localidadName && localidadName !== "Localidad no encontrada"
+        ? ` - Localidad: ${localidadName}`
+        : '';
+      const idLocalidadText = `ID: ${caracterizacionId}${localidadLabel}`;
+
+      doc.text(idLocalidadText, pageWidth / 2, yPosition, { align: 'center' });
+      yPosition += 30;
+
+      // 1. Título Principal (cambiado a: PLAN DE INVERSIÓN DEL EMPRENDIMIENTO)
+      doc.setFontSize(fontSizes.title);
+      doc.setFont(undefined, 'bold');
+      doc.setTextColor(0, 0, 0);
+      doc.text("PLAN DE INVERSIÓN DEL EMPRENDIMIENTO", pageWidth / 2, yPosition, { align: 'center' });
+
+      yPosition += 30;
+
+      // 2. Mostrar información de datosTab (filtrando campos no deseados)
+      doc.setFontSize(fontSizes.normal);
+      doc.setFont(undefined, 'normal');
+      yPosition += 20;
+
+      const piDatosFields = Object.keys(datosTab).filter(
+        (key) => !datosKeys.includes(key) && key !== 'caracterizacion_id'
       );
 
-      await fetchAllRecordsFiles(records);
-      setFile(null);
-      setFileName('');
-      setUploadingRecordId(null);
-    } catch (error) {
-      console.error('Error subiendo el archivo:', error);
-      setError('Error subiendo el archivo');
-    }
-  };
+      if (piDatosFields.length > 0) {
+        piDatosFields.forEach((key) => {
+          let label = `${key}:`;
+          let value = datosTab[key] || 'No disponible';
 
-  const handleFileDelete = async (formulacion_id, fileId) => {
-    if (window.confirm('¿Estás seguro de que deseas eliminar este archivo?')) {
-      try {
-        const token = localStorage.getItem('token');
-        const userId = localStorage.getItem('id');
-        await axios.delete(
-          `https://impulso-local-back.onrender.com/api/inscriptions/tables/pi_formulacion/record/${id}/file/${fileId}`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-            data: { user_id: userId } // Enviamos user_id en DELETE
+          // Evitar mostrar "ID: " si viene con un prefijo raro
+          if (typeof value === 'string' && value.toLowerCase().startsWith('id:')) {
+            value = value.substring(3).trim();
+          } else if (typeof value !== 'string') {
+            value = String(value);
           }
-        );
 
-        await fetchAllRecordsFiles(records);
-      } catch (error) {
-        console.error('Error eliminando el archivo:', error);
-        setError('Error eliminando el archivo');
-      }
-    }
-  };
+          doc.setFont(undefined, 'bold');
+          const labelLines = doc.splitTextToSize(label, maxLineWidth);
+          yPosition = checkPageEnd(doc, yPosition, labelLines.length * 14);
+          doc.text(labelLines, margin, yPosition);
+          yPosition += labelLines.length * 14;
 
-  const handleDeleteRecord = async (formulacion_id) => {
-    if (window.confirm('¿Estás seguro de que deseas eliminar este registro?')) {
-      try {
-        const token = localStorage.getItem('token');
-        const userId = localStorage.getItem('id');
-        // Para eliminar un registro, podemos enviar user_id en la query o en data si el backend lo soporta.
-        // Suponemos que el backend ya hace insertHistory al eliminar el registro.
-        // Si hace falta user_id, se puede enviar por query param: `?user_id=${userId}`
-        await axios.delete(
-          `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/pi_formulacion/record/${formulacion_id}?user_id=${userId}`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
+          doc.setFont(undefined, 'normal');
+          const valueLines = doc.splitTextToSize(value, maxLineWidth);
+          yPosition = checkPageEnd(doc, yPosition, valueLines.length * 14);
+          doc.text(valueLines, margin, yPosition);
+          yPosition += valueLines.length * 14 + 5;
+
+          // Espacio adicional si es "descripcion del negocio" u "objetivo del plan de inversion"
+          if (
+            key.toLowerCase() === 'descripcion del negocio' ||
+            key.toLowerCase() === 'objetivo del plan de inversion'
+          ) {
+            yPosition += 10;
           }
-        );
-
-        await fetchRecords();
-      } catch (error) {
-        console.error('Error eliminando el registro:', error);
-        setError('Error eliminando el registro');
+        });
+      } else {
+        doc.text("No hay datos generales del negocio disponibles.", margin, yPosition);
+        yPosition += 14;
       }
-    }
-  };
 
-  const resumenPorRubro = rubrosOptions.map((r) => {
-    const total = records
-      .filter((rec) => rec["Rubro"] === r)
-      .reduce((sum, rec) => {
-        const cantidad = rec["Cantidad"] || 0;
-        const valorUnitario = rec["Valor Unitario"] || 0;
-        return sum + (cantidad * valorUnitario);
-      }, 0);
-    return { rubro: r, total };
-  });
+      // 3. PROPUESTA DE MEJORA SOBRE EL DIAGNÓSTICO REALIZADO
+      doc.setFontSize(fontSizes.subtitle);
+      doc.setFont(undefined, 'bold');
+      yPosition += 20;
+      doc.text("PROPUESTA DE MEJORA SOBRE EL DIAGNÓSTICO REALIZADO", pageWidth / 2, yPosition, { align: 'center' });
 
-  const totalInversion = resumenPorRubro.reduce((sum, item) => sum + item.total, 0);
-  const contrapartida = totalInversion > montoDisponible ? totalInversion - montoDisponible : 0;
+      doc.setFontSize(fontSizes.normal);
+      doc.setFont(undefined, 'normal');
+      yPosition += 20;
 
-  const handleOpenComplianceModal = (f) => {
-    setSelectedFileForCompliance(f);
-    setComplianceCumple(
-      f.cumple === 'true' || f.cumple === true || f.cumple === 1
-        ? true
-        : f.cumple === 'false' || f.cumple === false || f.cumple === 0
-        ? false
-        : null
-    );
-    setComplianceDescripcion(f['descripcion cumplimiento'] || '');
-  };
+      if (propuestaMejoraData.length > 0) {
+        const propuestaHeaders = [
+          { header: 'Área de Fortalecimiento', dataKey: 'area' },
+          { header: 'Descripción', dataKey: 'descripcion' },
+          { header: 'Propuesta', dataKey: 'propuesta' },
+        ];
 
-  const handleCloseComplianceModal = () => {
-    setSelectedFileForCompliance(null);
-    setComplianceCumple(null);
-    setComplianceDescripcion('');
-  };
+        const propuestaBody = propuestaMejoraData.map(item => ({
+          area: item["Area de fortalecimiento"] || 'No disponible',
+          descripcion: item["Descripcion del area critica por area de fortalecimiento"] || 'No disponible',
+          propuesta: item["Propuesta de mejora"] || 'No disponible',
+        }));
 
-  const handleSaveCompliance = async () => {
-    if (!selectedFileForCompliance) return;
-    try {
-      const token = localStorage.getItem('token');
-      const userId = localStorage.getItem('id');
-      await axios.put(
-        `https://impulso-local-back.onrender.com/api/inscriptions/tables/pi_formulacion/record/${id}/file/${selectedFileForCompliance.id}/compliance`,
-        {
-          cumple: complianceCumple,
-          descripcion_cumplimiento: complianceDescripcion,
-          user_id: userId
+        doc.autoTable({
+          startY: yPosition,
+          head: [propuestaHeaders.map(col => col.header)],
+          body: propuestaBody.map(row => propuestaHeaders.map(col => row[col.dataKey])),
+          theme: 'striped',
+          styles: { fontSize: fontSizes.normal, cellPadding: 4 },
+          tableWidth: 'auto',
+          headStyles: { fillColor: tableColor, textColor: [255, 255, 255], fontStyle: 'bold' },
+          margin: { left: margin, right: margin },
+          didDrawPage: (data) => {
+            yPosition = data.cursor.y;
+          },
+        });
+
+        yPosition = doc.lastAutoTable.finalY + 10 || yPosition + 10;
+      } else {
+        doc.text("No hay propuestas de mejora registradas.", margin, yPosition);
+        yPosition += 14;
+      }
+
+      // 4. FORMULACIÓN DE INVERSIÓN
+      doc.setFontSize(fontSizes.subtitle);
+      doc.setFont(undefined, 'bold');
+      yPosition += 20;
+      doc.text("FORMULACIÓN DE INVERSIÓN", pageWidth / 2, yPosition, { align: 'center' });
+
+      doc.setFontSize(fontSizes.normal);
+      doc.setFont(undefined, 'normal');
+      yPosition += 20;
+
+      if (formulacionData.length > 0) {
+        const formulacionHeaders = [
+          { header: 'Rubro', dataKey: 'rubro' },
+          { header: 'Elemento', dataKey: 'elemento' },
+          { header: 'Descripción', dataKey: 'descripcion' },
+          { header: 'Cantidad', dataKey: 'cantidad' },
+          { header: 'Valor Unitario', dataKey: 'valorUnitario' },
+          { header: 'Valor Total', dataKey: 'valorTotal' },
+        ];
+
+        const formulacionBody = formulacionData.map(item => ({
+          rubro: item["Rubro"] || 'No disponible',
+          elemento: item["Elemento"] || 'No disponible',
+          descripcion: item["Descripción"] || 'No disponible',
+          cantidad: item["Cantidad"] ? item["Cantidad"].toLocaleString() : '0',
+          valorUnitario: item["Valor Unitario"] ? `$${item["Valor Unitario"].toLocaleString()}` : '$0',
+          valorTotal: item["Cantidad"] && item["Valor Unitario"]
+            ? `$${(item["Cantidad"] * item["Valor Unitario"]).toLocaleString()}`
+            : '$0',
+        }));
+
+        doc.autoTable({
+          startY: yPosition,
+          head: [formulacionHeaders.map(col => col.header)],
+          body: formulacionBody.map(row => formulacionHeaders.map(col => row[col.dataKey])),
+          theme: 'striped',
+          styles: { fontSize: fontSizes.normal, cellPadding: 4 },
+          tableWidth: 'auto',
+          headStyles: { fillColor: tableColor, textColor: [255, 255, 255], fontStyle: 'bold' },
+          margin: { left: margin, right: margin },
+          didDrawPage: (data) => {
+            yPosition = data.cursor.y;
+          },
+        });
+
+        yPosition = doc.lastAutoTable.finalY + 10 || yPosition + 10;
+      } else {
+        doc.text("No hay registros de formulación de inversión.", margin, yPosition);
+        yPosition += 14;
+      }
+
+      // 5. RESUMEN DE LA INVERSIÓN
+      doc.setFontSize(fontSizes.subtitle);
+      doc.setFont(undefined, 'bold');
+      yPosition += 20;
+      doc.text("RESUMEN DE LA INVERSIÓN", pageWidth / 2, yPosition, { align: 'center' });
+
+      yPosition += 20;
+
+      const resumenColumns = [
+        { header: 'Rubro', dataKey: 'rubro' },
+        { header: 'Valor', dataKey: 'total' },
+      ];
+
+      doc.autoTable({
+        startY: yPosition,
+        head: [resumenColumns.map(col => col.header)],
+        body: groupedRubros.map(row => {
+          const valorFormateado = `$${Number(row.total).toLocaleString()}`;
+          return [row.rubro, valorFormateado];
+        }),
+        theme: 'striped',
+        styles: { fontSize: fontSizes.normal, cellPadding: 4 },
+        tableWidth: 'auto',
+        headStyles: { fillColor: tableColor, textColor: [255, 255, 255], fontStyle: 'bold' },
+        margin: { left: margin, right: margin },
+        didDrawPage: (data) => {
+          yPosition = data.cursor.y;
         },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      const updatedMap = { ...uploadedFilesMap };
-
-      const match = selectedFileForCompliance.name.match(/_formulacion_(\d+)/);
-      if (match) {
-        const formulacion_id = parseInt(match[1], 10);
-        const files = updatedMap[formulacion_id] || [];
-        const updatedFiles = files.map((file) =>
-          file.id === selectedFileForCompliance.id
-            ? {
-                ...file,
-                cumple: complianceCumple,
-                'descripcion cumplimiento': complianceDescripcion,
-              }
-            : file
-        );
-        updatedMap[formulacion_id] = updatedFiles;
-        setUploadedFilesMap(updatedMap);
-      }
-
-      handleCloseComplianceModal();
-    } catch (error) {
-      console.error('Error actualizando el cumplimiento:', error);
-      setError('Error actualizando el cumplimiento');
-    }
-  };
-
-  // Funciones para el historial de cambios
-  const fetchAllRecordsHistory = async () => {
-    if (records.length === 0) {
-      // Sin registros, sin historial
-      setHistory([]);
-      return;
-    }
-
-    setHistoryLoading(true);
-    setHistoryError(null);
-
-    try {
-      const token = localStorage.getItem('token');
-
-      // Obtener historial de todos los registros y combinarlo
-      const historyPromises = records.map((rec) =>
-        axios.get(
-          `https://impulso-local-back.onrender.com/api/inscriptions/tables/pi_formulacion/record/${rec.id}/history`,
-          {
-            headers: { Authorization: `Bearer ${token}` }
-          }
-        )
-      );
-
-      const historyResponses = await Promise.all(historyPromises);
-      let combinedHistory = [];
-
-      historyResponses.forEach((response) => {
-        if (response.data.history && Array.isArray(response.data.history)) {
-          combinedHistory = combinedHistory.concat(response.data.history);
-        }
       });
 
-      combinedHistory.sort(
-        (a, b) => new Date(b.created_at) - new Date(a.created_at)
-      );
+      yPosition = doc.lastAutoTable.finalY + 10 || yPosition + 10;
 
-      setHistory(combinedHistory);
-      setHistoryLoading(false);
-    } catch (error) {
-      console.error('Error obteniendo el historial:', error);
-      setHistoryError('Error obteniendo el historial');
-      setHistoryLoading(false);
-    }
-  };
+      // <-- Cambio: Añadimos otra tabla para "Total Inversión, Monto disponible, Contrapartida"
+      const datosInversion = [
+        ["Total Inversión", `$${Number(totalInversion).toLocaleString()}`],
+        ["Monto disponible", `$${montoDisponible.toLocaleString()}`],
+        ["Contrapartida", `$${Number(contrapartida).toLocaleString()}`],
+      ];
 
-  const handleOpenHistoryModal = async () => {
-    await fetchAllRecordsHistory();
-    setShowHistoryModal(true);
+      doc.autoTable({
+        startY: yPosition,
+        head: [["Concepto", "Valor"]],
+        body: datosInversion,
+        theme: 'striped',
+        styles: { fontSize: fontSizes.normal, cellPadding: 4 },
+        tableWidth: 'auto',
+        headStyles: { fillColor: tableColor, textColor: [255, 255, 255], fontStyle: 'bold' },
+        margin: { left: margin, right: margin },
+        didDrawPage: (data) => {
+          yPosition = data.cursor.y;
+        },
+      });
+
+      yPosition = doc.lastAutoTable.finalY + 10 || yPosition + 10;
+
+      // 6. CONCEPTO DE VIABILIDAD DE PLAN DE INVERSIÓN
+      doc.setFontSize(fontSizes.subtitle);
+      doc.setFont(undefined, 'bold');
+      yPosition += 30;
+      doc.text("CONCEPTO DE VIABILIDAD DE PLAN DE INVERSIÓN", pageWidth / 2, yPosition, { align: 'center' });
+
+      doc.setFontSize(fontSizes.normal);
+      doc.setFont(undefined, 'normal');
+      yPosition += 20;
+
+      const textoViabilidad = [
+        `Yo, ${asesorNombre}, identificado con documento de identidad ${asesorDocumento}, en mi calidad de asesor empresarial del micronegocio denominado ${nombreEmprendimiento} y haciendo parte del equipo ejecutor del programa “Impulso Local” suscrito entre la Corporación para el Desarrollo de las Microempresas - Propaís y la Secretaría de Desarrollo Económico - SDDE, emito concepto de VIABILIDAD para que el beneficiario pueda acceder a los recursos de capitalización proporcionados por el citado programa.`,
+        "",
+        "Nota: El valor detallado en el presente documento corresponde a la planeación de las inversiones que requiere cada negocio local, sin embargo, es preciso aclarar que el programa Impulso Local no capitalizará este valor en su totalidad, sino que fortalecerá cada unidad productiva con algunos de estos bienes hasta por $3.000.000 de pesos en total, de acuerdo con la disponibilidad de los mismos y la mayor eficiencia en el uso de los recursos públicos.",
+        "",
+        "Nota: Declaro que toda la información sobre el plan de inversión aquí consignada fue diligenciada en conjunto con el asesor empresarial a cargo, está de acuerdo con las condiciones del negocio, es verdadera, completa y correcta, la cual puede ser verificada en cualquier momento."
+      ];
+
+      textoViabilidad.forEach(parrafo => {
+        if (parrafo === "") {
+          yPosition += 10;
+          return;
+        }
+        const lines = doc.splitTextToSize(parrafo, maxLineWidth);
+        yPosition = checkPageEnd(doc, yPosition, lines.length * 14);
+        doc.text(lines, margin, yPosition);
+        yPosition += lines.length * 14 + 10;
+      });
+
+      // 7. Sección de Firmas
+      const firmasSectionHeight = 120;
+      yPosition += 10;
+      yPosition = checkPageEnd(doc, yPosition, firmasSectionHeight);
+
+      doc.setFontSize(fontSizes.subtitle);
+      doc.setFont(undefined, 'bold');
+      doc.text("Firmas", pageWidth / 2, yPosition, { align: 'center' });
+
+      yPosition += 30;
+      doc.setFontSize(fontSizes.normal);
+      doc.setFont(undefined, 'normal');
+
+      const boxWidth = 150;
+      const boxHeight = 40;
+      const beneficiarioBoxX = margin + 30;
+      const asesorBoxX = pageWidth - margin - 180;
+
+      doc.text("Beneficiario", beneficiarioBoxX + boxWidth / 2, yPosition, { align: 'center' });
+      doc.text("Asesor", asesorBoxX + boxWidth / 2, yPosition, { align: 'center' });
+
+      yPosition += 10;
+      doc.rect(beneficiarioBoxX, yPosition, boxWidth, boxHeight);
+      doc.rect(asesorBoxX, yPosition, boxWidth, boxHeight);
+
+      yPosition += boxHeight + 15;
+
+      // Si el beneficiario se llama '', lo mostramos en blanco
+      const benefNameToShow = emprendedorNombre.trim() === 'No disponible' ? '' : emprendedorNombre.trim();
+      doc.text(benefNameToShow, beneficiarioBoxX + boxWidth / 2, yPosition, { align: 'center' });
+
+      doc.text(asesorNombre, asesorBoxX + boxWidth / 2, yPosition, { align: 'center' });
+
+      yPosition += 15;
+      // Para la cédula del beneficiario, si no hay nada, dejar en blanco
+      const emprendedorCC = caracterizacionData["Numero de documento de identificacion ciudadano"] || '';
+      const benefCCToShow = emprendedorCC.trim() === 'No disponible' ? '' : `C.C. ${emprendedorCC.trim()}`;
+      doc.text(benefCCToShow, beneficiarioBoxX + boxWidth / 2, yPosition, { align: 'center' });
+
+      const asesorCCToShow = asesorDocumento === 'No disponible' ? '' : `C.C. ${asesorDocumento}`;
+      doc.text(asesorCCToShow, asesorBoxX + boxWidth / 2, yPosition, { align: 'center' });
+
+      // 8. Sección de Fecha y Hora
+      const dateSectionHeight = 30;
+      yPosition += 30;
+      yPosition = checkPageEnd(doc, yPosition, dateSectionHeight);
+
+      const fecha = new Date();
+      doc.text(`Fecha y hora de generación`, pageWidth / 2, yPosition, { align: 'center' });
+      yPosition += 15;
+      doc.text(`${fecha.toLocaleDateString()} ${fecha.toLocaleTimeString()}`, pageWidth / 2, yPosition, { align: 'center' });
+
+      // Descargar PDF
+      doc.save(`Ficha_Negocio_Local_${id}.pdf`);
+    };
   };
 
   return (
     <div>
-      <h3>Formulación del Plan de Inversión</h3>
-      {loading ? (
-        <p>Cargando...</p>
-      ) : error ? (
-        <div className="alert alert-danger">{error}</div>
-      ) : (
-        <div>
-          {records.length > 0 ? (
-            <div className="mb-3">
-              {records.map((rec, index) => {
-                const formulacion_id = rec.id; 
-                const rubro = rec["Rubro"] || "";
-                const elemento = rec["Elemento"] || "";
-                const descripcion = (rec["Descripción"] && rec["Descripción"].trim() !== "") 
-                  ? rec["Descripción"] 
-                  : "Sin descripción";
-                const cantidad = rec["Cantidad"] || 0;
-                const valorUnitario = rec["Valor Unitario"] || 0;
-                const valorTotal = cantidad * valorUnitario;
-
-                const files = uploadedFilesMap[formulacion_id] || [];
-
-                return (
-                  <div key={formulacion_id} className="card mb-2" style={{ borderLeft: "5px solid #28a745" }}>
-                    <div className="card-body">
-                      <h5 className="card-title">
-                        {index + 1}. {rubro} <span className="text-success">✔️</span>
-                      </h5>
-                      <p className="card-text" style={{ lineHeight: "1.5" }}>
-                        <strong>Elemento:</strong> {elemento}<br />
-                        <strong>Descripción:</strong> {descripcion}<br />
-                        <strong>Cantidad:</strong> {cantidad.toLocaleString()}<br />
-                        <strong>Valor Unitario:</strong> ${valorUnitario.toLocaleString()}<br />
-                        <strong>Valor Total:</strong> ${valorTotal.toLocaleString()}
-                      </p>
-
-                      <div className="mt-4" style={{ width: '100%' }}>
-                        <h6>Archivos adjuntos</h6>
-                        {uploadingRecordId === formulacion_id ? (
-                          <form onSubmit={handleFileUpload}>
-                            <div className="form-group mb-2">
-                              <label>Nombre del archivo</label>
-                              <input
-                                type="text"
-                                className="form-control"
-                                value={fileName}
-                                onChange={handleFileNameChange}
-                              />
-                            </div>
-                            <div className="form-group mb-2">
-                              <label>Seleccionar archivo</label>
-                              <input
-                                type="file"
-                                className="form-control"
-                                onChange={handleFileChange}
-                              />
-                            </div>
-                            <button type="submit" className="btn btn-success btn-sm mb-2">
-                              Cargar archivo
-                            </button>
-                            <button
-                              type="button"
-                              className="btn btn-secondary btn-sm"
-                              onClick={() => {setUploadingRecordId(null); setFile(null); setFileName('');}}
-                            >
-                              Cancelar
-                            </button>
-                          </form>
-                        ) : (
-                          <button
-                            className="btn btn-primary btn-sm mb-2"
-                            onClick={() => {setUploadingRecordId(formulacion_id); setFile(null); setFileName('');}}
-                          >
-                            Subir documento
-                          </button>
-                        )}
-
-                        {files.length > 0 ? (
-                          <ul className="list-group mt-3">
-                            {files.map((f) => (
-                              <li
-                                key={f.id}
-                                className="list-group-item d-flex justify-content-between align-items-center"
-                              >
-                                <div>
-                                  <strong>{f.name}</strong>
-                                  <br />
-                                  <a
-                                    href={`https://impulso-local-back.onrender.com${f.url}`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                  >
-                                    Ver archivo
-                                  </a>
-                                  <br />
-                                  {/* Etiqueta de Cumplimiento */}
-                                  <span
-                                    className="badge"
-                                    style={{
-                                      backgroundColor:
-                                        f.cumple === true ||
-                                        f.cumple === 'true' ||
-                                        f.cumple === 1
-                                          ? 'green'
-                                          : f.cumple === false ||
-                                            f.cumple === 'false' ||
-                                            f.cumple === 0
-                                          ? 'red'
-                                          : 'gray',
-                                      color: '#fff',
-                                      padding: '5px',
-                                      borderRadius: '5px',
-                                      cursor: 'pointer',
-                                      marginTop: '5px',
-                                      display: 'inline-block',
-                                    }}
-                                    onClick={() => handleOpenComplianceModal(f)}
-                                  >
-                                    {f.cumple === true ||
-                                    f.cumple === 'true' ||
-                                    f.cumple === 1
-                                      ? 'Cumple'
-                                      : f.cumple === false ||
-                                        f.cumple === 'false' ||
-                                        f.cumple === 0
-                                      ? 'No Cumple'
-                                      : 'Cumplimiento'}
-                                  </span>
-                                  {f['descripcion cumplimiento'] && (
-                                    <p style={{ marginTop: '5px' }}>
-                                      <strong>Descripción:</strong>{' '}
-                                      {f['descripcion cumplimiento']}
-                                    </p>
-                                  )}
-                                </div>
-                                <button
-                                  className="btn btn-danger btn-sm"
-                                  onClick={() => handleFileDelete(formulacion_id, f.id)}
-                                >
-                                  Eliminar archivo
-                                </button>
-                              </li>
-                            ))}
-                          </ul>
-                        ) : (
-                          <p>No hay archivos subidos aún para este registro.</p>
-                        )}
-                      </div>
-                      
-                      <button
-                        className="btn btn-danger btn-sm mt-2"
-                        onClick={() => handleDeleteRecord(formulacion_id)}
-                      >
-                        Eliminar registro
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          ) : (
-            <p>No hay registros agregados aún.</p>
-          )}
-
-          <div className="card p-3 mb-3">
-            <h5>Agregar nuevo rubro</h5>
-            <div className="row mb-2">
-              <div className="col-md-4">
-                <label><strong>Rubro</strong></label>
-                <select
-                  className="form-select w-100"
-                  name="Rubro"
-                  value={newRubro["Rubro"]}
-                  onChange={handleChange}
-                >
-                  <option value="">Seleccionar...</option>
-                  {rubrosOptions.map((r) => (
-                    <option key={r} value={r}>{r}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="col-md-4">
-                <label><strong>Elemento</strong></label>
-                <input
-                  type="text"
-                  className="form-control w-100"
-                  name="Elemento"
-                  value={newRubro["Elemento"]}
-                  onChange={handleChange}
-                  placeholder="Ej: Par, Kgs, Und"
-                />
-              </div>
-              <div className="col-md-4">
-                <label><strong>Descripción</strong></label>
-                <input
-                  type="text"
-                  className="form-control w-100"
-                  name="Descripción"
-                  value={newRubro["Descripción"]}
-                  onChange={handleChange}
-                  placeholder="Descripción (opcional)"
-                />
-              </div>
-            </div>
-            <div className="row mb-2">
-              <div className="col-md-4">
-                <label><strong>Cantidad</strong></label>
-                <input
-                  type="number"
-                  className="form-control w-100"
-                  name="Cantidad"
-                  value={newRubro["Cantidad"]}
-                  onChange={handleChange}
-                  placeholder="Cantidad"
-                />
-              </div>
-              <div className="col-md-4">
-                <label><strong>Valor Unitario</strong></label>
-                <input
-                  type="number"
-                  className="form-control w-100"
-                  name="Valor Unitario"
-                  value={newRubro["Valor Unitario"]}
-                  onChange={handleChange}
-                  placeholder="Valor Unitario"
-                />
-              </div>
-              <div className="col-md-4 d-flex align-items-end">
-                <button className="btn btn-primary w-100" onClick={handleSubmit}>
-                  Guardar rubro
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <h5>Resumen de la inversión</h5>
-          <table className="table table-bordered">
-            <thead>
-              <tr>
-                <th>Rubro</th>
-                <th>Valor</th>
-              </tr>
-            </thead>
-            <tbody>
-              {resumenPorRubro.map((r) => (
-                <tr key={r.rubro}>
-                  <td>{r.rubro}</td>
-                  <td>${Number(r.total).toLocaleString()}</td>
-                </tr>
-              ))}
-              <tr>
-                <td><strong>Total</strong></td>
-                <td><strong>${Number(totalInversion).toLocaleString()}</strong></td>
-              </tr>
-              <tr>
-                <td>Monto disponible</td>
-                <td>${montoDisponible.toLocaleString()}</td>
-              </tr>
-              <tr>
-                <td>Contrapartida</td>
-                <td style={{color: contrapartida > 0 ? "red" : "black"}}>
-                  ${contrapartida.toLocaleString()}
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      {/* Modal de cumplimiento */}
-      {selectedFileForCompliance && (
-        <div
-          className="modal fade show"
-          style={{ display: 'block' }}
-          tabIndex="-1"
-          role="dialog"
-        >
-          <div className="modal-dialog" role="document">
-            <div className="modal-content">
-              <div className="modal-header">
-                <h5 className="modal-title">Actualizar Cumplimiento</h5>
-                <button
-                  type="button"
-                  className="close"
-                  onClick={handleCloseComplianceModal}
-                >
-                  <span>&times;</span>
-                </button>
-              </div>
-              <div className="modal-body">
-                <div className="form-group">
-                  <label>Cumple</label>
-                  <div>
-                    <input
-                      type="radio"
-                      id="cumple-true"
-                      name="cumple"
-                      value="true"
-                      checked={complianceCumple === true}
-                      onChange={() => setComplianceCumple(true)}
-                    />
-                    <label htmlFor="cumple-true">Cumple</label>
-                  </div>
-                  <div>
-                    <input
-                      type="radio"
-                      id="cumple-false"
-                      name="cumple"
-                      value="false"
-                      checked={complianceCumple === false}
-                      onChange={() => setComplianceCumple(false)}
-                    />
-                    <label htmlFor="cumple-false">No Cumple</label>
-                  </div>
-                </div>
-                <div className="form-group">
-                  <label>Descripción cumplimiento</label>
-                  <textarea
-                    className="form-control"
-                    value={complianceDescripcion}
-                    onChange={(e) => setComplianceDescripcion(e.target.value)}
-                  ></textarea>
-                </div>
-              </div>
-              <div className="modal-footer d-flex justify-content-end">
-                <button
-                  type="button"
-                  className="btn btn-secondary mr-2"
-                  onClick={handleCloseComplianceModal}
-                >
-                  Cerrar
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-primary"
-                  onClick={handleSaveCompliance}
-                >
-                  Guardar cambios
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {selectedFileForCompliance && (
-        <div className="modal-backdrop fade show"></div>
-      )}
-
-      {/* Botón y Modal del Historial de Cambios */}
-      {records.length > 0 && (
-        <button
-          type="button"
-          className="btn btn-info btn-sm mt-3"
-          onClick={handleOpenHistoryModal}
-        >
-          Ver Historial de Cambios
-        </button>
-      )}
-
-      {showHistoryModal && (
-        <div
-          className="modal fade show"
-          style={{ display: 'block' }}
-          tabIndex="-1"
-          role="dialog"
-        >
-          <div className="modal-dialog modal-lg" role="document" style={{ maxWidth: '90%' }}>
-            <div
-              className="modal-content"
-              style={{ maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}
-            >
-              <div className="modal-header">
-                <h5 className="modal-title">Historial de Cambios</h5>
-                <button
-                  type="button"
-                  className="close"
-                  onClick={() => setShowHistoryModal(false)}
-                >
-                  <span>&times;</span>
-                </button>
-              </div>
-              <div className="modal-body" style={{ overflowY: 'auto' }}>
-                {historyError && (
-                  <div className="alert alert-danger">{historyError}</div>
-                )}
-                {historyLoading ? (
-                  <div>Cargando historial...</div>
-                ) : history.length > 0 ? (
-                  <div
-                    className="table-responsive"
-                    style={{ maxHeight: '400px', overflowY: 'auto' }}
-                  >
-                    <table className="table table-striped table-bordered table-sm">
-                      <thead className="thead-light">
-                        <tr>
-                          <th>ID Usuario</th>
-                          <th>Usuario</th>
-                          <th>Fecha del Cambio</th>
-                          <th>Tipo de Cambio</th>
-                          <th>Campo</th>
-                          <th>Valor Antiguo</th>
-                          <th>Valor Nuevo</th>
-                          <th>Descripción</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {history.map((item) => (
-                          <tr key={item.id}>
-                            <td>{item.user_id}</td>
-                            <td>{item.username}</td>
-                            <td>{new Date(item.created_at).toLocaleString()}</td>
-                            <td>{item.change_type}</td>
-                            <td>{item.field_name || '-'}</td>
-                            <td>{item.old_value || '-'}</td>
-                            <td>{item.new_value || '-'}</td>
-                            <td>{item.description || '-'}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                ) : (
-                  <p className="mt-3">No hay historial de cambios.</p>
-                )}
-              </div>
-              <div className="modal-footer">
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  onClick={() => setShowHistoryModal(false)}
-                >
-                  Cerrar
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {(showHistoryModal || selectedFileForCompliance) && (
-        <div className="modal-backdrop fade show"></div>
-      )}
+      <h3>Generar Ficha</h3>
+      {errorMsg && <div className="alert alert-danger">{errorMsg}</div>}
+      <button onClick={generateFichaPDF} className="btn btn-primary" disabled={loading}>
+        Descargar Ficha PDF
+      </button>
+      {loading && <p>Cargando datos, por favor espera...</p>}
     </div>
   );
 }
 
-FormulacionTab.propTypes = {
+GenerarFichaTab.propTypes = {
   id: PropTypes.string.isRequired,
 };
 
