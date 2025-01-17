@@ -135,10 +135,8 @@ export default function GenerarFichaTab({ id }) {
 
         // 5. Obtener nombre del beneficiario
         const nombreEmprendedor = [
-          caracterizacionResponse.data.record["Primer nombre"] || '',
-          caracterizacionResponse.data.record["Otros nombres"] || '',
-          caracterizacionResponse.data.record["Primer apellido"] || '',
-          caracterizacionResponse.data.record["Segundo apellido"] || ''
+          caracterizacionResponse.data.record["Nombres"] || '',
+          caracterizacionResponse.data.record["Apellidos"] || ''
         ].filter(Boolean).join(' ');
         setEmprendedorNombre(nombreEmprendedor || '');
         console.log("Nombre del emprendedor:", nombreEmprendedor);
