@@ -117,6 +117,14 @@ export default function DiagnosticoTab({ id }) {
     enfoque_ambiental: ["231"],
   };
 
+  // Mapeo de Pregunta a Field
+  const questionTextToFieldMapping = initialQuestions.reduce((acc, section) => {
+    section.questions.forEach((q) => {
+      acc[q.text.trim()] = q.field;
+    });
+    return acc;
+  }, {});
+
   const [answers, setAnswers] = useState({});
   const [recordIds, setRecordIds] = useState({});
   const [loading, setLoading] = useState(true);
@@ -166,8 +174,14 @@ export default function DiagnosticoTab({ id }) {
 
         const records = response.data.reduce(
           (acc, record) => {
-            acc.answers[record.field] = record.Respuesta;
-            acc.recordIds[record.field] = record.id;
+            const pregunta = record.Pregunta.trim();
+            const field = questionTextToFieldMapping[pregunta];
+            if (field) {
+              acc.answers[field] = record.Respuesta;
+              acc.recordIds[field] = record.id;
+            } else {
+              console.warn(`No se encontró el campo para la pregunta: "${pregunta}"`);
+            }
             return acc;
           },
           { answers: {}, recordIds: {} }
@@ -186,7 +200,7 @@ export default function DiagnosticoTab({ id }) {
     };
 
     fetchExistingRecords();
-  }, [id]);
+  }, [id, questionTextToFieldMapping]);
 
   const handleAnswerChange = (field, value) => {
     setAnswers((prev) => ({ ...prev, [field]: value }));
@@ -213,12 +227,13 @@ export default function DiagnosticoTab({ id }) {
       // 1) Guardar/actualizar Diagnóstico (pi_diagnostico_cap)
       for (const section of initialQuestions) {
         for (const question of section.questions) {
+          const field = question.field;
           const currentAnswer =
-            answers[question.field] === undefined
+            answers[field] === undefined
               ? false
-              : answers[question.field];
+              : answers[field];
 
-          const puntaje = isInvertedQuestion(question.field)
+          const puntaje = isInvertedQuestion(field)
             ? currentAnswer
               ? 0
               : 1
@@ -233,19 +248,21 @@ export default function DiagnosticoTab({ id }) {
             Respuesta: currentAnswer,
             Puntaje: puntaje,
             user_id: userId,
-            field: question.field, // Asegúrate de incluir el 'field' si es necesario en el backend
+            field: field, // Asegúrate de incluir el 'field' si es necesario en el backend
           };
 
           console.log("Enviando Datos:", requestData);
 
-          if (newRecordIds[question.field]) {
+          if (newRecordIds[field]) {
             // update
             const updatePromise = axios.put(
-              `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/pi_diagnostico_cap/record/${newRecordIds[question.field]}`,
+              `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/pi_diagnostico_cap/record/${newRecordIds[field]}`,
               requestData,
               { headers: { Authorization: `Bearer ${token}` } }
             ).then(response => {
-              console.log(`Registro Actualizado para ${question.field}:`, response.data);
+              console.log(`Registro Actualizado para ${field}:`, response.data);
+            }).catch(error => {
+              console.error(`Error actualizando el registro para ${field}:`, error);
             });
             requestPromises.push(updatePromise);
           } else {
@@ -257,8 +274,11 @@ export default function DiagnosticoTab({ id }) {
                 { headers: { Authorization: `Bearer ${token}` } }
               )
               .then((response) => {
-                console.log(`Registro Creado para ${question.field}:`, response.data);
-                newRecordIds[question.field] = response.data.id;
+                console.log(`Registro Creado para ${field}:`, response.data);
+                newRecordIds[field] = response.data.id;
+              })
+              .catch(error => {
+                console.error(`Error creando el registro para ${field}:`, error);
               });
             requestPromises.push(createPromise);
           }
@@ -272,11 +292,11 @@ export default function DiagnosticoTab({ id }) {
       const triggeredCodes = [];
       for (const section of initialQuestions) {
         for (const question of section.questions) {
-          const score = getScoreFromState(question.field);
+          const field = question.field;
+          const score = getScoreFromState(field);
           if (score === 0) {
-            const questionField = question.field;
-            if (questionToCodesMapping[questionField]) {
-              questionToCodesMapping[questionField].forEach((code) => {
+            if (questionToCodesMapping[field]) {
+              questionToCodesMapping[field].forEach((code) => {
                 if (!triggeredCodes.includes(code)) {
                   triggeredCodes.push(code);
                 }
@@ -357,6 +377,45 @@ export default function DiagnosticoTab({ id }) {
     } catch (error) {
       console.error("Error en upsertRecommendedCodes:", error);
       alert("Hubo un error al guardar los códigos recomendados.");
+    }
+  };
+
+  // Función para recargar registros existentes
+  const fetchExistingRecords = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        console.warn("No se encontró el token de autenticación al recargar registros");
+        return;
+      }
+
+      const response = await axios.get(
+        `https://impulso-local-back.onrender.com/api/inscriptions/pi/tables/pi_diagnostico_cap/records?caracterizacion_id=${id}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      const records = response.data.reduce(
+        (acc, record) => {
+          const pregunta = record.Pregunta.trim();
+          const field = questionTextToFieldMapping[pregunta];
+          if (field) {
+            acc.answers[field] = record.Respuesta;
+            acc.recordIds[field] = record.id;
+          } else {
+            console.warn(`No se encontró el campo para la pregunta: "${pregunta}"`);
+          }
+          return acc;
+        },
+        { answers: {}, recordIds: {} }
+      );
+
+      console.log("Respuestas Cargadas después de recargar:", records.answers);
+      console.log("IDs de Registros después de recargar:", records.recordIds);
+
+      setAnswers(records.answers);
+      setRecordIds(records.recordIds);
+    } catch (error) {
+      console.error("Error recargando registros existentes:", error);
     }
   };
 
@@ -573,4 +632,5 @@ export default function DiagnosticoTab({ id }) {
 DiagnosticoTab.propTypes = {
   id: PropTypes.string.isRequired,
 };
+
 
