@@ -78,19 +78,26 @@ export default function GenerarFichaTab({ id }) {
 
         const baseURL = 'https://impulso-local-back.onrender.com/api/inscriptions';
 
-        // 1. Obtener datos de `inscription_caracterizacion`
-        const caracterizacionResponse = await axios.get(
-          `${baseURL}/tables/inscription_caracterizacion/record/${id}`,
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
+        // Realizar solicitudes en paralelo
+        const [
+          caracterizacionResponse,
+          fieldsResponse,
+          datosResponse,
+          propuestaMejoraResponse,
+          formulacionResponse
+        ] = await Promise.all([
+          axios.get(`${baseURL}/tables/inscription_caracterizacion/record/${id}`, { headers: { Authorization: `Bearer ${token}` } }),
+          axios.get(`${baseURL}/pi/tables/inscription_caracterizacion/related-data`, { headers: { Authorization: `Bearer ${token}` } }),
+          axios.get(`${baseURL}/pi/tables/pi_datos/records?caracterizacion_id=${id}`, { headers: { Authorization: `Bearer ${token}` } }),
+          axios.get(`${baseURL}/pi/tables/pi_propuesta_mejora/records?caracterizacion_id=${id}`, { headers: { Authorization: `Bearer ${token}` } }),
+          axios.get(`${baseURL}/pi/tables/pi_formulacion/records?caracterizacion_id=${id}`, { headers: { Authorization: `Bearer ${token}` } }),
+        ]);
+
+        // 1. Procesar datos de `inscription_caracterizacion`
         console.log("Datos de caracterización:", caracterizacionResponse.data.record);
         setCaracterizacionData(caracterizacionResponse.data.record);
 
-        // 2. Obtener datos relacionados para claves foráneas (si aplica)
-        const fieldsResponse = await axios.get(
-          `${baseURL}/pi/tables/inscription_caracterizacion/related-data`,
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
+        // 2. Procesar datos relacionados
         setRelatedData(fieldsResponse.data.relatedData || {});
 
         // 3. Obtener el nombre de la localidad
@@ -110,10 +117,7 @@ export default function GenerarFichaTab({ id }) {
         // 4. Obtener datos del asesor
         const asesorId = caracterizacionResponse.data.record.Asesor;
         if (asesorId) {
-          const asesorResponse = await axios.get(
-            `${baseURL}/tables/users/record/${asesorId}`,
-            { headers: { Authorization: `Bearer ${token}` } }
-          );
+          const asesorResponse = await axios.get(`${baseURL}/tables/users/record/${asesorId}`, { headers: { Authorization: `Bearer ${token}` } });
           const asesorData = asesorResponse.data.record;
           const nombreAsesor = asesorData.username || 'No asignado';
           setAsesorNombre(nombreAsesor);
@@ -136,16 +140,10 @@ export default function GenerarFichaTab({ id }) {
           caracterizacionResponse.data.record["Primer apellido"] || '',
           caracterizacionResponse.data.record["Segundo apellido"] || ''
         ].filter(Boolean).join(' ');
-
-        // Si no hay nada, preferimos dejarlo como cadena vacía para no mostrar "No disponible" en la firma
         setEmprendedorNombre(nombreEmprendedor || '');
         console.log("Nombre del emprendedor:", nombreEmprendedor);
 
-        // 6. Obtener datos de `pi_datos` para el caracterizacion_id
-        const datosResponse = await axios.get(
-          `${baseURL}/pi/tables/pi_datos/records?caracterizacion_id=${id}`,
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
+        // 6. Procesar datos de `pi_datos`
         if (datosResponse.data.length > 0) {
           setDatosTab(datosResponse.data[0]);
           console.log("Datos de pi_datos:", datosResponse.data[0]);
@@ -153,19 +151,11 @@ export default function GenerarFichaTab({ id }) {
           console.log("No se encontraron datos en pi_datos para este caracterizacion_id.");
         }
 
-        // 7. Obtener datos de `pi_propuesta_mejora`
-        const propuestaMejoraResponse = await axios.get(
-          `${baseURL}/pi/tables/pi_propuesta_mejora/records?caracterizacion_id=${id}`,
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
+        // 7. Procesar datos de `pi_propuesta_mejora`
         setPropuestaMejoraData(propuestaMejoraResponse.data);
         console.log("Datos de pi_propuesta_mejora:", propuestaMejoraResponse.data);
 
-        // 8. Obtener datos de `pi_formulacion` sin referencias a `provider_proveedores`
-        const formulacionResponse = await axios.get(
-          `${baseURL}/pi/tables/pi_formulacion/records?caracterizacion_id=${id}`,
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
+        // 8. Procesar datos de `pi_formulacion`
         setFormulacionData(formulacionResponse.data);
         console.log("Datos de pi_formulacion:", formulacionResponse.data);
 
@@ -199,7 +189,9 @@ export default function GenerarFichaTab({ id }) {
         console.log("Total inversión:", totalInv);
         console.log("Contrapartida:", cpart);
 
+        console.log("Finalizando la carga de datos. Seteando loading a false.");
         setLoading(false);
+        console.log("Estado de loading:", loading);
       } catch (error) {
         console.error("Error al obtener los datos:", error);
         setErrorMsg("Error al obtener los datos. Por favor, inténtalo nuevamente más tarde.");
@@ -459,7 +451,7 @@ export default function GenerarFichaTab({ id }) {
 
       yPosition = doc.lastAutoTable.finalY + 10 || yPosition + 10;
 
-      // <-- Cambio: Añadimos otra tabla para "Total Inversión, Monto disponible, Contrapartida"
+      // Añadir tabla para "Total Inversión, Monto disponible, Contrapartida"
       const datosInversion = [
         ["Total Inversión", `$${Number(totalInversion).toLocaleString()}`],
         ["Monto disponible", `$${montoDisponible.toLocaleString()}`],
@@ -492,7 +484,7 @@ export default function GenerarFichaTab({ id }) {
       doc.setFont(undefined, 'normal');
       yPosition += 20;
 
-      // <-- Cambio: Actualizar textoViabilidad con el nuevo contenido
+      // Actualizar textoViabilidad con el nuevo contenido
       const textoViabilidad = [
         `Yo, ${asesorNombre}, identificado(a) con documento de identidad N° ${asesorDocumento}, en mi calidad de asesor empresarial del beneficiario denominado ${nombreEmprendimiento} y haciendo parte del equipo ejecutor del programa “Impulso Local 4.0” que emana del Convenio Interadministrativo suscrito entre la Corporación para el Desarrollo de las Microempresas – PROPAIS y el Fondo de desarrollo local, emito concepto de VIABILIDAD para acceder a los recursos de capitalización proporcionados por el citado Programa.`,
         "",
@@ -584,7 +576,7 @@ export default function GenerarFichaTab({ id }) {
 }
 
 GenerarFichaTab.propTypes = {
-  id: PropTypes.string.isRequired,
+  id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
 };
 
 
