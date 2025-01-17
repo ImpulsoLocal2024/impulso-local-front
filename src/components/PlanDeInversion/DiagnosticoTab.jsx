@@ -310,8 +310,8 @@ export default function DiagnosticoTab({ id }) {
               )
               .then((response) => {
                 console.log(`Registro Creado para "${questionText}":`, response.data);
-                if (response.data.id) {
-                  newRecordIds[questionText] = response.data.id;
+                if (response.data.record && response.data.record.id) { // Modificación aquí
+                  newRecordIds[questionText] = response.data.record.id;
                 } else {
                   console.error(`No se recibió el ID para la pregunta: "${questionText}"`);
                 }
