@@ -47,6 +47,7 @@ export default function InfoBancariaTab({ id }) {
     "BANCOOMEVA S.A.",
     "CONFIAR COOPERATIVA FINANCIERA",
     "DAVIPLATA",
+    "NEQUI",
     "LULO BANK",
     "MOVII S.A.",
     "BANCO SANTANDER COLOMBIA",

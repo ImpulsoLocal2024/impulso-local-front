@@ -15,10 +15,10 @@ export default function EjecucionTab({ id }) {
   });
 
   const rubrosOptions = [
-    "Maquinaria",
-    "Herramientas",
-    "Mobiliario",
-    "Equipoy/o similares",
+    "Maquinaria y equipo",
+    "Insumos/Materias primas",
+    "Cursos",
+    "Póliza",
   ];
 
   const montoDisponible = 3000000; // 3 millones

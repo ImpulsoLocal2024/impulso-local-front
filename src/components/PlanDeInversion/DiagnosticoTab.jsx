@@ -93,12 +93,7 @@ export default function DiagnosticoTab({ id }) {
     },
   ];
 
-  /**
-   * Mapeo de pregunta => arreglo de códigos 
-   * (Ejemplo: "¿Están separadas sus finanzas...?" => ["210 - Separar finanzas personales y comerciales"])
-   * Para la demo, asigna los códigos que tú decidas. 
-   * Aquí coloco ejemplos tentativos:
-   */
+
   const questionToCodesMapping = {
     "¿Están separadas sus finanzas personales de las de su negocio?": ["229"],
     "¿Lleva registros de ingresos y gastos de su empresa periódicamente?": ["230", "228", "226"],
