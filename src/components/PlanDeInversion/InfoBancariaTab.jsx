@@ -63,6 +63,7 @@ export default function InfoBancariaTab({ id }) {
     "Cedula de Ciudadania",
     "Cedula de Extranjeria",
     "Contrasena de cedula",
+    "NIT",
     "Permiso especial de permanencia",
     "Permiso por proteccion temporal",
     "Permiso temporal de permanencia"
