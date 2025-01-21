@@ -42,6 +42,7 @@ export default function InfoBancariaTab({ id }) {
     "BANCO PICHINCHA",
     "BANCO POPULAR",
     "BANCO SERFINANZA",
+    "BANCO NU",
     "BANCO W",
     "BANCOLOMBIA",
     "BANCOOMEVA S.A.",
