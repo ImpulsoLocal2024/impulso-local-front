@@ -113,70 +113,42 @@ export default function PublicRecordCreate() {
     [normalize('Direccion')]: 'Dirección de residencia',
     [normalize('Barrio')]: 'Barrio de residencia',
     [normalize('Localidad de residencia')]: 'Localidad de residencia',
-    [normalize('Nivel educativo del empresario')]:
-      'Nivel educativo del emprendedor',
-    [normalize('Presenta algun tipo de discapacidad')]:
-      '¿Presenta algún tipo de discapacidad?',
+    [normalize('Nivel educativo del empresario')]: 'Nivel educativo del emprendedor',
+    [normalize('Presenta algun tipo de discapacidad')]: '¿Presenta algún tipo de discapacidad?',
     [normalize('Grupo etnico')]: 'Grupo étnico',
-    [normalize('Es victima del conflicto armado')]:
-      '¿Es víctima del conflicto armado?',
-    [normalize('Es cuidador de alguna de las siguientes personas')]:
-      '¿Es cuidador de alguna de las siguientes personas?',
+    [normalize('Es victima del conflicto armado')]: '¿Es víctima del conflicto armado?',
+    [normalize('Es cuidador de alguna de las siguientes personas')]: '¿Es cuidador de alguna de las siguientes personas?',
     [normalize('Identidad de genero')]: 'Identidad de género',
     [normalize('Personas a cargo')]: 'Personas a cargo',
     [normalize('Nombre del emprendimiento')]: 'Nombre del emprendimiento',
-    [normalize('Fecha de inicio actividad economica')]:
-      'Fecha de inicio actividad económica',
-    [normalize('Esta registrado y renovado ante la Camara de Comercio')]:
-      '¿Su emprendimiento está registrada ante la Cámara de Comercio?',
-    [normalize('Logro renovar la matricula del negocio a comienzos del 2023')]:
-      '¿Logró renovar la matrícula del emprendimiento a comienzos del 2024?',
-    [normalize('Fecha de registro en Cámara de Comercio')]:
-      'Fecha de registro en Cámara de Comercio (DD/MM/AAAA)',
+    [normalize('Fecha de inicio actividad economica')]: 'Fecha de inicio actividad económica',
+    [normalize('Esta registrado y renovado ante la Camara de Comercio')]: '¿Su emprendimiento está registrada ante la Cámara de Comercio?',
+    [normalize('Logro renovar la matricula del negocio a comienzos del 2023')]: '¿Logró renovar la matrícula del emprendimiento a comienzos del 2024?',
+    [normalize('Fecha de registro en Cámara de Comercio')]: 'Fecha de registro en Cámara de Comercio (DD/MM/AAAA)',
     [normalize('NIT')]: 'NIT (sin dígito de verificación)',
-    [normalize('Localidad de la unidad de negocio')]:
-      'Localidad donde se encuentra en funcionamiento el emprendimiento',
-    [normalize('Direccion de la unidad de negocio')]:
-      'Dirección donde se desarrolla la actividad del emprendimiento (debe coincidir con el servicio público que va a adjuntar más adelante)',
-    [normalize('En esta direccion tambien es su vivienda')]:
-      '¿En esta dirección también es su vivienda?',
+    [normalize('Localidad de la unidad de negocio')]: 'Localidad donde se encuentra en funcionamiento el emprendimiento',
+    [normalize('Direccion de la unidad de negocio')]: 'Dirección donde se desarrolla la actividad del emprendimiento (debe coincidir con el servicio público que va a adjuntar más adelante)',
+    [normalize('En esta direccion tambien es su vivienda')]: '¿En esta dirección también es su vivienda?',
     [normalize('Barrio de la unidad de negocio')]: 'Barrio del emprendimiento',
-    [normalize('Telefono fijo de la unidad de negocio')]:
-      'Teléfono fijo del emprendimiento',
-    [normalize('El negocio se encuentra ubicado en area')]:
-      'El emprendimiento se encuentra ubicado en área:',
-    [normalize('Estrato socioeconomico de su unidad de negocio')]:
-      'Estrato socioeconómico de su emprendimiento',
-    [normalize('Cuanto tiempo de funcionamiento tiene su emprendimiento')]:
-      '¿Cuánto tiempo de funcionamiento tiene su emprendimiento?',
-    [normalize('Vendedor informal o ambulante registrado en el HEMI con RIVI')]:
-      '¿Usted es vendedor informal/ambulante registrado en el HEMI con RIVI de la localidad por la cual se postula?',
-    [normalize('Cuantas personas trabajan directamente en el emprendimiento')]:
-      '¿Cuántas personas trabajan directamente en su emprendimiento, incluyéndolo a usted?',
-    [normalize('En que sector productivo se encuentra su emprendimiento')]:
-      '¿En qué sector productivo se encuentra su emprendimiento?',
-    [normalize('Cual es la oferta de productos o servicios de su negocio')]:
-      '¿Cuál es la oferta de productos o servicios de su emprendimiento?',
-    [normalize('Realiza actividades sostenibles y en proceso de reconversion')]:
-      '¿Su emprendimiento realiza actividades sostenibles y en proceso de reconversión dirigidas al cuidado del medio ambiente?',
-    [normalize('Actividad que Ud. Implementa sostenible y de reconversion')]:
-      'Si su respuesta anterior fue Si - ¿Cuál es esa actividad que usted implementa que es sostenible y en proceso de reconversión dirigidas al cuidado del medio ambiente?',
-    [normalize('Tiene acceso a internet y a un dispositivo')]:
-      '¿Tiene acceso a internet y/o a un dispositivo que le permita acceder a las cápsulas de conocimiento?',
-    [normalize('Cuenta con plan de datos en su celular')]:
-      '¿Cuenta con plan de datos en su celular?',
-    [normalize('Dispone de una cuenta bancaria o billetera electronica')]:
-      '¿Dispone de una cuenta bancaria o algún servicio de billetera electrónica que le permita recibir el incentivo económico?',
+    [normalize('Telefono fijo de la unidad de negocio')]: 'Teléfono fijo del emprendimiento',
+    [normalize('El negocio se encuentra ubicado en area')]: 'El emprendimiento se encuentra ubicado en área:',
+    [normalize('Estrato socioeconomico de su unidad de negocio')]: 'Estrato socioeconómico de su emprendimiento',
+    [normalize('Cuanto tiempo de funcionamiento tiene su emprendimiento')]: '¿Cuánto tiempo de funcionamiento tiene su emprendimiento?',
+    [normalize('Vendedor informal o ambulante registrado en el HEMI con RIVI')]: '¿Usted es vendedor informal/ambulante registrado en el HEMI con RIVI de la localidad por la cual se postula?',
+    [normalize('Cuantas personas trabajan directamente en el emprendimiento')]: '¿Cuántas personas trabajan directamente en su emprendimiento, incluyéndolo a usted?',
+    [normalize('En que sector productivo se encuentra su emprendimiento')]: '¿En qué sector productivo se encuentra su emprendimiento?',
+    [normalize('Cual es la oferta de productos o servicios de su negocio')]: '¿Cuál es la oferta de productos o servicios de su emprendimiento?',
+    [normalize('Realiza actividades sostenibles y en proceso de reconversion')]: '¿Su emprendimiento realiza actividades sostenibles y en proceso de reconversión dirigidas al cuidado del medio ambiente?',
+    [normalize('Actividad que Ud. Implementa sostenible y de reconversion')]: 'Si su respuesta anterior fue Si - ¿Cuál es esa actividad que usted implementa que es sostenible y en proceso de reconversión dirigidas al cuidado del medio ambiente?',
+    [normalize('Tiene acceso a internet y a un dispositivo')]: '¿Tiene acceso a internet y/o a un dispositivo que le permita acceder a las cápsulas de conocimiento?',
+    [normalize('Cuenta con plan de datos en su celular')]: '¿Cuenta con plan de datos en su celular?',
+    [normalize('Dispone de una cuenta bancaria o billetera electronica')]: '¿Dispone de una cuenta bancaria o algún servicio de billetera electrónica que le permita recibir el incentivo económico?',
     [normalize('Cual')]: '¿Cuál?',
     [normalize('Numero de clientes actuales')]: 'Número de clientes actuales',
-    [normalize('Valor de ventas promedio mensual')]:
-      'Valor de ventas promedio mensual',
-    [normalize('Cuanto tiempo dispone para el proceso de formacion y PI')]:
-      '¿De cuánto tiempo dispone para dedicarle al proceso de formación y realización del plan de inversión?',
-    [normalize('Para la comercializacion de su producto utiliza canales como')]:
-      'Para la comercialización de su producto utiliza canales como:',
-    [normalize('El dueño del emprendimiento es funcionario publico')]:
-      '¿El dueño del emprendimiento es funcionario público?',
+    [normalize('Valor de ventas promedio mensual')]: 'Valor de ventas promedio mensual',
+    [normalize('Cuanto tiempo dispone para el proceso de formacion y PI')]: '¿De cuánto tiempo dispone para dedicarle al proceso de formación y realización del plan de inversión?',
+    [normalize('Para la comercializacion de su producto utiliza canales como')]: 'Para la comercialización de su producto utiliza canales como:',
+    [normalize('El dueño del emprendimiento es funcionario publico')]: '¿El dueño del emprendimiento es funcionario público?',
   };
 
   const dateFields = new Set([
@@ -213,9 +185,14 @@ export default function PublicRecordCreate() {
         // Excluir además el campo "Acepta terminos"
         const filteredFields = fieldsResponse.data.filter(
           (field) =>
-            !['estado', 'asesor', 'id', 'acepta terminos', 'created_at', 'updated_at',].includes(
-              field.column_name.toLowerCase()
-            )
+            ![
+              'estado',
+              'asesor',
+              'id',
+              'acepta terminos',
+              'created_at',
+              'updated_at',
+            ].includes(field.column_name.toLowerCase())
         );
         setFields(filteredFields);
 
@@ -594,11 +571,22 @@ Por favor, estar atento(a) a los datos de contacto que suministró.`;
               onChange={handleChange}
             >
               <option value="">-- Selecciona una opción --</option>
-              {relatedData[field.column_name].map((relatedRecord) => (
-                <option key={relatedRecord.id} value={relatedRecord.id}>
-                  {relatedRecord.displayValue || `ID: ${relatedRecord.id}`}
-                </option>
-              ))}
+              {relatedData[field.column_name].map((relatedRecord) => {
+                
+                if (
+                  normalizedColumnName === normalize('Localidad de la unidad de negocio') &&
+                  relatedRecord.id === 16
+                ) {
+                  return null; 
+                }
+                
+
+                return (
+                  <option key={relatedRecord.id} value={relatedRecord.id}>
+                    {relatedRecord.displayValue || `ID: ${relatedRecord.id}`}
+                  </option>
+                );
+              })}
             </select>
           ) : (
             <>
@@ -761,6 +749,7 @@ Por favor, estar atento(a) a los datos de contacto que suministró.`;
     </div>
   );
 }
+
 
 
 
