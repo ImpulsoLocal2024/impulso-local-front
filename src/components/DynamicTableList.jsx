@@ -27,10 +27,10 @@ export default function DynamicTableList() {
   const [relatedData, setRelatedData] = useState({}); // Datos relacionados para claves foráneas
 
   // -----------------------------
-  // Paginación: cambiamos a 150 registros por página
+  // Paginación: cambiamos a 50 registros por página
   // -----------------------------
   const [currentPage, setCurrentPage] = useState(1); // Página actual
-  const recordsPerPage = 150; // Número de registros por página
+  const recordsPerPage = 50; // Número de registros por página
   // Máximo de tabs a mostrar
   const maxPageTabs = 10;
 
