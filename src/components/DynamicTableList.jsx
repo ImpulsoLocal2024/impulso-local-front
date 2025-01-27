@@ -5,7 +5,9 @@ import { useNavigate } from 'react-router-dom';
 import './css/UsersList.css'; // Asegúrate de ajustar la ruta si es necesario
 
 export default function DynamicTableList() {
+  // -----------------------------
   // Estados y variables
+  // -----------------------------
   const [tables, setTables] = useState([]); // Tablas disponibles
   const [selectedTable, setSelectedTable] = useState(''); // Tabla seleccionada
   const [isPrimaryTable, setIsPrimaryTable] = useState(false); // Si la tabla es principal
@@ -24,25 +26,35 @@ export default function DynamicTableList() {
   const [fieldOptionsLoaded, setFieldOptionsLoaded] = useState(false); // Estado de carga de opciones
   const [relatedData, setRelatedData] = useState({}); // Datos relacionados para claves foráneas
 
+  // -----------------------------
+  // Paginación: cambiamos a 150 registros por página
+  // -----------------------------
   const [currentPage, setCurrentPage] = useState(1); // Página actual
   const recordsPerPage = 150; // Número de registros por página
+  // Máximo de tabs a mostrar
+  const maxPageTabs = 10;
 
   const navigate = useNavigate();
 
+  // -----------------------------
   // Claves únicas para evitar conflictos entre módulos
+  // -----------------------------
   const LOCAL_STORAGE_TABLE_KEY = 'dynamicSelectedTable'; // Clave única para tablas en dynamic
   const LOCAL_STORAGE_COLUMNS_KEY = 'dynamicVisibleColumns'; // Clave única para columnas visibles
   const LOCAL_STORAGE_SEARCH_KEY = 'dynamicSearchQuery'; // Clave única para búsqueda
 
+  // -----------------------------
   // Referencia para el select de columnas
+  // -----------------------------
   const selectRef = useRef(null);
 
-  // Función para obtener el ID del usuario logueado desde el localStorage
+  // -----------------------------
+  // Funciones auxiliares para localStorage
+  // -----------------------------
   const getLoggedUserId = () => {
     return localStorage.getItem('id') || null;
   };
 
-  // Función para obtener el role_id del usuario logueado desde el localStorage
   const getLoggedUserRoleId = () => {
     return localStorage.getItem('role_id') || null;
   };
@@ -50,13 +62,17 @@ export default function DynamicTableList() {
   // Obtener el role_id del usuario
   const roleId = getLoggedUserRoleId();
 
-  // Estados para los filtros adicionales
+  // -----------------------------
+  // Estados para filtros adicionales
+  // -----------------------------
   const [selectedLocalidad, setSelectedLocalidad] = useState('');
   const [selectedEstado, setSelectedEstado] = useState('');
   const [localidadOptions, setLocalidadOptions] = useState([]);
   const [estadoOptions, setEstadoOptions] = useState([]);
 
-  // Función para obtener columnas y registros de la tabla seleccionada
+  // -----------------------------
+  // Función para obtener columnas y registros de la tabla
+  // -----------------------------
   const fetchTableData = async (tableName, savedVisibleColumns = null) => {
     try {
       setLoading(true);
@@ -86,7 +102,7 @@ export default function DynamicTableList() {
 
       setMultiSelectFields(multiSelectFieldsArray);
 
-      // Si hay columnas visibles guardadas en localStorage, úsalas; si no, muestra todas las columnas por defecto
+      // Si hay columnas visibles guardadas en localStorage, úsalas; si no, muestra todas por defecto
       const localVisibleColumns =
         savedVisibleColumns || JSON.parse(localStorage.getItem(LOCAL_STORAGE_COLUMNS_KEY)) || [];
       if (localVisibleColumns.length > 0) {
@@ -107,7 +123,7 @@ export default function DynamicTableList() {
 
       let filteredRecords = recordsResponse.data;
 
-      // Filtrar los registros si el rol es 4, mostrando solo aquellos donde el campo 'Asesor' coincida con el userId
+      // Filtrar los registros si el rol es 4, mostrando solo aquellos donde Asesor == userId
       if (tableName === 'inscription_caracterizacion') {
         if (loggedUserRoleId === '4' && loggedUserId) {
           filteredRecords = filteredRecords.filter(
@@ -145,7 +161,9 @@ export default function DynamicTableList() {
     }
   };
 
-  // Cargar las tablas y los filtros guardados desde el localStorage al montar
+  // -----------------------------
+  // Efecto para cargar tablas al montar
+  // -----------------------------
   useEffect(() => {
     const fetchTables = async () => {
       try {
@@ -158,13 +176,13 @@ export default function DynamicTableList() {
             },
           }
         );
-        setTables(response.data || []); // Asegurar que `tables` es un array
+        setTables(response.data || []);
 
-        // Determinar la tabla a mostrar
-        let initialTable = 'inscription_caracterizacion'; // Tabla por defecto para usuarios no administradores
+        // Determinar tabla inicial
+        let initialTable = 'inscription_caracterizacion'; // por defecto
 
         if (roleId === '1') {
-          // Si es rol 1, cargar la tabla seleccionada desde localStorage o usar la primera tabla
+          // Si es rol 1, cargar la tabla seleccionada desde localStorage o usar la primera
           const savedTable = localStorage.getItem(LOCAL_STORAGE_TABLE_KEY);
           initialTable = savedTable || response.data[0]?.table_name || initialTable;
         }
@@ -174,8 +192,9 @@ export default function DynamicTableList() {
         const selectedTableObj = response.data.find(
           (table) => table.table_name === initialTable
         );
-        setIsPrimaryTable(selectedTableObj?.is_primary || false); // Actualizar estado
+        setIsPrimaryTable(selectedTableObj?.is_primary || false);
 
+        // Cargar datos de la tabla inicial
         fetchTableData(initialTable);
       } catch (error) {
         console.error('Error obteniendo las tablas:', error);
@@ -186,26 +205,28 @@ export default function DynamicTableList() {
     fetchTables();
   }, [roleId]);
 
-  // Manejar Select2 con persistencia
+  // -----------------------------
+  // Manejo de Select2 con persistencia
+  // -----------------------------
   useEffect(() => {
     if (window.$ && selectedTable && selectRef.current) {
       const $select = window.$(selectRef.current);
 
       // Inicializar Select2
       $select.select2({
-        closeOnSelect: false, // No cerrar al seleccionar
-        theme: 'bootstrap4', // Usar el tema de Bootstrap 4
+        closeOnSelect: false,
+        theme: 'bootstrap4',
         width: '100%',
       });
 
-      // Remover manejadores previos para evitar duplicidades
+      // Evitar duplicidades de eventos
       $select.off('change').on('change', (e) => {
         const selectedOptions = Array.from(e.target.selectedOptions || []).map(
           (option) => option.value
         );
 
         if (selectedOptions.length === 0 && columns.length > 0) {
-          // Seleccionar automáticamente la primera columna
+          // Si no hay seleccionados, forzar al primero
           const firstColumn = columns[0];
           $select.val([firstColumn]).trigger('change');
           setVisibleColumns([firstColumn]);
@@ -217,16 +238,15 @@ export default function DynamicTableList() {
         localStorage.setItem(LOCAL_STORAGE_COLUMNS_KEY, JSON.stringify(selectedOptions));
       });
 
-      // Cargar las columnas visibles guardadas desde el localStorage
+      // Cargar columnas visibles guardadas
       const savedVisibleColumns = JSON.parse(localStorage.getItem(LOCAL_STORAGE_COLUMNS_KEY));
       if (savedVisibleColumns && savedVisibleColumns.length > 0) {
         $select.val(savedVisibleColumns).trigger('change');
       } else if (columns.length > 0) {
-        // Seleccionar la primera columna por defecto si no hay selecciones guardadas
         $select.val([columns[0]]).trigger('change');
       }
 
-      // Cleanup al desmontar o cambiar de tabla
+      // Cleanup
       return () => {
         if ($select.hasClass('select2-hidden-accessible')) {
           $select.select2('destroy');
@@ -234,37 +254,42 @@ export default function DynamicTableList() {
       };
     }
 
-    // Cargar la búsqueda persistente
+    // Cargar búsqueda persistente
     const savedSearch = localStorage.getItem(LOCAL_STORAGE_SEARCH_KEY);
     if (savedSearch) {
       setSearch(savedSearch);
     }
   }, [columns, selectedTable]);
 
-  // Manejar la selección de tabla (solo para role_id === '1')
+  // -----------------------------
+  // Manejar la selección de tabla
+  // (solo rol 1)
+  // -----------------------------
   const handleTableSelect = (e) => {
     const tableName = e.target.value;
     setSelectedTable(tableName);
-    localStorage.setItem(LOCAL_STORAGE_TABLE_KEY, tableName); // Guardar tabla seleccionada en el localStorage
-    setCurrentPage(1); // Resetear la página actual
+    localStorage.setItem(LOCAL_STORAGE_TABLE_KEY, tableName);
+    setCurrentPage(1);
 
     if (tableName) {
-      const selectedTableObj = tables.find((table) => table.table_name === tableName);
-      setIsPrimaryTable(selectedTableObj?.is_primary || false); // Actualizar estado
+      const selectedTableObj = tables.find((t) => t.table_name === tableName);
+      setIsPrimaryTable(selectedTableObj?.is_primary || false);
 
       const savedVisibleColumns = JSON.parse(localStorage.getItem(LOCAL_STORAGE_COLUMNS_KEY));
-      fetchTableData(tableName, savedVisibleColumns); // Cargar columnas y registros de la tabla seleccionada
+      fetchTableData(tableName, savedVisibleColumns);
     } else {
-      setRecords([]); // Limpiar los registros si no se selecciona ninguna tabla
+      setRecords([]);
       setIsPrimaryTable(false);
       setVisibleColumns([]);
     }
   };
 
-  // Función para obtener el valor a mostrar en una columna
+  // -----------------------------
+  // Valor a mostrar en c/columna
+  // -----------------------------
   const getColumnDisplayValue = (record, column) => {
     if (multiSelectFields.includes(column)) {
-      // Es un campo de llave foránea
+      // Es llave foránea
       const foreignKeyValue = record[column];
 
       if (relatedData[column]) {
@@ -284,10 +309,11 @@ export default function DynamicTableList() {
     }
   };
 
-  // Actualizar las opciones de los filtros cuando cambien los registros
+  // -----------------------------
+  // Actualizar opciones de filtro
+  // -----------------------------
   useEffect(() => {
     if (records.length > 0) {
-      // Extraer IDs y valores de visualización únicos para 'Localidad de la unidad de negocio' y 'Estado'
       const localidadMap = new Map();
       const estadoMap = new Map();
 
@@ -309,10 +335,7 @@ export default function DynamicTableList() {
       });
 
       const localidadOptionsArray = Array.from(localidadMap.entries()).map(
-        ([id, displayValue]) => ({
-          id,
-          displayValue,
-        })
+        ([id, displayValue]) => ({ id, displayValue })
       );
 
       const estadoOptionsArray = Array.from(estadoMap.entries()).map(([id, displayValue]) => ({
@@ -328,9 +351,11 @@ export default function DynamicTableList() {
     }
   }, [records, relatedData]);
 
-  // Aplicar el filtro de búsqueda y los filtros adicionales
+  // -----------------------------
+  // Filtrado (búsqueda + dropdowns)
+  // -----------------------------
   const filteredRecords = records.filter((record) => {
-    // Aplicar filtro de búsqueda
+    // Búsqueda
     if (search) {
       const matchesSearch = visibleColumns.some((column) => {
         const value = getColumnDisplayValue(record, column);
@@ -338,54 +363,84 @@ export default function DynamicTableList() {
       });
       if (!matchesSearch) return false;
     }
-    // Aplicar filtro de Localidad
+
+    // Localidad
     if (selectedLocalidad) {
       if (String(record['Localidad de la unidad de negocio']) !== selectedLocalidad) {
         return false;
       }
     }
-    // Aplicar filtro de Estado
+    // Estado
     if (selectedEstado) {
       if (String(record['Estado']) !== selectedEstado) {
         return false;
       }
     }
+
     return true;
   });
 
-  // Resetear la página actual cuando cambian los registros filtrados o la búsqueda
+  // -----------------------------
+  // Resetear página al cambiar filtros
+  // -----------------------------
   useEffect(() => {
     setCurrentPage(1);
   }, [search, records, selectedLocalidad, selectedEstado]);
 
-  // Paginación
+  // -----------------------------
+  // Lógica de paginación (10 tabs)
+  // -----------------------------
   const totalPages = Math.ceil(filteredRecords.length / recordsPerPage);
+
+  // Función para obtener los números de página limitados a maxPageTabs
+  const getPageNumbers = () => {
+    let startPage = Math.max(1, currentPage - Math.floor(maxPageTabs / 2));
+    let endPage = startPage + maxPageTabs - 1;
+
+    if (endPage > totalPages) {
+      endPage = totalPages;
+      startPage = Math.max(1, endPage - maxPageTabs + 1);
+    }
+
+    const pages = [];
+    for (let i = startPage; i <= endPage; i++) {
+      pages.push(i);
+    }
+    return pages;
+  };
+
+  const pageNumbers = getPageNumbers();
+
   const indexOfLastRecord = currentPage * recordsPerPage;
   const indexOfFirstRecord = indexOfLastRecord - recordsPerPage;
   const currentRecords = filteredRecords.slice(indexOfFirstRecord, indexOfLastRecord);
 
-  // Función para limpiar filtros y mostrar todos los registros
+  // -----------------------------
+  // Limpiar filtros
+  // -----------------------------
   const clearFilters = () => {
-    setVisibleColumns(columns); // Mostrar todas las columnas disponibles
-    setSearch(''); // Limpiar búsqueda
-    localStorage.removeItem(LOCAL_STORAGE_COLUMNS_KEY); // Limpiar filtros persistentes
-    localStorage.removeItem(LOCAL_STORAGE_SEARCH_KEY); // Limpiar búsqueda persistente
-    setCurrentPage(1); // Resetear la página actual
-    setSelectedLocalidad(''); // Limpiar filtro de Localidad
-    setSelectedEstado(''); // Limpiar filtro de Estado
-
-    // Volver a cargar todos los registros de la tabla seleccionada
-    fetchTableData(selectedTable); // Restablecer la tabla completa sin filtros
+    setVisibleColumns(columns);
+    setSearch('');
+    localStorage.removeItem(LOCAL_STORAGE_COLUMNS_KEY);
+    localStorage.removeItem(LOCAL_STORAGE_SEARCH_KEY);
+    setCurrentPage(1);
+    setSelectedLocalidad('');
+    setSelectedEstado('');
+    fetchTableData(selectedTable); // recargar todo sin filtros
   };
 
-  // Manejar el cambio en la búsqueda
+  // -----------------------------
+  // Manejo de búsqueda
+  // -----------------------------
   const handleSearchChange = (e) => {
     setSearch(e.target.value);
-    localStorage.setItem(LOCAL_STORAGE_SEARCH_KEY, e.target.value); // Guardar búsqueda en el localStorage
-    setCurrentPage(1); // Resetear la página actual
+    localStorage.setItem(LOCAL_STORAGE_SEARCH_KEY, e.target.value);
+    setCurrentPage(1);
   };
 
-  // Manejar cambios en los checkboxes
+  // -----------------------------
+  // Manejo de selección de registros (checkbox)
+  // -----------------------------
   const handleCheckboxChange = (recordId) => {
     setSelectedRecords((prevSelected) => {
       if (prevSelected.includes(recordId)) {
@@ -396,7 +451,6 @@ export default function DynamicTableList() {
     });
   };
 
-  // Manejar selección de todos los registros
   const handleSelectAll = (e) => {
     if (e.target.checked) {
       const allRecordIds = currentRecords.map((record) => record.id);
@@ -406,7 +460,9 @@ export default function DynamicTableList() {
     }
   };
 
-  // Manejar cambios en los campos de actualización masiva
+  // -----------------------------
+  // Manejo de actualización masiva
+  // -----------------------------
   const handleBulkUpdateChange = (field, value) => {
     setBulkUpdateData((prevData) => ({
       ...prevData,
@@ -414,7 +470,6 @@ export default function DynamicTableList() {
     }));
   };
 
-  // Aplicar actualización masiva
   const applyBulkUpdate = async () => {
     try {
       const token = localStorage.getItem('token');
@@ -431,9 +486,9 @@ export default function DynamicTableList() {
         }
       );
       alert('Registros actualizados con éxito');
-      // Recargar los registros después de la actualización
+      // Recargar
       fetchTableData(selectedTable);
-      // Limpiar la selección
+      // Limpiar selección
       setSelectedRecords([]);
       setBulkUpdateData({});
     } catch (error) {
@@ -442,6 +497,9 @@ export default function DynamicTableList() {
     }
   };
 
+  // -----------------------------
+  // Render principal
+  // -----------------------------
   return (
     <div className="content-wrapper">
       {/* Cabecera */}
@@ -505,7 +563,7 @@ export default function DynamicTableList() {
                 </div>
               )}
 
-              {/* Dropdowns para filtrar */}
+              {/* Dropdowns de filtros adicionales */}
               {columns.length > 0 && (
                 <>
                   <div className="form-group mb-3 d-flex">
@@ -607,7 +665,9 @@ export default function DynamicTableList() {
                             ) : (
                               <td
                                 colSpan={
-                                  isPrimaryTable ? columns.length + 2 : columns.length + 1
+                                  isPrimaryTable
+                                    ? columns.length + 2
+                                    : columns.length + 1
                                 }
                                 className="text-center"
                               >
@@ -643,9 +703,10 @@ export default function DynamicTableList() {
                     </tbody>
                   </table>
 
-                  {/* Paginación */}
+                  {/* Paginación con máximo 10 tabs */}
                   {totalPages > 1 && (
                     <div className="pagination mt-3 d-flex justify-content-center">
+                      {/* Botón Anterior */}
                       <button
                         className="btn btn-light mr-2"
                         onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
@@ -653,19 +714,21 @@ export default function DynamicTableList() {
                       >
                         Anterior
                       </button>
-                      {Array.from({ length: totalPages }, (_, index) => index + 1).map(
-                        (number) => (
-                          <button
-                            key={number}
-                            onClick={() => setCurrentPage(number)}
-                            className={`btn btn-light mr-2 ${
-                              number === currentPage ? 'active' : ''
-                            }`}
-                          >
-                            {number}
-                          </button>
-                        )
-                      )}
+
+                      {/* Números de página limitados a maxPageTabs */}
+                      {pageNumbers.map((number) => (
+                        <button
+                          key={number}
+                          onClick={() => setCurrentPage(number)}
+                          className={`btn btn-light mr-2 ${
+                            number === currentPage ? 'active' : ''
+                          }`}
+                        >
+                          {number}
+                        </button>
+                      ))}
+
+                      {/* Botón Siguiente */}
                       <button
                         className="btn btn-light"
                         onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
