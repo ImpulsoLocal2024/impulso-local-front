@@ -572,14 +572,15 @@ Por favor, estar atento(a) a los datos de contacto que suministró.`;
             >
               <option value="">-- Selecciona una opción --</option>
               {relatedData[field.column_name].map((relatedRecord) => {
-                
+                // ***** INICIO MODIFICACIÓN PARA OCULTAR IDs = 16 y 18 *****
                 if (
                   normalizedColumnName === normalize('Localidad de la unidad de negocio') &&
-                  relatedRecord.id === 16
+                  [16, 18].includes(relatedRecord.id)
                 ) {
-                  return null; 
+                  // Retornamos null para que NO aparezca en el select
+                  return null;
                 }
-                
+                // ***** FIN MODIFICACIÓN *****
 
                 return (
                   <option key={relatedRecord.id} value={relatedRecord.id}>
@@ -749,10 +750,3 @@ Por favor, estar atento(a) a los datos de contacto que suministró.`;
     </div>
   );
 }
-
-
-
-
-
-
-
