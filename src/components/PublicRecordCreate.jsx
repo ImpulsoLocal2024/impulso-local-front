@@ -575,7 +575,7 @@ Por favor, estar atento(a) a los datos de contacto que suministró.`;
                 // ***** INICIO MODIFICACIÓN PARA OCULTAR IDs = 16 y 18 *****
                 if (
                   normalizedColumnName === normalize('Localidad de la unidad de negocio') &&
-                  [16, 18].includes(relatedRecord.id)
+                  [16, 18, 26, 23, 27].includes(relatedRecord.id)
                 ) {
                   // Retornamos null para que NO aparezca en el select
                   return null;
